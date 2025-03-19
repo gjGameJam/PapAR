@@ -3525,7 +3525,7 @@
     {}
   ScriptInputs:
     "":
-      {}
+      playerClaim: !<MappingBased.PlayerClaims> dcc7f992-7475-414a-b3fe-72323e036fe8
   ScriptTypes:
     "":
       {}
@@ -4996,7 +4996,7 @@
 - !<ScriptComponent/dcc7f992-7475-414a-b3fe-72323e036fe8>
   PrefabRemaps:
     []
-  Name: PlayerTrail
+  Name: PlayerClaims
   Enabled: true
   ScriptAsset: !<reference> 1040b699-ca99-4c4a-9db6-68a61d007bd2
   ScriptInputsDefault:
@@ -5005,7 +5005,7 @@
     {}
   ScriptInputs:
     "":
-      {}
+      playerCoords: !<MappingBased.PlayerTracker> 9e0291ca-4ac0-42cd-9bde-db2ae972637c
   ScriptTypes:
     "":
       {}

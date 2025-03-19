@@ -1,4 +1,5 @@
 require('LensStudio:RawLocationModule');
+import { PlayerClaims } from "./PlayerClaims";
 
 @component
 export class PlayerTracker extends BaseScriptComponent {
@@ -17,6 +18,9 @@ export class PlayerTracker extends BaseScriptComponent {
   private repeatUpdateUserLocation: DelayedCallbackEvent;
   private playerUpdate: DelayedCallbackEvent;
   private locationService: LocationService;
+    
+  @input 
+  playerClaim: PlayerClaims;
 
   onAwake() {
     this.createEvent('OnStartEvent').bind(() => {
@@ -56,7 +60,7 @@ export class PlayerTracker extends BaseScriptComponent {
     this.playerUpdate.bind(() => {
             
       //first print out coords to ensure accuracy
-      print('lat: ' + this.latitude + ', long: ' + this.longitude);
+      //print('lat: ' + this.latitude + ', long: ' + this.longitude);
       //if prevlat and prevlong are undefined and there is gps data available, create home point
       if ((this.prevlatitude == undefined || this.prevlongitude == undefined) && (this.latitude != undefined || this.longitude != undefined)){
                 this.HomeCoords = { latitude: this.latitude, longitude: this.longitude };     
@@ -100,8 +104,7 @@ export class PlayerTracker extends BaseScriptComponent {
   //function to spawn starter territory for player
   createHomePoint(){
      //this.HomeCoords is set right before this so spawn home area of player color
-     print('home point creation');
-     //TODO: spawn home chunk of land around current pos
+     this.playerClaim.createHomeClaim(this.latitude, this.longitude);
   }
    
    //function to retrieve the location of the home coords
@@ -128,7 +131,7 @@ export class PlayerTracker extends BaseScriptComponent {
   //function that is called while touching home territory
   //if stakes exist, add associated new area to claim
   claimStakedLand(){
-        
+        //do nothing if there is no staked land
   }
     
   checkForStakeLoop(){
