@@ -336,7 +336,7 @@
 - !<SceneObject/00eb2105-305f-40d5-a382-cca767f5e2c4>
   PrefabRemaps:
     []
-  Name: PlayerCoords
+  Name: PlayerLogic
   Enabled: true
   Layers: 1
   LocalTransform:
@@ -348,6 +348,7 @@
     []
   Components:
     - !<own> 9e0291ca-4ac0-42cd-9bde-db2ae972637c
+    - !<own> dcc7f992-7475-414a-b3fe-72323e036fe8
 - !<SceneObject/01dd1c60-8098-4833-915d-cf534d39b0c0>
   PrefabRemaps:
     []
@@ -3515,7 +3516,7 @@
 - !<ScriptComponent/9e0291ca-4ac0-42cd-9bde-db2ae972637c>
   PrefabRemaps:
     []
-  Name: PlayerCoords
+  Name: PlayerTracker
   Enabled: true
   ScriptAsset: !<reference> 9af0a51f-63a4-4665-b48f-812d322b050a
   ScriptInputsDefault:
@@ -4992,6 +4993,22 @@
     []
   Components:
     - !<own> 8b564f22-3d6a-4fef-a704-e3c15bd8066d
+- !<ScriptComponent/dcc7f992-7475-414a-b3fe-72323e036fe8>
+  PrefabRemaps:
+    []
+  Name: PlayerTrail
+  Enabled: true
+  ScriptAsset: !<reference> 1040b699-ca99-4c4a-9db6-68a61d007bd2
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/dcc8121e-b1c2-472a-b1e6-c1d175555d17>
   PrefabRemaps:
     []

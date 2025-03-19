@@ -1,6 +1,7 @@
 require('LensStudio:RawLocationModule');
 
-export class LocationExample extends BaseScriptComponent {
+@component
+export class PlayerTracker extends BaseScriptComponent {
   latitude: number;
   longitude: number;
   prevlatitude: number;
@@ -37,8 +38,8 @@ export class LocationExample extends BaseScriptComponent {
             this.longitude = geoPosition.longitude;
             this.horizontalAccuracy = geoPosition.horizontalAccuracy;
             this.verticalAccuracy = geoPosition.verticalAccuracy;
-            print('long: ' + this.longitude);
-            print('lat: ' + this.latitude);
+            print('new long: ' + this.longitude);
+            print('new lat: ' + this.latitude);
             this.timestamp = geoPosition.timestamp;
           }
         },
@@ -71,7 +72,7 @@ export class LocationExample extends BaseScriptComponent {
         //if outside of territory, connect path from previous point to current  
         this.stakeTerritory();
         //if staking path loops back into itself before reaching claimed territory, you die      
-      
+        this.checkForStakeLoop();
       }
       
       
@@ -127,6 +128,10 @@ export class LocationExample extends BaseScriptComponent {
   //function that is called while touching home territory
   //if stakes exist, add associated new area to claim
   claimStakedLand(){
+        
+  }
+    
+  checkForStakeLoop(){
         
   }
     

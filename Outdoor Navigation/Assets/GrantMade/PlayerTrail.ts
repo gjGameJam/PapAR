@@ -1,15 +1,21 @@
-//// ReceiverScript.ts
-//@component
-//export class ReceiverScript extends BaseScriptComponent {
+import { PlayerTracker } from "./PlayerTracker";
+
+@component
+export class PlayerClaims extends BaseScriptComponent {
+    
+    playerCoords: PlayerTracker;
+
+    onAwake() {
+        print("PlayerClaims awake");
+
+        // Get the PlayerTracker component attached to the same scene object
+//        this.playerCoords = this.getSceneObject().getComponent(PlayerTracker) as PlayerTracker;  // Cast to PlayerTracker
 //
-//    @field(SenderScript)
-//    senderScript: SenderScript;  // Reference to SenderScript
-//
-//    onAwake() {
-//        // Listen for the event from SenderScript
-//        this.senderScript.onMessageSent.add((message) => {
-//            print("Received message: " + message);
-//        });
-//    }
-//}
-//
+//        if (this.playerCoords) {
+//            let homePoint = this.playerCoords.getHomePoint();
+//            //print("Home Point:", homePoint.latitude, homePoint.longitude);
+//        } else {
+//            print("PlayerTracker component not found!");
+//        }
+    }
+}
