@@ -1,13 +1,16 @@
 CollapsedEntities:
   type: stringset
   value:
-    size: 531
+    size: 532
     values:
       - Device Camera Texture.deviceCameraTexture
       - Echopark.hdr
       - Echopark.hdr/Diffuse
       - Echopark.hdr/Specular
-      - GrantMade/PlayerClaim.ts
+      - GrantMade/DrawClaim.js
+      - GrantMade/PlayerCoords.js
+      - GrantMade/PlayerCoords.ts
+      - GrantMade/PlayerTrail.ts
       - MapComponent/.hidden
       - MapComponent/.hidden/Location Pin Outline.ss_graph
       - MapComponent/.hidden/Location Pin.ss_graph
@@ -36,7 +39,6 @@ CollapsedEntities:
       - MapComponent/Prefabs/QuestMarker.prefab
       - MapComponent/Prefabs/TilePrefab.prefab
       - MapComponent/Prefabs/Userpin.prefab
-      - MapComponent/Scripts
       - MapComponent/Scripts/Cell.ts
       - MapComponent/Scripts/MapComponent.ts
       - MapComponent/Scripts/MapConfig.ts
@@ -60,7 +62,6 @@ CollapsedEntities:
       - MapComponent/Textures/white_arrow.pvr
       - Render Target.renderTarget
       - Scene.scene
-      - Scripts
       - Scripts/Logging.ts
       - Scripts/MapContainerController.ts
       - Scripts/MapManipulation.ts

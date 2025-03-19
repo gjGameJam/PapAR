@@ -6,7 +6,7 @@
     - !<own> 00cca4cc-0c35-40f4-a25d-fbceea04a905
     - !<own> d1583ee4-a7ed-4727-a912-a62530c0984d
     - !<own> aa4c9644-7e91-4fd9-a405-4c02157e2375
-    - !<own> b5bdec0a-d061-43e2-821d-ef445a598d0d
+    - !<own> 83c830c9-d9be-4c0b-ba09-f86cf02d345b
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -1922,6 +1922,22 @@
     - !<own> 48ceb579-440e-41e0-997e-d6aacf7bcfb6
   Components:
     []
+- !<ScriptComponent/6059db5d-989f-4581-8f1a-79bb4ac1bfe3>
+  PrefabRemaps:
+    []
+  Name: DrawClaim
+  Enabled: true
+  ScriptAsset: !<reference> 1e16c9bc-b79f-4a2f-818f-15913c912eec
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/6113748a-b079-4aae-83b0-c6ca541684d1>
   PrefabRemaps:
     []
@@ -2811,6 +2827,22 @@
   ScriptTypes:
     "":
       {}
+- !<SceneObject/83c830c9-d9be-4c0b-ba09-f86cf02d345b>
+  PrefabRemaps:
+    []
+  Name: PlayerCoords
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 8b818759-74e1-41dd-8a1d-50d35c9dd83c
+    - !<own> 6059db5d-989f-4581-8f1a-79bb4ac1bfe3
 - !<ScriptComponent/85cdd03c-8233-42a7-91b7-081ead0cae37>
   PrefabRemaps:
     []
@@ -2959,6 +2991,22 @@
       acceptableXDirections: !<float> 3.000000
       acceptableYDirections: !<float> 3.000000
       acceptableZDirections: !<float> 3.000000
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/8b818759-74e1-41dd-8a1d-50d35c9dd83c>
+  PrefabRemaps:
+    []
+  Name: PlayerCoords
+  Enabled: true
+  ScriptAsset: !<reference> f02d0bc4-90af-4940-8521-b91dd3a576d7
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
   ScriptTypes:
     "":
       {}
@@ -4036,21 +4084,6 @@
     - !<own> bfb5f952-c4a1-44b7-b0b8-d34aab541d0d
   Components:
     []
-- !<SceneObject/b5bdec0a-d061-43e2-821d-ef445a598d0d>
-  PrefabRemaps:
-    []
-  Name: PaperTrail
-  Enabled: true
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> c91e3b26-a1e3-47a4-85a5-c8a530742316
 - !<SceneObject/b602b57e-35d3-4105-9104-6cfbeb5a7b71>
   PrefabRemaps:
     []
@@ -4457,22 +4490,6 @@
     - !<own> 78c16349-b182-4d1f-a9a5-bea49ce6ac93
   Components:
     []
-- !<ScriptComponent/c91e3b26-a1e3-47a4-85a5-c8a530742316>
-  PrefabRemaps:
-    []
-  Name: PlayerClaim
-  Enabled: true
-  ScriptAsset: !<reference> 9af0a51f-63a4-4665-b48f-812d322b050a
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<ScriptComponent/c99d4f2c-f5f0-4683-bb28-e2bbf4c7ea40>
   PrefabRemaps:
     []
