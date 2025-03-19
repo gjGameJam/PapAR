@@ -7,7 +7,7 @@ CollapsedEntities:
       - Echopark.hdr
       - Echopark.hdr/Diffuse
       - Echopark.hdr/Specular
-      - MapComponent
+      - GrantMade/PlayerClaim.ts
       - MapComponent/.hidden
       - MapComponent/.hidden/Location Pin Outline.ss_graph
       - MapComponent/.hidden/Location Pin.ss_graph
