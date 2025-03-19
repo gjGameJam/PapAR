@@ -44,6 +44,8 @@ export class PlayerTracker extends BaseScriptComponent {
             this.verticalAccuracy = geoPosition.verticalAccuracy;
             print('new long: ' + this.longitude);
             print('new lat: ' + this.latitude);
+            //create stake in new location (if applicable)
+            this.playerClaim.createNewStake(this.latitude, this.longitude);
             this.timestamp = geoPosition.timestamp;
           }
         },
@@ -65,18 +67,6 @@ export class PlayerTracker extends BaseScriptComponent {
       if ((this.prevlatitude == undefined || this.prevlongitude == undefined) && (this.latitude != undefined || this.longitude != undefined)){
                 this.HomeCoords = { latitude: this.latitude, longitude: this.longitude };     
                 this.createHomePoint(); //this should only happen once (prev points will be set below)
-      }
-            
-      //check if in or outside of claimed territory   
-      if (this.checkIfInTerritory()){
-        //if back inside, check if staking path exists and create/add new domain to current claim
-        this.claimStakedLand();
-      }
-      else{
-        //if outside of territory, connect path from previous point to current  
-        this.stakeTerritory();
-        //if staking path loops back into itself before reaching claimed territory, you die      
-        this.checkForStakeLoop();
       }
       
       
@@ -106,36 +96,13 @@ export class PlayerTracker extends BaseScriptComponent {
      //this.HomeCoords is set right before this so spawn home area of player color
      this.playerClaim.createHomeClaim(this.latitude, this.longitude);
   }
-   
-   //function to retrieve the location of the home coords
-  getHomePoint(){
-        return this.HomeCoords;
-  }
   
-  //function to stake regions of territory to claim
-  stakeTerritory(){
-     //return early if path is incomplete between prev and current
+  //returns true if prev and curr coords are defined
+  hasPrevAndCurrCoords(){
      if (this.prevlatitude == undefined || this.prevlongitude == undefined || this.latitude == undefined || this.longitude == undefined){
-            return;
+         return false;
      }
-     print('staking territory');
-     //TODO: connect previous and current lat/long coords with line thickness
-     
-  }
-    
-  //function to check if player is in their own claimed territory
-  checkIfInTerritory(){
         return true;
-  }
-  
-  //function that is called while touching home territory
-  //if stakes exist, add associated new area to claim
-  claimStakedLand(){
-        //do nothing if there is no staked land
-  }
-    
-  checkForStakeLoop(){
-        
   }
     
     
