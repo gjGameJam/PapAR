@@ -1,14 +1,12 @@
 CollapsedEntities:
   type: stringset
   value:
-    size: 532
+    size: 530
     values:
       - Device Camera Texture.deviceCameraTexture
       - Echopark.hdr
       - Echopark.hdr/Diffuse
       - Echopark.hdr/Specular
-      - GrantMade/DrawClaim.js
-      - GrantMade/PlayerCoords.js
       - GrantMade/PlayerCoords.ts
       - GrantMade/PlayerTrail.ts
       - MapComponent/.hidden

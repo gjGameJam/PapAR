@@ -6,7 +6,7 @@
     - !<own> 00cca4cc-0c35-40f4-a25d-fbceea04a905
     - !<own> d1583ee4-a7ed-4727-a912-a62530c0984d
     - !<own> aa4c9644-7e91-4fd9-a405-4c02157e2375
-    - !<own> 83c830c9-d9be-4c0b-ba09-f86cf02d345b
+    - !<own> 72033813-dd0b-4039-8c32-2a343a8549ed
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -333,6 +333,21 @@
     - !<own> aedf5dfb-cf45-4cbb-8b05-785ed2a02327
   Components:
     []
+- !<SceneObject/00eb2105-305f-40d5-a382-cca767f5e2c4>
+  PrefabRemaps:
+    []
+  Name: PlayerCoords
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9e0291ca-4ac0-42cd-9bde-db2ae972637c
 - !<SceneObject/01dd1c60-8098-4833-915d-cf534d39b0c0>
   PrefabRemaps:
     []
@@ -1922,22 +1937,6 @@
     - !<own> 48ceb579-440e-41e0-997e-d6aacf7bcfb6
   Components:
     []
-- !<ScriptComponent/6059db5d-989f-4581-8f1a-79bb4ac1bfe3>
-  PrefabRemaps:
-    []
-  Name: DrawClaim
-  Enabled: true
-  ScriptAsset: !<reference> 1e16c9bc-b79f-4a2f-818f-15913c912eec
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/6113748a-b079-4aae-83b0-c6ca541684d1>
   PrefabRemaps:
     []
@@ -2404,6 +2403,21 @@
     - !<own> ea989b66-9bdf-42ab-8b7a-155ef2a1132b
     - !<own> faa68c42-75eb-4569-a621-a0bbe8597cd0
     - !<own> 17bcafcf-ea72-45aa-b27f-e80206827dfa
+- !<SceneObject/72033813-dd0b-4039-8c32-2a343a8549ed>
+  PrefabRemaps:
+    []
+  Name: Object 0
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    - !<own> 00eb2105-305f-40d5-a382-cca767f5e2c4
+  Components:
+    []
 - !<SceneObject/723b2184-a52d-4e73-b0d6-384fcd1889aa>
   PrefabRemaps:
     []
@@ -2827,22 +2841,6 @@
   ScriptTypes:
     "":
       {}
-- !<SceneObject/83c830c9-d9be-4c0b-ba09-f86cf02d345b>
-  PrefabRemaps:
-    []
-  Name: PlayerCoords
-  Enabled: true
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 8b818759-74e1-41dd-8a1d-50d35c9dd83c
-    - !<own> 6059db5d-989f-4581-8f1a-79bb4ac1bfe3
 - !<ScriptComponent/85cdd03c-8233-42a7-91b7-081ead0cae37>
   PrefabRemaps:
     []
@@ -2991,22 +2989,6 @@
       acceptableXDirections: !<float> 3.000000
       acceptableYDirections: !<float> 3.000000
       acceptableZDirections: !<float> 3.000000
-  ScriptTypes:
-    "":
-      {}
-- !<ScriptComponent/8b818759-74e1-41dd-8a1d-50d35c9dd83c>
-  PrefabRemaps:
-    []
-  Name: PlayerCoords
-  Enabled: true
-  ScriptAsset: !<reference> f02d0bc4-90af-4940-8521-b91dd3a576d7
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
   ScriptTypes:
     "":
       {}
@@ -3530,6 +3512,22 @@
   BlendNormals: false
   BlendShapes:
     Pinch: 0.000000
+- !<ScriptComponent/9e0291ca-4ac0-42cd-9bde-db2ae972637c>
+  PrefabRemaps:
+    []
+  Name: PlayerCoords
+  Enabled: true
+  ScriptAsset: !<reference> 9af0a51f-63a4-4665-b48f-812d322b050a
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/9e9fb1bc-c48e-4c34-83f3-f04cd0e30f88>
   PrefabRemaps:
     []
