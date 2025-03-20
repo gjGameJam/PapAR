@@ -7,6 +7,7 @@
     - !<own> d1583ee4-a7ed-4727-a912-a62530c0984d
     - !<own> aa4c9644-7e91-4fd9-a405-4c02157e2375
     - !<own> 72033813-dd0b-4039-8c32-2a343a8549ed
+    - !<own> d2214942-872a-4062-bb29-a5bea3dc8717
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -4842,6 +4843,21 @@
     - !<own> 99dd8e79-ece5-4ac7-88ce-a2693ec8726a
   Components:
     - !<own> c99d4f2c-f5f0-4683-bb28-e2bbf4c7ea40
+- !<SceneObject/d2214942-872a-4062-bb29-a5bea3dc8717>
+  PrefabRemaps:
+    []
+  Name: StakeHolder
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    []
 - !<SceneObject/d68d4811-e2ce-4190-be0a-006a64fb3d44>
   PrefabRemaps:
     []
@@ -5006,6 +5022,7 @@
   ScriptInputs:
     "":
       playerCoords: !<MappingBased.PlayerTracker> 9e0291ca-4ac0-42cd-9bde-db2ae972637c
+      stakeHolder: !<reference.SceneObject> d2214942-872a-4062-bb29-a5bea3dc8717
       StakeLine: !<reference.ObjectPrefab> be691d8e-2032-4498-97f0-fd36c4926971
   ScriptTypes:
     "":

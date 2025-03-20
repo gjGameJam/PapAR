@@ -7,8 +7,14 @@ export class PlayerClaims extends BaseScriptComponent {
     playerCoords: PlayerTracker; //player coords and color data
     
     @input
+    stakeHolder: SceneObject; //object to spawn stakes as children
+    
+    @input
     StakeLine: ObjectPrefab;
     claimColor: vec4; //the color of this player's claim
+    
+    originLong: number;
+    originLat: number;
     
     stakes: { lat: number, long: number }[] = [];
     claimedArea: { lat: number, long: number }[] = []; // One continuous shape
@@ -72,6 +78,18 @@ export class PlayerClaims extends BaseScriptComponent {
         });
         //create local play zone around first player
         this.updateClaimMesh(); //update visual for claim
+        //create lens session origin coordinates if this is first player in session
+        if (this.getPlayerNum() == 1){
+            this.originLat = lat; //want to sync amungst all players
+            this.originLong = long; //want to sync amungst all players
+        }
+    }
+    
+    //helper funtion to determine how many players there are
+    getPlayerNum(): number {
+        //let players = session.getPlayers();
+        //return players.length;
+        return 1; //TODO use sync objects to determine unique number of players in scene
     }
     
     //called by player coords when player coordinates change
@@ -131,46 +149,62 @@ export class PlayerClaims extends BaseScriptComponent {
     //function for visually indicating a player's claim
     updateClaimMesh(){
         //TODO: add visual for claiming staked area
-    }
-    
-    //function for visually indicating a player's stakes
-    updateStakeMesh(){
-        //TODO: add visual for staking path
-        // Create new path segment visuals
-        for (var i = 0; i < this.stakes.length - 1; i++) {
-            var start = this.stakes[i];
-            var end = this.stakes[i + 1];
-            // Create a line between each stake (or create a 3D mesh like a tube)
-            var line = this.createLineBetweenPoints(start, end);
+        for (var i = 0; i < this.claimedArea.length - 1; i++) {
         }
     }
     
+    //helper function to convert coordinates to world space
+    convertCoordsToWorld(lat: number, long: number): vec3 {
+        let scale = 0.0001; // Adjust scale based on the real-world size you want
+        let x = (long - this.originLong) * scale;
+        let y = 0; // Keep the plane flat
+        let z = (lat - this.originLat) * scale;
+        return new vec3(x, y, z);
+    }
+    
+    //function for visually indicating a player's stakes
+    //TODO: test visual for staking path via spectacle gps movement
+    updateStakeMesh(){
+        // Create new path segment visual between most recent coordinates in stake data
+        var numStakes = this.stakes.length; //each data point is a coordinate
+        var prevStake = this.stakes[numStakes - 2]; // Previous stake (second to last)
+        var newStake = this.stakes[numStakes - 1]; // Newest stake (last one)
+
+        //get positions in lens space where to spawn line
+        var prevStakeWorldPos = this.convertCoordsToWorld(prevStake.lat, prevStake.long);
+        var newestStakeWorldPos = this.convertCoordsToWorld(newStake.lat, newStake.long);
+
+        var line = this.createLineBetweenPoints(prevStakeWorldPos, newestStakeWorldPos);
+
+    }
+    
     // Function to create a line between two points (represented by a 3D object or mesh)
-    createLineBetweenPoints(start, end) {
+    createLineBetweenPoints(start: vec3, end: vec3) {
         //TODO: get visual working for lines between stakes
+        //might need to use convertLatLongToWorld
         var direction = end.sub(start);
-        var distance = direction.length();
+        var distance = direction.length;
         
         // Create a new object (or mesh) to represent the line
-//        var line = this.StakeLine.instantiate(script.getSceneObject());  // Create a new SceneObject with a name
-//        //var meshVisual = line.createComponent("MeshVisual");
-//        //meshVisual.mesh = script.pathMesh; // Use the provided path mesh (e.g., a cylinder or line)
-//        // Access the Transform component of the line
-//        var transform = line.getTransform();  // Get the Transform component
-//        //change the transform of the stake line to go from prev to current coord
-//        if (transform) {
-//            // Set the position of the line
-//            transform.setWorldPosition(start);
-//            
-//            // Set the rotation (orient the line to face the end point)
-//            var lookAtRotation = quat.lookAt(transform.getWorldPosition(), end);  // Get the rotation towards the end point
-//            transform.setWorldRotation(lookAtRotation);
-//            
-//            // Scale the line to match the distance
-//            transform.setWorldScale(new vec3(1, 1, distance));
-//        } else {
-//            print("Error: Transform component not found on line object.");
-//        }
+        var line = this.StakeLine.instantiate(this.stakeHolder);  // Create a new SceneObject with a name
+        //var meshVisual = line.createComponent("MeshVisual");
+        //meshVisual.mesh = script.pathMesh; // Use the provided path mesh (e.g., a cylinder or line)
+        // Access the Transform component of the line
+        var transform = line.getTransform();  // Get the Transform component
+        //change the transform of the stake line to go from prev to current coord
+        if (transform) {
+            // Set the position of the line
+            transform.setWorldPosition(start);
+            
+            // Set the rotation (orient the line to face the end point)
+            var lookAtRotation = quat.lookAt(transform.getWorldPosition(), end);  // Get the rotation towards the end point
+            transform.setWorldRotation(lookAtRotation);
+            
+            // Scale the line to match the distance
+            transform.setWorldScale(new vec3(1, 1, distance));
+        } else {
+            print("Error: Transform component not found on line object.");
+        }
         
     }
     

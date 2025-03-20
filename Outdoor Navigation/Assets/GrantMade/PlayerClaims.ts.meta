@@ -28,15 +28,18 @@
   ScriptInputsHidden:
     StakeLine: false
     playerCoords: false
+    stakeHolder: false
   ScriptTypesHidden:
     {}
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
     - playerCoords: !<MappingBased.PlayerTracker> 00000000-0000-0000-0000-000000000000
       StakeLine: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      stakeHolder: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input PlayerTracker playerCoords
+    - // @input SceneObject stakeHolder
     - // @input Asset.ObjectPrefab StakeLine
