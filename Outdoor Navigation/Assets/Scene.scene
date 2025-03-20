@@ -5006,6 +5006,7 @@
   ScriptInputs:
     "":
       playerCoords: !<MappingBased.PlayerTracker> 9e0291ca-4ac0-42cd-9bde-db2ae972637c
+      StakeLine: !<reference.ObjectPrefab> be691d8e-2032-4498-97f0-fd36c4926971
   ScriptTypes:
     "":
       {}

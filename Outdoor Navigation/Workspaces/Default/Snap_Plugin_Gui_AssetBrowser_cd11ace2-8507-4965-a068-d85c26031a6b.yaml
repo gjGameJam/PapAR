@@ -9,6 +9,7 @@ CollapsedEntities:
       - Echopark.hdr/Specular
       - GrantMade/PlayerClaims.ts
       - GrantMade/PlayerTracker.ts
+      - GrantMade/StakeLine.prefab
       - MapComponent/.hidden
       - MapComponent/.hidden/Location Pin Outline.ss_graph
       - MapComponent/.hidden/Location Pin.ss_graph
@@ -30,7 +31,6 @@ CollapsedEntities:
       - MapComponent/Materials/ToggleMinimapButton/ToggleMinimapButton_idle.mat
       - MapComponent/Materials/ToggleMinimapButton/ToggleMinimapButton_pinched.mat
       - MapComponent/Materials/User Pin.mat
-      - MapComponent/Prefabs
       - MapComponent/Prefabs/ExamplePin.prefab
       - MapComponent/Prefabs/Map Controller.prefab
       - MapComponent/Prefabs/Map Render.prefab

@@ -5,7 +5,7 @@ dock:
       - items:
           - items:
               - persistentName: Snap.Plugin.Gui.SceneHierarchyEditor
-                Uuid: 6778142c-0629-4c2a-afc3-92a65ce29e1a
+                Uuid: c3c77733-467b-46d7-9f28-aa5debd5c3ca
             type: section
             current: 0
           - items:
@@ -14,8 +14,8 @@ dock:
             type: section
             current: 0
         sizes:
-          - 392
-          - 326
+          - 359
+          - 359
         type: splitter
         orientation: vertical
       - items:
@@ -24,6 +24,8 @@ dock:
                 Uuid: a14d85d7-9a15-42a6-913e-3f24dea267c2
               - persistentName: Snap.Plugin.Gui.ScriptEditorPanel
                 Uuid: 82cca743-f95d-4dfd-8d0a-ff152770222f
+              - persistentName: Snap.Plugin.Gui.SceneEditor
+                Uuid: 94fcc786-1d61-4291-8538-44f68a9f4d71
             type: section
             current: 1
           - items:
@@ -61,8 +63,8 @@ dock:
         current: 0
     sizes:
       - 215
-      - 822
-      - 124
+      - 667
+      - 279
       - 358
     type: splitter
     orientation: horizontal

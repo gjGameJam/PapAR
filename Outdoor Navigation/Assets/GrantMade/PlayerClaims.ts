@@ -6,8 +6,8 @@ export class PlayerClaims extends BaseScriptComponent {
     @input 
     playerCoords: PlayerTracker; //player coords and color data
     
-    //@input
-    //StakeLine: ObjectPrefab;
+    @input
+    StakeLine: ObjectPrefab;
     claimColor: vec4; //the color of this player's claim
     
     stakes: { lat: number, long: number }[] = [];
