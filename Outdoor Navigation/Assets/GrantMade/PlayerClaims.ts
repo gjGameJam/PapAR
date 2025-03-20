@@ -5,6 +5,9 @@ export class PlayerClaims extends BaseScriptComponent {
     
     @input 
     playerCoords: PlayerTracker; //player coords and color data
+    
+    //@input
+    //StakeLine: ObjectPrefab;
     claimColor: vec4; //the color of this player's claim
     
     stakes: { lat: number, long: number }[] = [];
@@ -42,8 +45,33 @@ export class PlayerClaims extends BaseScriptComponent {
     //called by player coords to create spawn point of player (first coord reading)
     createHomeClaim(lat: number, long: number){
         print("Home Claim Origin:" +  lat + long);
-        //TODO: spawn home chunk of land around current pos
+        const radius = 0.001; // Adjust the radius to set the size of the octagon (in degrees, approximately 111km per degree)
+
+        // Create an array to store the vertices of the octagon
+        let octagonCoords: { lat: number, long: number }[] = [];
+    
+        // Calculate the 8 vertices of the octagon
+        for (let i = 0; i < 8; i++) {
+            // Calculate angle in radians for each corner (45 degrees apart)
+            const angle = (i * 45) * (Math.PI / 180);  // Convert to radians
+    
+            // Calculate the offset lat/long for this corner using basic trigonometry
+            const offsetLat = radius * Math.cos(angle);
+            const offsetLong = radius * Math.sin(angle);
+    
+            // Add the new corner to the octagonCoords array
+            octagonCoords.push({
+                lat: lat + offsetLat,
+                long: long + offsetLong
+            });
+        }
+    
+        // Add the octagon to the claim
+        octagonCoords.forEach(coord => {
+                this.claimedArea.push(coord); //add stake to claim
+        });
         //create local play zone around first player
+        this.updateClaimMesh(); //update visual for claim
     }
     
     //called by player coords when player coordinates change
@@ -51,6 +79,7 @@ export class PlayerClaims extends BaseScriptComponent {
         
         //TODO: spawn trail of stakes
         //check if in or outside of claimed territory   
+        //consider changing this to bool that is switched upon threshold crossing for efficiency
         if (this.checkIfInTerritory(lat, long)){
           //if back inside, check if staking path exists and create/add new domain to current claim
           this.claimStakedLand();
@@ -62,10 +91,14 @@ export class PlayerClaims extends BaseScriptComponent {
           this.createNewStake(lat, long);
           //if staking path loops back into itself before reaching claimed territory, you die      
           if (this.checkForStakeLoop(this.stakes[this.stakes.length - 1], this.stakes[this.stakes.length])){
-                //TODO: handle player death
-            }
+            //called when newest stake loops back upon stake path
+            this.resetPlayer();
+          }
         }
-        print("updatePos called");
+        else{
+            print("updatePos called but neither hit :(");
+        }
+        
     }
 
     
@@ -81,9 +114,64 @@ export class PlayerClaims extends BaseScriptComponent {
         //so if the most recent line between stakes crosses the home claim, add to claim
         if (this.stakes.length > 1 && this.doesStakeCrossBoundary(this.stakes[this.stakes.length - 1], this.stakes[this.stakes.length])){
             //add region defined in stakes to claim and empty stakes
-            
+            this.stakes.forEach(stake => {
+                this.claimedArea.push(stake); //add stake to claim
+            });
+            this.stakes = [];  // clears all the stakes
+            this.updateClaimMesh();
         }
+        
+    }
+    
+    //function called on player death to reset their claims, stakes, and score
+    resetPlayer(){
+        //TODO: handle player death
+    }
+    
+    //function for visually indicating a player's claim
+    updateClaimMesh(){
         //TODO: add visual for claiming staked area
+    }
+    
+    //function for visually indicating a player's stakes
+    updateStakeMesh(){
+        //TODO: add visual for staking path
+        // Create new path segment visuals
+        for (var i = 0; i < this.stakes.length - 1; i++) {
+            var start = this.stakes[i];
+            var end = this.stakes[i + 1];
+            // Create a line between each stake (or create a 3D mesh like a tube)
+            var line = this.createLineBetweenPoints(start, end);
+        }
+    }
+    
+    // Function to create a line between two points (represented by a 3D object or mesh)
+    createLineBetweenPoints(start, end) {
+        //TODO: get visual working for lines between stakes
+        var direction = end.sub(start);
+        var distance = direction.length();
+        
+        // Create a new object (or mesh) to represent the line
+//        var line = this.StakeLine.instantiate(script.getSceneObject());  // Create a new SceneObject with a name
+//        //var meshVisual = line.createComponent("MeshVisual");
+//        //meshVisual.mesh = script.pathMesh; // Use the provided path mesh (e.g., a cylinder or line)
+//        // Access the Transform component of the line
+//        var transform = line.getTransform();  // Get the Transform component
+//        //change the transform of the stake line to go from prev to current coord
+//        if (transform) {
+//            // Set the position of the line
+//            transform.setWorldPosition(start);
+//            
+//            // Set the rotation (orient the line to face the end point)
+//            var lookAtRotation = quat.lookAt(transform.getWorldPosition(), end);  // Get the rotation towards the end point
+//            transform.setWorldRotation(lookAtRotation);
+//            
+//            // Scale the line to match the distance
+//            transform.setWorldScale(new vec3(1, 1, distance));
+//        } else {
+//            print("Error: Transform component not found on line object.");
+//        }
+        
     }
     
     // Function to check if a point (latitude, longitude) is inside the polygon (claimed area)
@@ -91,9 +179,6 @@ export class PlayerClaims extends BaseScriptComponent {
         // Call the point-in-polygon check function to see if coords are in claim polygon
         return this.isPointInPolygon(lat, long, this.claimedArea);
     }
-
-
-
     
     //checks if player runs into another stake, which kills the owning player
     checkForStakeLoop(prevStake: { lat: number, long: number }, newStake: { lat: number, long: number }): boolean {
@@ -166,7 +251,7 @@ export class PlayerClaims extends BaseScriptComponent {
         let direction = this.getBearing(pLo, pLa, lat, long);//0 = north, 180 = south
         //add coords to stakes array
         this.stakes.push({ lat, long });
-        //TODO: visually connect with previous stake
+        this.updateStakeMesh(); //update visual for stakes
     }
     
     //gets the distance between coords via Haversine formula

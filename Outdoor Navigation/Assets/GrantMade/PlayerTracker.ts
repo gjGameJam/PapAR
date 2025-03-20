@@ -51,8 +51,8 @@ export class PlayerTracker extends BaseScriptComponent {
              }
             this.horizontalAccuracy = geoPosition.horizontalAccuracy;
             this.verticalAccuracy = geoPosition.verticalAccuracy;
-            print('new long: ' + this.longitude);
-            print('new lat: ' + this.latitude);
+            //print('new long: ' + this.longitude);
+            //print('new lat: ' + this.latitude);
             //create stake in new location (if applicable)
             this.playerClaim.updatePos(this.latitude, this.longitude);
             this.timestamp = geoPosition.timestamp;
