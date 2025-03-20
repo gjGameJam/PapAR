@@ -26,6 +26,8 @@ export class PlayerTracker extends BaseScriptComponent {
     this.createEvent('OnStartEvent').bind(() => {
       this.createAndLogLocation();
     });
+        
+
     
     // repeatedly update position
     this.repeatUpdateUserLocation = this.createEvent('DelayedCallbackEvent');
@@ -38,14 +40,21 @@ export class PlayerTracker extends BaseScriptComponent {
             this.timestamp === undefined ||
             this.timestamp.getTime() !== geoPosition.timestamp.getTime()
           ) {
+            //set previous lat and long to current lat and long before setting new coords
+            this.prevlatitude = this.latitude;
+            this.prevlongitude = this.longitude
             this.latitude = geoPosition.latitude;
             this.longitude = geoPosition.longitude;
+            if ((this.prevlatitude == undefined || this.prevlongitude == undefined) && (this.latitude != undefined || this.longitude != undefined)){
+                 this.HomeCoords = { latitude: this.latitude, longitude: this.longitude };     
+                 this.createHomePoint(); //this should only happen once (prev points will be set below)
+             }
             this.horizontalAccuracy = geoPosition.horizontalAccuracy;
             this.verticalAccuracy = geoPosition.verticalAccuracy;
             print('new long: ' + this.longitude);
             print('new lat: ' + this.latitude);
             //create stake in new location (if applicable)
-            this.playerClaim.createNewStake(this.latitude, this.longitude);
+            this.playerClaim.updatePos(this.latitude, this.longitude);
             this.timestamp = geoPosition.timestamp;
           }
         },
@@ -56,26 +65,8 @@ export class PlayerTracker extends BaseScriptComponent {
       // Acquire next location update in 1 second
       this.repeatUpdateUserLocation.reset(1.0);
     });
+        
 
-    // Create and bind event to repeatedly run
-    this.playerUpdate = this.createEvent('DelayedCallbackEvent');
-    this.playerUpdate.bind(() => {
-            
-      //first print out coords to ensure accuracy
-      //print('lat: ' + this.latitude + ', long: ' + this.longitude);
-      //if prevlat and prevlong are undefined and there is gps data available, create home point
-      if ((this.prevlatitude == undefined || this.prevlongitude == undefined) && (this.latitude != undefined || this.longitude != undefined)){
-                this.HomeCoords = { latitude: this.latitude, longitude: this.longitude };     
-                this.createHomePoint(); //this should only happen once (prev points will be set below)
-      }
-      
-      
-      //set previous lat and long to current lat and long
-      this.prevlatitude = this.latitude;
-      this.prevlongitude = this.longitude
-      
-      this.playerUpdate.reset(1.0);  // Run this function again in one second
-    });
   }
 
   // Function called on start
@@ -88,7 +79,6 @@ export class PlayerTracker extends BaseScriptComponent {
 
     // Acquire next location immediately with zero delay to start loop
     this.repeatUpdateUserLocation.reset(0.0);
-    this.playerUpdate.reset(0);
   }
   
   //function to spawn starter territory for player
@@ -102,7 +92,17 @@ export class PlayerTracker extends BaseScriptComponent {
      if (this.prevlatitude == undefined || this.prevlongitude == undefined || this.latitude == undefined || this.longitude == undefined){
          return false;
      }
-        return true;
+     return true;
+  }
+  
+    //getter for previous longitude
+  getPrevLong(){
+      return this.prevlongitude;
+    }
+    
+    //getter for previous longitude
+  getPrevLat(){
+      return this.prevlatitude;
   }
     
     
