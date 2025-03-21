@@ -1,0 +1,42 @@
+- !<AssetImportMetadata/9c88db32-d3e5-4870-8e51-2215142ed9b7>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 7e13a2b7-b990-41e4-b6e6-f9a81005ef70
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 7e13a2b7-b990-41e4-b6e6-f9a81005ef70
+  PackageType: NotAPackage
+  PackagePolicy: CannotBeUnpacked
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 1cbbb03a-b60c-4ae8-8f15-d8260a7ae604
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/1cbbb03a-b60c-4ae8-8f15-d8260a7ae604>
+  SvgIcon: ""
+  Description: ""
+  InternalVersion: 0
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  ComponentUid: 0d173fd5-e2ff-41c2-89fe-a79cc07f52fd
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  CurrentVisibility: Editable
+  MaxVisibility: Editable
+  ScriptInputsHidden:
+    deviceTracking: false
+    horizonLineIMG: false
+  ScriptTypesHidden:
+    {}
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  DefaultScriptInputs:
+    - deviceTracking: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
+      horizonLineIMG: !<reference.Image> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Component.DeviceTracking deviceTracking
+    - // @input Component.Image horizonLineIMG
