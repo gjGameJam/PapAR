@@ -1,8 +1,8 @@
-- !<Material/0bc86543-ba5a-48f1-aa34-57f3a3090b94>
+- !<Material/0425a979-6c8d-4788-a55c-4bd945e0ae7e>
   PackagePath: ""
   PassesInfo:
-    - !<own> 357e594d-4627-44f2-be47-b423a4debb85
-- !<PassInfo/357e594d-4627-44f2-be47-b423a4debb85>
+    - !<own> 4fe1e20d-0f47-49ff-a4ec-1b17191768ab
+- !<PassInfo/4fe1e20d-0f47-49ff-a4ec-1b17191768ab>
   CachedProperties:
     - Port_Depth_N004:
         typeIdx: 1
@@ -73,7 +73,7 @@
     - NODE_27_DROPLIST_ITEM 0
     - NODE_49_DROPLIST_ITEM 0
     - NODE_69_DROPLIST_ITEM 0
-  BlendMode: PremultipliedAlphaAuto
+  BlendMode: Disabled
   Properties:
     Port_Default_N204:
       typeIdx: 1
