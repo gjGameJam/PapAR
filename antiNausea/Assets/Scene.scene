@@ -3021,7 +3021,7 @@
 - !<SceneObject/2da78e10-5118-4dc4-af2d-d43df68e405b>
   PrefabRemaps:
     []
-  Name: HorizonBar
+  Name: AntiNauseaOverlay
   Enabled: true
   Layers: 1048576
   LocalTransform:
@@ -3034,6 +3034,7 @@
   Components:
     - !<own> ae00a255-b555-44e2-b2d4-f47b69d2ba0e
     - !<own> c0c77e18-cd26-4fd4-87dc-5bfdde4cdf54
+    - !<own> 742a680f-fb78-4c48-be5b-a19f2cb450d4
 - !<RenderMeshVisual/2e20f35f-02bc-4dc1-b7b9-d039db2267dc>
   PrefabRemaps:
     []
@@ -7007,6 +7008,25 @@
     - !<own> 9ad1cea4-9b71-4198-915a-6287cbcaa8fa
   Components:
     []
+- !<Image/742a680f-fb78-4c48-be5b-a19f2cb450d4>
+  PrefabRemaps:
+    []
+  Name: Image
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Fit
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> e1afd13c-f217-46b8-acc5-cb8083493f4b
+  FlipX: false
+  FlipY: false
+  RotationAngle: 0
+  Pivot: {x: 0.000000, y: 0.000000}
+  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
 - !<SceneObject/75220963-d729-41bf-be89-1daf0fab2486>
   PrefabRemaps:
     []
