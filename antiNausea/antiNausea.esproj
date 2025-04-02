@@ -26,14 +26,14 @@ metaInfo:
     []
   lensName: Specs Starter
   lensDescriptors:
-    []
+    - GEN_AI_ICON
   lensApplicability:
     - Front
     - Back
   lensClientCompatibilities:
     - Spectacles
   platformBundlesEnabled: false
-  iconHash: ""
+  iconHash: b258309ad3f276d9d614bf584f8a7000
   videoPreviewHash: ""
   fromTemplateName: Spectacles
   fromTemplateUrl: Lens Studio 5.7.2.25030805
