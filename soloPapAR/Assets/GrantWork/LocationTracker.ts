@@ -50,8 +50,8 @@ export class LocationTracker extends BaseScriptComponent {
           ) {
             this.latitude = geoPosition.latitude;
             this.longitude = geoPosition.longitude;
-            this.horizontalAccuracy = geoPosition.horizontalAccuracy;
-            this.verticalAccuracy = geoPosition.verticalAccuracy;
+//            this.horizontalAccuracy = geoPosition.horizontalAccuracy;
+//            this.verticalAccuracy = geoPosition.verticalAccuracy;
             print('long: ' + this.longitude);
             print('lat: ' + this.latitude);
             this.timestamp = geoPosition.timestamp;
