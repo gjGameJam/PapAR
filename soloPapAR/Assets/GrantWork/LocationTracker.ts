@@ -1,4 +1,5 @@
 require('LensStudio:RawLocationModule');
+import { GridClaimer } from './GridClaimer';
 
 @component
 export class LocationTracker extends BaseScriptComponent {
@@ -9,6 +10,9 @@ export class LocationTracker extends BaseScriptComponent {
   verticalAccuracy: number;
   timestamp: Date;
   locationSource: string;
+    
+  @input
+  GridClaimer: GridClaimer;
 
   private repeatUpdateUserLocation: DelayedCallbackEvent;
   private locationService: LocationService;
@@ -28,6 +32,7 @@ export class LocationTracker extends BaseScriptComponent {
   }
 
   createAndLogLocationAndHeading() {
+    
     // Create location handler
     this.locationService = GeoLocation.createLocationService();
 
@@ -50,6 +55,7 @@ export class LocationTracker extends BaseScriptComponent {
             print('long: ' + this.longitude);
             print('lat: ' + this.latitude);
             this.timestamp = geoPosition.timestamp;
+            this.GridClaimer.updatePos(this.latitude, this.longitude);
           }
         },
         (error) => {
