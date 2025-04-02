@@ -226,6 +226,7 @@
     "":
       deviceTracking: !<reference.DeviceTracking> 8f7490f8-fa74-499d-ac92-44fc0dfb8b8e
       horizonLineIMG: !<reference.Image> c0c77e18-cd26-4fd4-87dc-5bfdde4cdf54
+      antiNauseaHUD: !<reference.ScreenTransform> ae00a255-b555-44e2-b2d4-f47b69d2ba0e
   ScriptTypes:
     "":
       {}
@@ -2886,7 +2887,7 @@
     - ff6e802b-cf7a-4fe8-b6d3-d5fb8ed1acdd: 3bc46d60-13b1-4b6e-bbdd-fb8c67f401a5
     - ffac3d7c-1404-43d2-a9c1-086fed177a66: 405de18b-1683-4e73-bff0-aee9ea9285f5
   Name: SIK Examples
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform:
     position: {x: 0.000000, y: 0.000000, z: 0.000000}
@@ -4444,7 +4445,7 @@
     - fe0eb749-0de0-4408-a7d9-17a51cda691f: b9d14d3a-7945-428c-a768-41692c2eba14
     - fec5414e-bc42-47bd-b070-e99a804072b3: 022bb054-542f-44f4-bb45-962f06351c51
   Name: SpectaclesInteractionKit
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform:
     position: {x: 0.000000, y: 0.000000, z: 0.000000}
@@ -7026,7 +7027,7 @@
   FlipY: false
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
-  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
+  ExtentsTarget: !<reference> 2fd6473a-66aa-432d-89c1-16a44aa80440
 - !<SceneObject/75220963-d729-41bf-be89-1daf0fab2486>
   PrefabRemaps:
     []
@@ -11217,7 +11218,7 @@
   FlipY: false
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
-  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
+  ExtentsTarget: !<reference> 2fd6473a-66aa-432d-89c1-16a44aa80440
 - !<SceneObject/c240820e-3730-40e2-ac17-0eeca97d9572>
   PrefabRemaps:
     []

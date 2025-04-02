@@ -26,6 +26,7 @@
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
+    antiNauseaHUD: false
     deviceTracking: false
     horizonLineIMG: false
   ScriptTypesHidden:
@@ -34,9 +35,11 @@
   DefaultScriptInputs:
     - deviceTracking: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
       horizonLineIMG: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      antiNauseaHUD: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input Component.DeviceTracking deviceTracking
     - // @input Component.Image horizonLineIMG
+    - // @input Component.ScreenTransform antiNauseaHUD

@@ -8,38 +8,45 @@ export class HorizonLineLens extends BaseScriptComponent {
     
     horizonLineObj: SceneObject; //object to emulate horizon line
     
+    prevPitch: number = 0;
     prevRoll: number = 0; // Store last known rotation to only temporally update
+    smoothingFactor: number = 1; // Adjust for smoother motion (lower = smoother, higher = faster)    
     
+    @input
     antiNauseaHUD : ScreenTransform;
     
-    //when the transform is changed, update horizon lens
+    //function to update horizon line rotation to always stay parallel to IRL horizon
     onAfterTransformUpdated() {
         // Get rotation data from device tracking object
-        var transform = this.deviceTracking.getTransform();
-        var forward = transform.forward;
-        var right = transform.right;
-        var up = transform.up;
-        //var yaw = Math.atan2(forward.z, forward.x)  + Math.PI // y rotation
-        //var pitch = Math.asin(forward.y) * -1 // x rotation
-        //get roll in degrees
-        //var rollAngle = Math.atan2(right.y, right.x) * (180 / Math.PI); //check accuracy of roll calcs (like this)
-        var roll = Math.atan2(right.y, up.y) * (180 / Math.PI); // This calculates the tilt/roll around the z-axis
-        
-        // Check if roll (side to side) has changed
-        if (roll != this.prevRoll) {
-            print("Roll Changed: " + roll);
-            this.prevRoll = roll; // Update last known rotation
-            //update horizon line UI with new rotation
-            this.antiNauseaHUD.rotation = quat.fromEulerAngles(0, 0, roll);
-            
-
+        const transform = this.deviceTracking.getTransform();
+        if (!transform) {
+            print("Error: DeviceTransform not available.");
+            return;
         }
-        
-        
+
+        // Extract the device's forward, right, and up vectors from the transform
+        const right = transform.right;
+        const up = transform.up;
+
+        // Calculate roll (rotation around the z-axis)
+        const roll = Math.atan2(right.y, up.y) * (180 / Math.PI); // Convert to degrees
+
+        // Interpolate between the previous roll and the new roll for smoother transition
+        this.prevRoll = this.prevRoll * (1 - this.smoothingFactor) + roll * this.smoothingFactor;
+
+        // Convert degrees to radians for quaternion rotation
+        const rollRadians = -this.prevRoll * (Math.PI / 180);
+
+        // Apply the updated roll to the horizon line
+        this.antiNauseaHUD.rotation = quat.fromEulerAngles(0, 0, rollRadians);
     }
+
+    
     
     onAwake() {
-
+        print("Horizon Line script awake");
+        this.setHorizonLineTransparency(0.5); //set initial transparency
+        this.createEvent("UpdateEvent").bind(this.onAfterTransformUpdated.bind(this));
     }
     
     //0 for transparent 1 for opaque (to be called from anti nausea settings in future)
