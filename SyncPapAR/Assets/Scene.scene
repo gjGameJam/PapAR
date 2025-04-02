@@ -4,6 +4,7 @@
     - !<own> 00000000-0000-0065-0000-000000000064
     - !<own> 0005641c-028d-459a-0000-000000014b4d
     - !<own> fe4fff83-e5e7-4310-80c2-38cc3061ebf3
+    - !<own> 469f85a9-2378-46f8-a7ec-8bf04c863e56
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -4120,6 +4121,22 @@
     - !<own> 8dfb1bb1-d4b7-4ca4-98f1-c5419da7f193
   Components:
     - !<own> e9ebcc91-8664-411d-be3b-a5a304cd338e
+- !<ScriptComponent/3f0de5a7-4742-45a1-8c05-f5715674911d>
+  PrefabRemaps:
+    []
+  Name: LocationTracker
+  Enabled: true
+  ScriptAsset: !<reference> 40a2071f-52ed-4587-9f25-8832f8a4433d
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/3f33e201-80d3-49d3-84f1-6369a6450a9e>
   PrefabRemaps:
     []
@@ -4352,6 +4369,21 @@
     []
   Components:
     - !<own> 9132110c-d5da-46b3-a05f-246b8680f22b
+- !<SceneObject/469f85a9-2378-46f8-a7ec-8bf04c863e56>
+  PrefabRemaps:
+    []
+  Name: LocationTracker
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 3f0de5a7-4742-45a1-8c05-f5715674911d
 - !<SceneObject/46bb8623-b92a-4e4e-9976-882a4fea780b>
   PrefabRemaps:
     []
