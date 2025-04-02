@@ -6,6 +6,8 @@ export class GridClaimer extends BaseScriptComponent {
     prevlat: number = 400;
     prevlong: number = 400;
     hasPrev: boolean = false; //has prev coords
+    // Store world origin to convert coords to grid space
+    worldOrigin: { lat: number; long: number } | null = null; 
     
     onAwake() {
 
@@ -20,10 +22,12 @@ export class GridClaimer extends BaseScriptComponent {
         //either stake when out of claim or do nothing when in claim
         if (this.hasPrev) {
             //convert lat and long to world coords
-            //determine which grid cell world coords are in
+            //convert gps coordinates to x,y of game grid cell
             //get the CellState of the grid cell
             //if CellState == Staked, stake owner dies and their stakes + claims return unclaimed
-            //if CellState == Claimed, player drops stake on claim
+            //if CellState == Unclaimed, player drops stake on claim
+            //if CellState == Claimed by someone else, player drops stake on claim
+            //if CellState == Claimed by player, expand claim to include area encompassed by claim loop
         }
     }
     
@@ -34,9 +38,13 @@ export class GridClaimer extends BaseScriptComponent {
                 // First call: Initialize current position
                 this.lat = lat;
                 this.long = long;
+                //set world origin for all in lens instance to base location on
+                if (!this.worldOrigin) {
+                    this.worldOrigin = { lat: this.lat, long: this.long };
+                }
                 return;
             }
-            // Second call: Set previous position
+            // Second call: Set previous position and world origin
             this.prevlat = this.lat;
             this.prevlong = this.long;
             this.hasPrev = true;
@@ -49,7 +57,6 @@ export class GridClaimer extends BaseScriptComponent {
         this.lat = lat;
         this.long = long;
     }
-
 }
 
 
@@ -119,4 +126,3 @@ class SparseGrid {
         this.stakedCells.delete(key);
     }
 }
-
