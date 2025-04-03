@@ -11,6 +11,7 @@ export class GridClaimer extends BaseScriptComponent {
     prevlong: number = 400;
     hasPrev: boolean = false; //has prev coords
     playerID: number = 0;
+    DEGREES_TO_RADIANS = Math.PI / 180;
     // Store world origin to convert coords to grid space
     worldOrigin: { lat: number; long: number } | null = null; 
     
@@ -24,13 +25,17 @@ export class GridClaimer extends BaseScriptComponent {
     updatePos(lat : number, long : number){
         this.setCurrAndPrev(lat, long);
         print('location has been updated');
-        this.PlayerVisuals.updateHUDText(lat, long, 0, 0);
+        //this.PlayerVisuals.updateHUDText(lat, long, 0, 0);
         if (this.hasPrev) {
             //convert lat and long to world coords
             const worldPos = this.gpsCoordsToWorldPos(lat, long);
             //convert world coordinates to get game grid cell
             const gridPos = this.worldCoordsToGridPos(worldPos);
             //update player visuals with coords and grid pos
+            const latOffset = lat - this.worldOrigin.lat;
+            const longOffset = long - this.worldOrigin.long;
+            this.PlayerVisuals.updateHUDText(lat, long, gridPos.x, gridPos.y, latOffset, longOffset);
+            
             //this.PlayerVisuals.updateHUDText(lat, long, gridPos.x, gridPos.y)
             //get the CellState of the grid cell
             const currState = this.grid.getCellState(gridPos.x, gridPos.y);
@@ -204,19 +209,36 @@ export class GridClaimer extends BaseScriptComponent {
         return new vec2(row, col);
     }
     
-    //function to determine where player is in world space from their gps coords
-    gpsCoordsToWorldPos(lat: number, long: number): vec2{
-        // Define conversion factors (every five decimal points difference is ~1 meter)
-        const metersPerLat = 111320; // 1 degree latitude ≈ 111.32 km (constant)
-        const metersPerLong = Math.cos(lat * Math.PI / 180) * 111320; 
-        // Longitude conversion depends on latitude
+   // Function to determine where the player is in world space from their GPS coordinates
+    gpsCoordsToWorldPos(lat: number, long: number): vec2 {
+        const latRad = lat * this.DEGREES_TO_RADIANS;
+        const latDiff = this.worldOrigin.lat - lat;
+        const longDiff = this.worldOrigin.long - long;
     
-        // Convert lat/lon difference to meters
-        const latMeterDiff = (this.worldOrigin.lat - lat) * metersPerLat;
-        const longMeterDiff = (this.worldOrigin.long - long) * metersPerLong;
-        //return vec2 of world pos difference between origin and coords
+        // Precompute cosine terms to reduce redundant calculations
+        const cosLat = Math.cos(latRad);
+        const cos2Lat = 2 * cosLat * cosLat - 1; // cos(2x) identity
+        const cos4Lat = 2 * cos2Lat * cos2Lat - 1; // cos(4x)
+        const cos6Lat = 2 * cos4Lat * cos2Lat - 1; // cos(6x)
+    
+        // Precompute higher multiples of latRad
+        const latRad3 = 3 * latRad;
+        const latRad5 = 5 * latRad;
+    
+        // Compute meters per latitude and longitude degree
+        const metersPerLat = 111132.92 - 559.82 * cos2Lat + 1.175 * cos4Lat - 0.0023 * cos6Lat;
+        const metersPerLong = 111412.84 * cosLat - 93.5 * Math.cos(latRad3) + 0.118 * Math.cos(latRad5);
+    
+        // Convert latitude/longitude difference to meters
+        const latMeterDiff = latDiff * metersPerLat;
+        const longMeterDiff = longDiff * metersPerLong;
+    
+        // Return meter difference from current world origin coordinates
         return new vec2(longMeterDiff, latMeterDiff);
     }
+
+
+
     
     //updates the lat, long, prevlat, prevlong
     setCurrAndPrev(lat: number, long: number) {
