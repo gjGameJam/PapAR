@@ -1,34 +1,120 @@
+import { LoopDetection } from './UnionFindLoopDetection';
+
 @component
 export class GridClaimer extends BaseScriptComponent {
     
+    metersPerCell: number = 4;//cells are this number by this number meters
+    grid: SparseGrid = new SparseGrid(); // Initialize the grid
+    loopDetection: LoopDetection = new LoopDetection(); // Initialize the loop detection algorithm
     lat: number = 400;
     long: number = 400;
     prevlat: number = 400;
     prevlong: number = 400;
     hasPrev: boolean = false; //has prev coords
+    playerID: number = 0;
     // Store world origin to convert coords to grid space
     worldOrigin: { lat: number; long: number } | null = null; 
     
-    onAwake() {
-
-    }
+    @input
+    LoopDetection: LoopDetection;
+    
+//    onAwake() {
+//    }
     
     //function called by location tracker script whenever coordinates change
     updatePos(lat : number, long : number){
-        print('location has been updated');
         this.setCurrAndPrev(lat, long);
-        //if lat, long, prevlat, and prevlong are set, 
-        //check for collision with stake line, if so kill the owning player
-        //either stake when out of claim or do nothing when in claim
+        print('location has been updated');
         if (this.hasPrev) {
             //convert lat and long to world coords
-            //convert gps coordinates to x,y of game grid cell
+            const worldPos = this.gpsCoordsToWorldPos(lat, long);
+            //convert world coordinates to get game grid cell
+            const gridPos = this.worldCoordsToGridPos(worldPos);
             //get the CellState of the grid cell
-            //if CellState == Staked, stake owner dies and their stakes + claims return unclaimed
-            //if CellState == Unclaimed, player drops stake on claim
-            //if CellState == Claimed by someone else, player drops stake on claim
-            //if CellState == Claimed by player, expand claim to include area encompassed by claim loop
+            const currState = this.grid.getCellState(gridPos.x, gridPos.y);
+            
+            //the state of the grid cell matters, handle interaction
+            if (currState === CellState.STAKED) {
+                //stake owner dies and their stakes + claims return unclaimed
+                //TODO: create function to remove all stakes & claims
+            }
+            else if (currState === CellState.UNCLAIMED) {
+                // player drops stake on unclaimed land
+                this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+            }
+            else if (currState === CellState.CLAIMED) {
+                const owner = this.grid.getClaimOwner(gridPos.x, gridPos.y);
+                if (owner === this.playerID) {
+                    // expand claim to include area encompassed by claim loop
+                    this.addStakedRegionToClaim();
+                }
+                else {
+                    //multiplayer: if the claim owner is in the entered cell, you die
+                    // player drops stake on claim (that isn't theirs yet)
+                    this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+                }
+            }
         }
+    }
+    
+    //add the staked cells to claim, then claim all cells inside stake loop and claim line
+    addStakedRegionToClaim(){
+        print('adding staked region to claim');
+        // Collect all staked cells belonging to the player
+        const playerStakes = this.grid.getPlayerStakes(this.playerID);
+        // Attempt to find a closed loop of the player stakes
+        const closedLoop = this.findClosedLoop(playerStakes);
+        if (!closedLoop) {
+            print('No closed loop detected.');
+            return;
+        }
+    
+        // Convert all staked cells in the loop to claims
+        for (const key of closedLoop) {
+            const [x, y] = key.split(',').map(Number);
+            this.grid.claimCell(x, y, this.playerID);
+        }
+    
+        // Find the enclosed area and claim it
+        this.findAndFillEnclosedRegion(closedLoop);
+    
+        print('Claim expansion complete!');
+    }
+    
+    
+    //converts the world coords to grid row and column number
+    worldCoordsToGridPos(wPos: vec2): vec2{
+        //divide the meters away from origin by meters per cell
+        //this gets the cells away from origin to determine grid pos
+        const row = wPos.x / this.metersPerCell;
+        const col = wPos.y / this.metersPerCell;
+        return new vec2(row, col);
+    }
+    
+    // Helper function to detect a closed loop of stakes
+    findClosedLoop(stakes: GridCell[]): GridCell[] | null {
+        // TODO: Implement a loop detection algorithm (e.g., BFS/DFS or convex hull method)
+        // If a closed loop is found, return the ordered list of stakes forming the loop.
+        return null;
+    }
+    
+    // Helper function to find the area of ands claim the enclosed region
+    findAndFillEnclosedRegion(loop: GridCell[]) {
+        // TODO: Implement a flood-fill algorithm or polygon scanline fill
+    }
+    
+    //function to determine where player is in world space from their gps coords
+    gpsCoordsToWorldPos(lat: number, long: number): vec2{
+        // Define conversion factors (every five decimal points difference is ~1 meter)
+        const metersPerLat = 111320; // 1 degree latitude ≈ 111.32 km (constant)
+        const metersPerLong = Math.cos(lat * Math.PI / 180) * 111320; 
+        // Longitude conversion depends on latitude
+    
+        // Convert lat/lon difference to meters
+        const latMeterDiff = (this.worldOrigin.lat - lat) * metersPerLat;
+        const longMeterDiff = (this.worldOrigin.long - long) * metersPerLong;
+        //return vec2 of world pos difference between origin and coords
+        return new vec2(longMeterDiff, latMeterDiff);
     }
     
     //updates the lat, long, prevlat, prevlong
@@ -38,6 +124,9 @@ export class GridClaimer extends BaseScriptComponent {
                 // First call: Initialize current position
                 this.lat = lat;
                 this.long = long;
+                //TODO: create grid on start
+                this.createInitialGrid(); // Create the grid when the world origin is set
+                //TODO: create home claim on start
                 //set world origin for all in lens instance to base location on
                 if (!this.worldOrigin) {
                     this.worldOrigin = { lat: this.lat, long: this.long };
@@ -56,6 +145,17 @@ export class GridClaimer extends BaseScriptComponent {
         // Always update the current position
         this.lat = lat;
         this.long = long;
+    }
+    
+    //function to create big unclaimed grid around player
+    createInitialGrid() {
+        const gridRadius = 10; // Create a 10x10 grid area around the player
+        for (let x = -gridRadius; x <= gridRadius; x++) {
+            for (let y = -gridRadius; y <= gridRadius; y++) {
+                this.grid.unclaimCell(x, y); // Initialize all cells as unclaimed
+            }
+        }
+        print("Grid initialized.");
     }
 }
 
@@ -124,5 +224,12 @@ class SparseGrid {
     unstakeCell(x: number, y: number): void {
         const key: GridCell = `${x},${y}`;
         this.stakedCells.delete(key);
+    }
+    
+    //gets all staked cells from the player id
+    getPlayerStakes(playerID: number): GridCell[] {
+        return Array.from(this.stakedCells.entries())
+            .filter(([_, owner]) => owner === playerID)
+            .map(([cell, _]) => cell);
     }
 }
