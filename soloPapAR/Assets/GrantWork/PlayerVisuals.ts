@@ -22,8 +22,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         print('HUD text has been updated');
         // Display the clamped coordinates and grid position
         this.uiText.text = 
-            `Coordinates: (${clampedLat}, ${clampedLong})\n` + 
-            `Grid Cell: (${clampedgridx}, ${clampedgridx})\n` + 
-            `Offset: (${clampedlatOff}, ${clampedlongOff})`;
+            `Offset: (${clampedLat}, ${clampedLong})\n` + 
+            `WorldPos: (${clampedgridx}, ${clampedgridy})\n` + 
+            `Grid Cell: (${clampedlatOff}, ${clampedlongOff})`;
     }
 }
