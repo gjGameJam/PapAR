@@ -3,8 +3,9 @@ import { PlayerVisuals } from './PlayerVisuals';
 @component
 export class GridClaimer extends BaseScriptComponent {
     
-    metersPerCell: number = 4;//cells are this number by this number meters
-    grid: SparseGrid = new SparseGrid(); // Initialize the grid
+    metersPerCell: number = 5;//cells are this number by this number meters
+    gridRadius: number = 10;
+    grid: SparseGrid = new SparseGrid(this.gridRadius); // Initialize the grid as gridRadius * gridRadius
     lat: number = 400;
     long: number = 400;
     prevlat: number = 400;
@@ -12,7 +13,7 @@ export class GridClaimer extends BaseScriptComponent {
     hasPrev: boolean = false; //has prev coords
     playerID: number = 0;
     DEGREES_TO_RADIANS = Math.PI / 180;
-    gridRadius: number = 10;
+    
     // Store world origin to convert coords to grid space
     worldOrigin: { lat: number; long: number } | null = null; 
     
@@ -31,13 +32,15 @@ export class GridClaimer extends BaseScriptComponent {
             //get offset from world origin in coords
             const originOffset = this.getOriginOffset(lat, long);
             //convert lat and long to offset from world origin
-            const worldPos = this.gpsCoordsToWorldPos(originOffset.x, originOffset.y);
+            const worldPos = this.gpsCoordsToWorldPos(originOffset.y, originOffset.x);
             //convert world coordinates to get game grid cell
             const gridPos = this.worldCoordsToGridPos(worldPos);
-            //update player visuals with coords and grid pos
+            //TODO: remove debugging update player visuals with coords and grid pos
             this.PlayerVisuals.updateHUDText(originOffset.x, originOffset.y, worldPos.x, worldPos.y, gridPos.x, gridPos.y);
-            
-            //this.PlayerVisuals.updateHUDText(lat, long, gridPos.x, gridPos.y)
+            //update player minimap (if necessary)
+            if (!this.PlayerVisuals.updateMiniMap(gridPos, this.grid)){
+                return; //return early if player is in same grid as last updatePos call
+            }
             //get the CellState of the grid cell
             const currState = this.grid.getCellState(gridPos.x, gridPos.y);
             
@@ -66,14 +69,14 @@ export class GridClaimer extends BaseScriptComponent {
     }
     
     //converts the world coords to grid row and column number
-    worldCoordsToGridPos(wPos: vec2): vec2{
-        //assuming middle of grid is at world origin and the grid is gridRad * gridRad
-        //divide the meters away from origin by meters per cell
-        //this gets the cells away from origin to determine grid pos
-        const row = this.gridRadius + Math.floor(wPos.x / this.metersPerCell);
-        const col = this.gridRadius - Math.floor(wPos.y / this.metersPerCell);
-        return new vec2(row, col);
+    worldCoordsToGridPos(wPos: vec2): vec2 {
+        // The center of the grid corresponds to (gridRadius, gridRadius)
+        const col = Math.ceil(this.gridRadius + wPos.x / this.metersPerCell);
+        const row = Math.ceil(this.gridRadius + wPos.y / this.metersPerCell);
+    
+        return new vec2(col, row);
     }
+
     
     //returns difference between current lat and lat of world origin
     getOriginOffset(lat: number, long: number): vec2{
@@ -82,44 +85,38 @@ export class GridClaimer extends BaseScriptComponent {
         return new vec2(latDiff, longDiff);
     }
     
-//    // Function to determine where the player is in world space from their GPS coordinates
-//    gpsCoordsToWorldPos(lat: number, long: number): vec2 {
-//        const originLatRad = this.worldOrigin.lat * this.DEGREES_TO_RADIANS; // Use world origin latitude
-//        const latDiff = lat - this.worldOrigin.lat;
-//        const longDiff = long - this.worldOrigin.long;
-//    
-//        // Precompute cosine terms based on world origin latitude
-//        const cosLat = Math.cos(originLatRad);
-//        const cos2Lat = 2 * cosLat * cosLat - 1; // cos(2x) identity
-//        const cos4Lat = 2 * cos2Lat * cos2Lat - 1; // cos(4x)
-//        const cos6Lat = 2 * cos4Lat * cos2Lat - 1; // cos(6x)
-//    
-//        // Compute meters per latitude and longitude degree at the origin latitude
-//        const metersPerLat = 111132.92 - 559.82 * cos2Lat + 1.175 * cos4Lat - 0.0023 * cos6Lat;
-//        const metersPerLong = 111412.84 * cosLat - 93.5 * Math.cos(3 * originLatRad) + 0.118 * Math.cos(5 * originLatRad);
-//    
-//        // Convert latitude/longitude difference to meters
-//        const latMeterDiff = latDiff * metersPerLat;
-//        const longMeterDiff = longDiff * metersPerLong;
-//    
-//        // Longitude is usually x, latitude is usually y (negative to make north positive)
-//        return new vec2(longMeterDiff, -latMeterDiff);
-//    }
-    
+    // Function to determine where the player is in world space from their GPS coordinates
     gpsCoordsToWorldPos(latDiff: number, longDiff: number): vec2 {
-        const metersPerLat = 111320; // Approximate meters per degree of latitude
-        const metersPerLong = Math.cos(this.worldOrigin.lat * this.DEGREES_TO_RADIANS) * 111320;
+        const originLatRad = this.worldOrigin.lat * this.DEGREES_TO_RADIANS; // Use world origin latitude
+
+        // Precompute cosine terms based on world origin latitude
+        const cosLat = Math.cos(originLatRad);
+        const cos2Lat = 2 * cosLat * cosLat - 1; // cos(2x) identity
+        const cos4Lat = 2 * cos2Lat * cos2Lat - 1; // cos(4x)
+        const cos6Lat = 2 * cos4Lat * cos2Lat - 1; // cos(6x)
     
+        // Compute meters per latitude and longitude degree at the origin latitude
+        const metersPerLat = 111132.92 - 559.82 * cos2Lat + 1.175 * cos4Lat - 0.0023 * cos6Lat;
+        const metersPerLong = 111412.84 * cosLat - 93.5 * Math.cos(3 * originLatRad) + 0.118 * Math.cos(5 * originLatRad);
+    
+        // Convert latitude/longitude difference to meters
         const latMeterDiff = latDiff * metersPerLat;
         const longMeterDiff = longDiff * metersPerLong;
     
-        return new vec2(latMeterDiff, longMeterDiff); // Longitude (x), Latitude (y)
+        // return lat and long
+        return new vec2(longMeterDiff, latMeterDiff);
     }
-
-
-
-
-
+   
+    
+//    gpsCoordsToWorldPos(latDiff: number, longDiff: number): vec2 {
+//        const metersPerLat = 111320; // Approximate meters per degree of latitude
+//        const metersPerLong = Math.cos(this.worldOrigin.lat * this.DEGREES_TO_RADIANS) * 111320;
+//    
+//        const latMeterDiff = latDiff * metersPerLat;
+//        const longMeterDiff = longDiff * metersPerLong;
+//    
+//        return new vec2(latMeterDiff, longMeterDiff); // Longitude (x), Latitude (y)
+//    }
 
     
     //updates the lat, long, prevlat, prevlong
@@ -299,7 +296,7 @@ export class GridClaimer extends BaseScriptComponent {
 
 
 // Define possible states for a grid cell
-enum CellState {
+export enum CellState {
     UNCLAIMED = "Unclaimed",
     CLAIMED = "Claimed",
     STAKED = "Staked",
@@ -309,13 +306,20 @@ enum CellState {
 type GridCell = `${number},${number}`; 
 type PlayerID = number | null; // Player ID is an int (get from session controller)
 
-class SparseGrid {
+export class SparseGrid {
     private claimedCells: Map<GridCell, { claimOwner: PlayerID }>;
     private stakedCells: Map<GridCell, PlayerID>;
+    private lengthAndWidth: number;
 
-    constructor() {
+    constructor(gridlength: number) {
         this.claimedCells = new Map();
         this.stakedCells = new Map();
+        this.lengthAndWidth = gridlength; //square grid has equal length and width
+    }
+    
+    //getter for grid dimensions
+    getSize(): number {
+        return this.lengthAndWidth;
     }
 
     // Claim a grid cell (overwrites claimOwner, removes any stake)

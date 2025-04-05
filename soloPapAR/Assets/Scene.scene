@@ -4556,6 +4556,7 @@
   ScriptInputs:
     "":
       uiText: !<reference.Text> cc100e9f-dc8a-4697-927f-006d04627156
+      screenTransform: !<reference.ScreenTransform> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
   ScriptTypes:
     "":
       {}
