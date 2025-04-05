@@ -27,6 +27,30 @@
   MaxVisibility: Editable
   ScriptInputsHidden:
     cell00: false
+    cell01: false
+    cell02: false
+    cell03: false
+    cell04: false
+    cell10: false
+    cell11: false
+    cell12: false
+    cell13: false
+    cell14: false
+    cell20: false
+    cell21: false
+    cell22: false
+    cell23: false
+    cell24: false
+    cell30: false
+    cell31: false
+    cell32: false
+    cell33: false
+    cell34: false
+    cell40: false
+    cell41: false
+    cell42: false
+    cell43: false
+    cell44: false
     screenTransform: false
     uiText: false
   ScriptTypesHidden:
@@ -36,6 +60,30 @@
     - uiText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
       cell00: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell01: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell02: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell03: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell04: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell10: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell11: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell12: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell13: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell14: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell20: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell21: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell22: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell23: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell24: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell30: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell31: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell32: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell33: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell34: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell40: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell41: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell42: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell43: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell44: !<reference.Image> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -43,3 +91,27 @@
     - // @input Component.Text uiText
     - // @input Component.ScreenTransform screenTransform
     - // @input Component.Image cell00
+    - // @input Component.Image cell01
+    - // @input Component.Image cell02
+    - // @input Component.Image cell03
+    - // @input Component.Image cell04
+    - // @input Component.Image cell10
+    - // @input Component.Image cell11
+    - // @input Component.Image cell12
+    - // @input Component.Image cell13
+    - // @input Component.Image cell14
+    - // @input Component.Image cell20
+    - // @input Component.Image cell21
+    - // @input Component.Image cell22
+    - // @input Component.Image cell23
+    - // @input Component.Image cell24
+    - // @input Component.Image cell30
+    - // @input Component.Image cell31
+    - // @input Component.Image cell32
+    - // @input Component.Image cell33
+    - // @input Component.Image cell34
+    - // @input Component.Image cell40
+    - // @input Component.Image cell41
+    - // @input Component.Image cell42
+    - // @input Component.Image cell43
+    - // @input Component.Image cell44

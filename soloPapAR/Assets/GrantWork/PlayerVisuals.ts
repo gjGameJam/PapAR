@@ -18,6 +18,78 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     cell00: Image;
     
+    @input
+    cell01: Image;
+    
+    @input
+    cell02: Image;
+    
+    @input
+    cell03: Image;
+    
+    @input
+    cell04: Image;
+    
+    @input
+    cell10: Image;
+    
+    @input
+    cell11: Image;
+    
+    @input
+    cell12: Image;
+    
+    @input
+    cell13: Image;
+    
+    @input
+    cell14: Image;
+    
+    @input
+    cell20: Image;
+    
+    @input
+    cell21: Image;
+    
+    @input
+    cell22: Image;
+    
+    @input
+    cell23: Image;
+    
+    @input
+    cell24: Image;
+    
+    @input
+    cell30: Image;
+    
+    @input
+    cell31: Image;
+    
+    @input
+    cell32: Image;
+    
+    @input
+    cell33: Image;
+    
+    @input
+    cell34: Image;
+    
+    @input
+    cell40: Image;
+    
+    @input
+    cell41: Image;
+    
+    @input
+    cell42: Image;
+    
+    @input
+    cell43: Image;
+    
+    @input
+    cell44: Image;
+    
     //on awake, initialize all mini map cells as ui elements
     onAwake() {
         //TODO: create ui box prefab on start
@@ -45,9 +117,9 @@ export class PlayerVisuals extends BaseScriptComponent {
         this.prevGridPos = gridPos; // update previous grid pos to current
     
         const gridLength = grid.getSize();
-        const miniMapRadius = 3; // minimap is 7x7 (center + 3 in each direction)
+        const miniMapRadius = 2; // minimap is 5x5 (center + 2 in each direction)
     
-        // Loop through a 7x7 window centered around player
+        // Loop through a 5x5 window centered around player
         for (let dx = -miniMapRadius; dx <= miniMapRadius; dx++) {
             for (let dy = -miniMapRadius; dy <= miniMapRadius; dy++) {
                 const gridX = gridPos.x + dx;
@@ -74,20 +146,30 @@ export class PlayerVisuals extends BaseScriptComponent {
     renderMiniMapCell(gridX: number, gridY: number, cellState: CellState | null): void {
         //get color of cell to draw via cellstate
         const color = this.getCellColor(cellState);
-        //TODO: get prefab and color from array
-//        let cell = minimapCells[gridX][gridY];
-//        let image = cell.getComponent("Component.Image"); //get image component
-//        image.mainPass.baseColor = color;
-        this.cell00.mainPass.baseColor = new vec4(255, 0, 0, 1.0)
+        //TODO: color correct cell given pos and color
+        const imgName = `cell${gridX}${gridY}`;
+        const img = this[imgName];
+        if (img && img.mainPass) {
+            // If this image doesn't already have its own material, clone it
+            if (!img.__hasUniqueMaterial) {
+                const clonedMat = img.mainMaterial.clone();
+                img.mainMaterial = clonedMat;
+                img.__hasUniqueMaterial = true;
+            }
+            img.mainPass.baseColor = color; // assuming `color` is already a vec4
+        } else {
+            print(`MiniMap cell "${imgName}" does not exist.`);
+        }
+        //this[imgName].mainPass.baseColor = new vec4(255, 0, 0, 1.0);
     }
     
     //helper function to get color of cell based on cellstate (null/OOB is gray, staked is transparent green, and claimed is green)
     getCellColor(cellState: CellState | null): vec4 {
-        if (cellState == null) return new vec4(128, 128, 128, 1.0); // boundary / out of bounds
+        if (cellState == null) return new vec4(255, 0, 0, 1.0); // boundary / out of bounds
         switch (cellState) {
-            case CellState.UNCLAIMED: return new vec4(255, 255, 255, 1.0); // white
-            case CellState.CLAIMED:   return new vec4(0, 255, 0, 1.0); // solid green
-            case CellState.STAKED:   return new vec4(0, 255, 0, 1.5);     // translucent green
+            case CellState.UNCLAIMED: return new vec4(0, 0, 255, .75); // white
+            case CellState.CLAIMED:   return new vec4(0, 255, 0, .75); // green
+            case CellState.STAKED:   return new vec4(0, 255, 0, 0.25);     // translucent green
             default: return new vec4(128, 128, 128, 1.0); // fallback gray
         }
     }
