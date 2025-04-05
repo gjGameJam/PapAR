@@ -15,6 +15,9 @@ export class PlayerVisuals extends BaseScriptComponent {
     //@input 
     miniMapUICell: ObjectPrefab; //TODO create prefab for mini map cell
     
+    @input
+    testCell: Image;
+    
     //on awake, initialize all mini map cells as ui elements
     onAwake() {
         //TODO: create ui box prefab on start
@@ -75,6 +78,7 @@ export class PlayerVisuals extends BaseScriptComponent {
 //        let cell = minimapCells[gridX][gridY];
 //        let image = cell.getComponent("Component.Image"); //get image component
 //        image.mainPass.baseColor = color;
+        this.testCell.mainPass.baseColor = new vec4(255, 0, 0, 1.0)
     }
     
     //helper function to get color of cell based on cellstate (null/OOB is gray, staked is transparent green, and claimed is green)
