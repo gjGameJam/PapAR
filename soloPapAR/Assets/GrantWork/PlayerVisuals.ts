@@ -16,7 +16,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     miniMapUICell: ObjectPrefab; //TODO create prefab for mini map cell
     
     @input
-    testCell: Image;
+    cell00: Image;
     
     //on awake, initialize all mini map cells as ui elements
     onAwake() {
@@ -78,17 +78,17 @@ export class PlayerVisuals extends BaseScriptComponent {
 //        let cell = minimapCells[gridX][gridY];
 //        let image = cell.getComponent("Component.Image"); //get image component
 //        image.mainPass.baseColor = color;
-        this.testCell.mainPass.baseColor = new vec4(255, 0, 0, 1.0)
+        this.cell00.mainPass.baseColor = new vec4(255, 0, 0, 1.0)
     }
     
     //helper function to get color of cell based on cellstate (null/OOB is gray, staked is transparent green, and claimed is green)
-    getCellColor(cellState: CellState | null): string {
-        if (cellState == null) return "rgba(128, 128, 128, 1.0)"; // boundary / out of bounds
+    getCellColor(cellState: CellState | null): vec4 {
+        if (cellState == null) return new vec4(128, 128, 128, 1.0); // boundary / out of bounds
         switch (cellState) {
-            case CellState.UNCLAIMED: return "rgba(255, 255, 255, 1.0)"; // white
-            case CellState.CLAIMED:   return "rgba(0, 255, 0, 1.0)";     // solid green
-            case CellState.STAKED:   return "rgba(0, 255, 0, 0.4)";     // translucent green
-            default: return "rgba(128, 128, 128, 1.0)"; // fallback gray
+            case CellState.UNCLAIMED: return new vec4(255, 255, 255, 1.0); // white
+            case CellState.CLAIMED:   return new vec4(0, 255, 0, 1.0); // solid green
+            case CellState.STAKED:   return new vec4(0, 255, 0, 1.5);     // translucent green
+            default: return new vec4(128, 128, 128, 1.0); // fallback gray
         }
     }
 

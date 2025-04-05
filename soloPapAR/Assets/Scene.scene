@@ -4567,14 +4567,14 @@
   Enabled: true
   ScriptAsset: !<reference> 124839d2-c4cc-498a-b9dc-285f33b98749
   ScriptInputsDefault:
-    {}
+    cell00: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       uiText: !<reference.Text> cc100e9f-dc8a-4697-927f-006d04627156
       screenTransform: !<reference.ScreenTransform> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
-      testCell: !<reference.Image> af5d1441-8220-446f-96eb-88469074afdc
+      cell00: !<reference.Image> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     "":
       {}

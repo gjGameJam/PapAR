@@ -26,8 +26,8 @@
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
+    cell00: false
     screenTransform: false
-    testCell: false
     uiText: false
   ScriptTypesHidden:
     {}
@@ -35,11 +35,11 @@
   DefaultScriptInputs:
     - uiText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
-      testCell: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      cell00: !<reference.Image> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input Component.Text uiText
     - // @input Component.ScreenTransform screenTransform
-    - // @input Component.Image testCell
+    - // @input Component.Image cell00
