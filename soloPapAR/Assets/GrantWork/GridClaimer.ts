@@ -36,9 +36,10 @@ export class GridClaimer extends BaseScriptComponent {
             //convert world coordinates to get game grid cell
             const gridPos = this.worldCoordsToGridPos(worldPos);
             //TODO: remove debugging update player visuals with coords and grid pos
-            this.PlayerVisuals.updateHUDText(originOffset.x, originOffset.y, worldPos.x, worldPos.y, gridPos.x, gridPos.y);
+            //this.PlayerVisuals.updateHUDText(originOffset.x, originOffset.y, worldPos.x, worldPos.y, gridPos.x, gridPos.y);
             //update player minimap (if necessary)
-            if (!this.PlayerVisuals.updateMiniMap(gridPos, this.grid)){
+            const testGridPos = new vec2(9, 9);
+            if (!this.PlayerVisuals.updateMiniMap(testGridPos, this.grid)){
                 return; //return early if player is in same grid as last updatePos call
             }
             //get the CellState of the grid cell
