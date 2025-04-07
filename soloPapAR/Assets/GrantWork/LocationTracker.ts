@@ -10,6 +10,9 @@ export class LocationTracker extends BaseScriptComponent {
   verticalAccuracy: number;
   timestamp: Date;
   locationSource: string;
+  
+  @input
+  playerTracker: DeviceTracking;
     
   @input
   GridClaimer: GridClaimer;

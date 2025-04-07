@@ -5,7 +5,7 @@ export class GridClaimer extends BaseScriptComponent {
     
     metersPerCell: number = 5;//cells are this number by this number meters
     gridRadius: number = 10;
-    grid: SparseGrid = new SparseGrid(this.gridRadius); // Initialize the grid as gridRadius * gridRadius
+    grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     lat: number = 400;
     long: number = 400;
     prevlat: number = 400;
@@ -38,8 +38,8 @@ export class GridClaimer extends BaseScriptComponent {
             //TODO: remove debugging update player visuals with coords and grid pos
             //this.PlayerVisuals.updateHUDText(originOffset.x, originOffset.y, worldPos.x, worldPos.y, gridPos.x, gridPos.y);
             //update player minimap (if necessary)
-            const testGridPos = new vec2(9, 9);
-            if (!this.PlayerVisuals.updateMiniMap(testGridPos, this.grid)){
+            //const testGridPos = new vec2(9, 9);
+            if (!this.PlayerVisuals.updateMiniMap(gridPos, this.grid)){
                 return; //return early if player is in same grid as last updatePos call
             }
             //get the CellState of the grid cell

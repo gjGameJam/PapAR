@@ -213,6 +213,7 @@
     {}
   ScriptInputs:
     "":
+      playerTracker: !<reference.DeviceTracking> e5553c8a-0b7e-4ef4-92d9-3e1318fb82c1
       GridClaimer: !<MappingBased.GridClaimer> 5e8b2860-accc-47a5-83e6-f9d6f87e4dde
   ScriptTypes:
     "":

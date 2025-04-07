@@ -27,13 +27,16 @@
   MaxVisibility: Editable
   ScriptInputsHidden:
     GridClaimer: false
+    playerTracker: false
   ScriptTypesHidden:
     {}
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
     - GridClaimer: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
+      playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
+    - // @input Component.DeviceTracking playerTracker
     - // @input GridClaimer GridClaimer
