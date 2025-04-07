@@ -14,14 +14,8 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //array of cells going one column at a time
     @input
-    miniMapCells: Image[]; // array of cells
+    miniMapCells: Image[]; // array of cells to be colored for minimap
     
-    //on awake, initialize all mini map cells as ui elements
-    onAwake() {
-        //TODO: create ui box prefab on start
-        //TODO: once single box is working, go to 7x7
-        //make sure cells are indexed [0-6][0-6] for draw calls (could handle in prefab?)
-    }
     
     //returns true if grid pos is different from last grid pos
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)
@@ -45,10 +39,6 @@ export class PlayerVisuals extends BaseScriptComponent {
                 // These are the minimap canvas coordinates (0-4)
                 const miniMapX = dx + miniMapRadius;
                 const miniMapY = dy + miniMapRadius;
-                
-                
-                
-                //this.updateHUDText(gridPos.x, gridPos.y, gridX, gridY, miniMapX, miniMapY);
                 
                 //if gridx and gridy are within bounds, draw cellstate else draw red
                 if (gridX >= 0 && gridX < gridLength && gridY >= 0 && gridY < gridLength) {
