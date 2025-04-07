@@ -48,18 +48,18 @@ export class PlayerVisuals extends BaseScriptComponent {
                 
                 
                 
-                this.updateHUDText(gridPos.x, gridPos.y, gridX, gridY, miniMapX, miniMapY);
+                //this.updateHUDText(gridPos.x, gridPos.y, gridX, gridY, miniMapX, miniMapY);
                 
                 //if gridx and gridy are within bounds, draw cellstate else draw red
                 if (gridX >= 0 && gridX < gridLength && gridY >= 0 && gridY < gridLength) {
                     //gets and renders the cell state
                     const cellState = grid.getCellState(gridX, gridY);
-                    print('x: ' + gridX + ', y: ' + gridY + ', state: ' + cellState);
+                    //print('x: ' + gridX + ', y: ' + gridY + ', state: ' + cellState);
                     this.renderMiniMapCell(miniMapX, miniMapY, cellState);
                 } else {
                     //renders null cell state
                     this.renderMiniMapCell(miniMapX, miniMapY, null); // Out of bounds = boundary
-                    print('x: ' + gridX + ', y: ' + gridY + ', is out of bounds?');
+                    //print('x: ' + gridX + ', y: ' + gridY + ', is out of bounds?');
                 }
             }
         }
@@ -116,8 +116,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         
         // Display the clamped coordinates and grid position
         this.uiText.text = 
-            `Offset: (${clampedLat}, ${clampedLong})\n` + 
+            `Grid: (${clampedLat}, ${clampedLong})\n` + 
             `WorldPos: (${clampedgridx}, ${clampedgridy})\n` + 
-            `Grid Cell: (${clampedlatOff}, ${clampedlongOff})`;
+            `N/A: (${clampedlatOff}, ${clampedlongOff})`;
     }
 }

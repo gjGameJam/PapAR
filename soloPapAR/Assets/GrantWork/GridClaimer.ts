@@ -3,7 +3,7 @@ import { PlayerVisuals } from './PlayerVisuals';
 @component
 export class GridClaimer extends BaseScriptComponent {
     
-    metersPerCell: number = 5;//cells are this number by this number meters
+    unitsPerCell: number = 100;//cells are this number by this number meters
     gridRadius: number = 10;
     grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     lat: number = 400;
@@ -24,19 +24,19 @@ export class GridClaimer extends BaseScriptComponent {
 //    }
     
     //function called by location tracker script whenever coordinates change
-    updatePos(lat : number, long : number){
-        this.setCurrAndPrev(lat, long);
-        print('location has been updated');
+    updatePos(worldX : number, worldZ : number){
+        this.setCurrAndPrev(worldX, worldZ);
+        //print('location has been updated');
         //this.PlayerVisuals.updateHUDText(lat, long, 0, 0);
         if (this.hasPrev) {
             //get offset from world origin in coords
-            const originOffset = this.getOriginOffset(lat, long);
+            //const originOffset = this.getOriginOffset(lat, long);
             //convert lat and long to offset from world origin
-            const worldPos = this.gpsCoordsToWorldPos(originOffset.y, originOffset.x);
+            //const worldPos = this.gpsCoordsToWorldPos(originOffset.y, originOffset.x);
             //convert world coordinates to get game grid cell
-            const gridPos = this.worldCoordsToGridPos(worldPos);
+            const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
             //TODO: remove debugging update player visuals with coords and grid pos
-            //this.PlayerVisuals.updateHUDText(originOffset.x, originOffset.y, worldPos.x, worldPos.y, gridPos.x, gridPos.y);
+            this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);
             //update player minimap (if necessary)
             //const testGridPos = new vec2(9, 9);
             if (!this.PlayerVisuals.updateMiniMap(gridPos, this.grid)){
@@ -72,8 +72,8 @@ export class GridClaimer extends BaseScriptComponent {
     //converts the world coords to grid row and column number
     worldCoordsToGridPos(wPos: vec2): vec2 {
         // The center of the grid corresponds to (gridRadius, gridRadius)
-        const col = Math.ceil(this.gridRadius + wPos.x / this.metersPerCell);
-        const row = Math.ceil(this.gridRadius + wPos.y / this.metersPerCell);
+        const col = Math.ceil(this.gridRadius + wPos.x / this.unitsPerCell);
+        const row = Math.ceil(this.gridRadius + wPos.y / this.unitsPerCell);
     
         return new vec2(col, row);
     }
