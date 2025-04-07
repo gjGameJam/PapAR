@@ -1,7 +1,6 @@
 - !<Scene/0a1ccb1a-fe88-4fbb-9883-e3af3c75fd99>
   PackagePath: ""
   objects:
-    - !<own> 03aadb0a-ce7b-4c4d-b1ef-9faba7632523
     - !<own> 00000000-0000-0065-0000-000000000064
     - !<own> 0005641c-028d-459a-0000-000000014b4d
     - !<own> 46a5475d-2c8f-4dec-b86d-cdf7b338378a
@@ -385,24 +384,6 @@
   ScriptTypes:
     "":
       {}
-- !<SceneObject/03aadb0a-ce7b-4c4d-b1ef-9faba7632523>
-  PrefabRemaps:
-    - 03aadb0a-ce7b-4c4d-b1ef-9faba7632523: f5f4ccd1-0195-4658-9879-0968a296218a
-    - 54550557-7be4-4998-a200-46bdaa588793: bc8232ee-5988-4d95-b6c7-7a8863a39c4e
-    - 6075feb1-76c0-4861-9b00-5d5c1bbf2ab8: ab3ab072-91b4-4a4b-a735-e244fcdd1305
-    - baa36fbf-e519-4025-bab0-b4e5a5d76ba3: 0b5d035c-b103-476e-9c5a-688ffa41c2f7
-  Name: TextLogger
-  Enabled: false
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> baa36fbf-e519-4025-bab0-b4e5a5d76ba3
 - !<SceneObject/04296362-b1e9-4286-b7e9-d62d26e194ea>
   PrefabRemaps:
     []
@@ -5096,7 +5077,6 @@
     "":
       uiText: !<reference.Text> cc100e9f-dc8a-4697-927f-006d04627156
       screenTransform: !<reference.ScreenTransform> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
-      textLog: !<reference.ScriptComponent> baa36fbf-e519-4025-bab0-b4e5a5d76ba3
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
         - !<reference> 9a3bbacc-8a4f-48a8-af8e-f342b8373b9d
@@ -12184,33 +12164,6 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<ScriptComponent/baa36fbf-e519-4025-bab0-b4e5a5d76ba3>
-  PrefabRemaps:
-    []
-  Name: TextLogger
-  Enabled: true
-  ScriptAsset: !<reference> f056e979-eb5c-4597-a958-8d7674dbc2f8
-  ScriptInputsDefault:
-    loggingEnabled: true
-    logLimit: true
-    logTextSize: true
-    customDisplay: true
-    useStudioLog: true
-    spectaclesMode: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      loggingEnabled: true
-      logColor: !<Vec4> {x: 0.630838, y: 0.821698, z: 0.360967, w: 1.000000}
-      logLimit: 20
-      logTextSize: 25
-      customDisplay: !<reference.Text> 00000000-0000-0000-0000-000000000000
-      useStudioLog: true
-      spectaclesMode: false
-  ScriptTypes:
-    "":
-      {}
 - !<ScriptComponent/bae3eb26-643a-4138-a20e-3419df5b6f87>
   PrefabRemaps:
     []

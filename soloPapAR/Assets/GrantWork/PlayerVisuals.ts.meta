@@ -28,7 +28,6 @@
   ScriptInputsHidden:
     miniMapCells: false
     screenTransform: false
-    textLog: false
     uiText: false
   ScriptTypesHidden:
     {}
@@ -38,12 +37,10 @@
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
       miniMapCells: !<reference.Image[]>
         []
-      textLog: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input Component.Text uiText
     - // @input Component.ScreenTransform screenTransform
-    - // @input Component.ScriptComponent textLog
     - "// @input Component.Image[] miniMapCells"

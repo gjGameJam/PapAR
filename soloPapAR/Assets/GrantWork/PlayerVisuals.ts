@@ -12,8 +12,6 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     prevGridPos: vec2 = new vec2(0, 0); //previous grid (only update minimap if new != previous)
     
-    @input
-    textLog : ScriptComponent;
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells
@@ -42,7 +40,6 @@ export class PlayerVisuals extends BaseScriptComponent {
             for (let dy = -miniMapRadius; dy <= miniMapRadius; dy++) {
                 //this will go from your pos +- 2
                 const gridX = gridPos.x + dx;
-                //(globalThis as any).textLogger.log("Hello from TS");
                 const gridY = gridPos.y + dy;
     
                 // These are the minimap canvas coordinates (0-4)
@@ -63,9 +60,6 @@ export class PlayerVisuals extends BaseScriptComponent {
             }
         }
         
-//        const TextLogger = require("TextLogger");
-//        var textLogger = new TextLogger();
-//        textLogger.log("test");
     
         return true; // minimap was updated
     }
