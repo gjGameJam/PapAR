@@ -20,18 +20,21 @@ export class GridClaimer extends BaseScriptComponent {
     
     //function called by location tracker script whenever coordinates change
     updatePos(worldX : number, worldZ : number){
-        this.setCurrAndPrev(worldX, worldZ);
         //print('location has been updated');
-        //this.PlayerVisuals.updateHUDText(lat, long, 0, 0);
+        this.setCurrAndPrev(worldX, worldZ);
+        
         if (this.hasPrev) {
             //convert world coordinates to get game grid cell
             const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
+            
             //TODO: remove debugging update player visuals with coords and grid pos
             this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);
-            //update player minimap (if necessary)
-            if (!this.PlayerVisuals.updateMiniMap(gridPos, this.grid)){
-                return; //return early if player is in same grid as last updatePos call
+            
+            //return early if player is in same grid as last updatePos call
+            if (this.PlayerVisuals.isInSameCell(gridPos)){
+                return; 
             }
+            
             //get the CellState of the grid cell
             const currState = this.grid.getCellState(gridPos.x, gridPos.y);
             
@@ -39,23 +42,29 @@ export class GridClaimer extends BaseScriptComponent {
             if (currState === CellState.STAKED) {
                 //stake owner dies and their stakes + claims return unclaimed
                 //TODO: create function to remove all stakes & claims
+                print('player hit their own stake');
             }
             else if (currState === CellState.UNCLAIMED) {
                 // player drops stake on unclaimed land
                 this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
             }
             else if (currState === CellState.CLAIMED) {
-                const owner = this.grid.getClaimOwner(gridPos.x, gridPos.y);
-                if (owner === this.playerID) {
-                    // expand claim to include area encompassed by claim loop
-                    this.addStakedRegionToClaim();
-                }
-                else {
-                    //multiplayer: if the claim owner is in the entered cell, you die
-                    // player drops stake on claim (that isn't theirs yet)
-                    this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
-                }
+                //once player returns to their own claim. claim any staked region
+                this.addStakedRegionToClaim();
+//                const owner = this.grid.getClaimOwner(gridPos.x, gridPos.y);
+//                if (owner === this.playerID) {
+//                    // expand claim to include area encompassed by claim loop
+//                    this.addStakedRegionToClaim();
+//                }
+//                else {
+//                    //multiplayer: if the claim owner is in the entered cell, you die
+//                    // player drops stake on claim (that isn't theirs yet)
+//                    this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+//                }
             }
+            
+            //update the minimap with new cell colors
+            this.PlayerVisuals.updateMiniMap(gridPos, this.grid);
         }
     }
     
@@ -84,7 +93,9 @@ export class GridClaimer extends BaseScriptComponent {
                 //create grid on start
                 this.createInitialGrid(); // Create the grid when the world origin is set
                 //TODO: create home claim on start
+                const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currY));
                 //world origin is device handler's (0,0,0)
+                this.grid.claimCell(GridPos.x, GridPos.y, this.playerID);
                 return;
             }
             // Second call: Set previous position
@@ -129,120 +140,11 @@ export class GridClaimer extends BaseScriptComponent {
     
         print('Claim expansion complete!');
     }
-        
-    // Helper function using scanline fille to find the area of ands claim the enclosed region
-    //scanline fill algorithm is extremely fast and needs to be adapted for polygons    
-    // Ensure `GridCell` type is properly formatted
-    private formatGridCell(x: number, y: number): GridCell {
-        return `${x},${y}` as GridCell;
-    }
-    
-    //helper function to get starter grid for scanline fill algorithm
-    findSeedPoint(loop: GridCell[]): GridCell | null {
-        if (loop.length === 0) return null;
-    
-        let sumX = 0, sumY = 0;
-        
-        // Sum up the coordinates
-        for (const cell of loop) {
-            const [x, y] = cell.split(',').map(Number);
-            sumX += x;
-            sumY += y;
-        }
-    
-        // Compute the approximate centroid
-        const centerX = Math.round(sumX / loop.length);
-        const centerY = Math.round(sumY / loop.length);
-        const centroid: GridCell = `${centerX},${centerY}`;
-    
-        // Check if centroid is a valid seed
-        if (this.isValidSeed(centroid, loop)) {
-            return centroid;
-        }
-    
-        // Otherwise, search for the nearest valid cell
-        return this.findNearestValidSeed(centerX, centerY, loop);
-    }
-    
-    isValidSeed(cell: GridCell, loop: GridCell[]): boolean {
-        //it's a valid seed if not included in loop (grid cell state doesn't matter)
-        return !loop.includes(cell); 
-    }
-    
-    //helper function to get seed point for scanline fill algorithm
-    findNearestValidSeed(cx: number, cy: number, loop: GridCell[]): GridCell | null {
-        const directions = [
-            [0, 1], [1, 0], [0, -1], [-1, 0], // Cardinal directions
-        ];
-    
-        const queue: GridCell[] = [`${cx},${cy}`];
-        const visited = new Set(queue);
-    
-        while (queue.length > 0) {
-            const current = queue.shift()!;
-            const [x, y] = current.split(',').map(Number);
-    
-            if (this.isValidSeed(current, loop)) {
-                return current; // Found a valid seed point
-            }
-    
-            for (const [dx, dy] of directions) {
-                const neighbor: GridCell = `${x + dx},${y + dy}`;
-                if (!visited.has(neighbor)) {
-                    queue.push(neighbor);
-                    visited.add(neighbor);
-                }
-            }
-        }
-    
-        return null; // No valid seed found (unlikely)
-    }
 
 
     //main function for scanline fill algorithm, takes in loop of cells
     findAndFillEnclosedRegion(loop: GridCell[]) {
-        const visited = new Set<GridCell>(); // Track visited cells
-        const queue: GridCell[] = [];
-    
-        // Convert loop to a set for fast boundary checking
-        const loopSet = new Set(loop);
-    
-        // Step 1: Find a seed point inside the loop
-        const seed = this.findSeedPoint(loop);
-        if (!seed) return;
-    
-        queue.push(seed);
-        visited.add(seed);
-    
-        while (queue.length > 0) {
-            const current = queue.shift()!;
-            const [x, y] = current.split(',').map(Number);
-    
-            // Step 2: Scan right and left
-            let left = x;
-            while (!loopSet.has(this.formatGridCell(left - 1, y)) && !visited.has(this.formatGridCell(left - 1, y))) {
-                left--;
-            }
-            let right = x;
-            while (!loopSet.has(this.formatGridCell(right + 1, y)) && !visited.has(this.formatGridCell(right + 1, y))) {
-                right++;
-            }
-    
-            // Step 3: Claim the entire horizontal span
-            for (let fillX = left; fillX <= right; fillX++) {
-                this.grid.claimCell(fillX, y, this.playerID);
-                const cellKey = this.formatGridCell(fillX, y);
-                visited.add(cellKey);
-    
-                // Step 4: Add neighbors (up and down) if not yet visited or outside boundary
-                if (!loopSet.has(this.formatGridCell(fillX, y - 1)) && !visited.has(this.formatGridCell(fillX, y - 1))) {
-                    queue.push(this.formatGridCell(fillX, y - 1));
-                }
-                if (!loopSet.has(this.formatGridCell(fillX, y + 1)) && !visited.has(this.formatGridCell(fillX, y + 1))) {
-                    queue.push(this.formatGridCell(fillX, y + 1));
-                }
-            }
-        }
+        return;
     }
 }
 

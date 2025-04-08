@@ -22,15 +22,17 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
 
-    
-    
-    //returns true if grid pos is different from last grid pos
-    //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)
-    updateMiniMap(gridPos: vec2, grid: SparseGrid): boolean {
-        if (gridPos.equal(this.prevGridPos)) {
-            return false; // don't need to update if no movement occurred (change in multiplayer version)
+    //returns true if new worldPos == previous position
+    isInSameCell(gridPos: vec2): boolean{
+        if (gridPos.equal(this.prevGridPos)){
+            return true;
         }
-        
+        return false;
+    }
+    
+    //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)
+    updateMiniMap(gridPos: vec2, grid: SparseGrid) {
+
         //this.createCell(new vec3(0,0,0));
     
         this.prevGridPos = gridPos; // update previous grid pos to current
@@ -64,7 +66,6 @@ export class PlayerVisuals extends BaseScriptComponent {
         }
         
     
-        return true; // minimap was updated
     }
     
     //helper function to clone cellMaterial
@@ -149,12 +150,12 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //helper function to get color of cell based on cellstate (null/OOB is gray, staked is transparent green, and claimed is green)
     getCellColor(cellState: CellState | null): vec4 {
-        if (cellState == null) return new vec4(255, 0, 0, 0.75); // boundary / out of bounds
+        if (cellState == null) return new vec4(255, 0, 0, 0.5); // boundary / out of bounds
         switch (cellState) {
-            case CellState.UNCLAIMED: return new vec4(0, 0, 255, 0.75); // white
-            case CellState.CLAIMED:   return new vec4(0, 255, 0, 0.75); // green
-            case CellState.STAKED:   return new vec4(0, 255, 0, 0.25);  // translucent green
-            default: return new vec4(128, 128, 128, 0.75); // fallback gray
+            case CellState.UNCLAIMED: return new vec4(0, 0, 255, 0.5); // blue
+            case CellState.STAKED:   return new vec4(255, 255, 0, 0.5);  // yellow
+            case CellState.CLAIMED:   return new vec4(0, 255, 0, 0.5); // green
+            default: return new vec4(255, 0, 0, 0.5); // fallback red
         }
     }
 
