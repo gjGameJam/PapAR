@@ -12,9 +12,16 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     prevGridPos: vec2 = new vec2(0, 0); //previous grid (only update minimap if new != previous)
     
+    @input
+    cellMaterial: Material;
+        
+    @input
+    whiteCell: Texture;
+    
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
+
     
     
     //returns true if grid pos is different from last grid pos
@@ -23,6 +30,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         if (gridPos.equal(this.prevGridPos)) {
             return false; // don't need to update if no movement occurred (change in multiplayer version)
         }
+        
+        //this.createCell(new vec3(0,0,0));
     
         this.prevGridPos = gridPos; // update previous grid pos to current
     
@@ -57,7 +66,65 @@ export class PlayerVisuals extends BaseScriptComponent {
     
         return true; // minimap was updated
     }
+    
+    //helper function to clone cellMaterial
+    getCellMatClone(){
+        return this.cellMaterial.clone();
+    }
+    
+    //creates cell image ui attached to screen transform
+    createCell(localPos: vec3) {
+        // 1. Create SceneObject
+        const cellObj = global.scene.createSceneObject("CellObject");
+        if (!cellObj) {
+            print("Failed to create CellObject scene object.");
+            return;
+        }
+    
+        // 2. Parent it to the screen transform’s scene object
+        const parentObj = this.screenTransform.getSceneObject();
+        if (!parentObj) {
+            print("screenTransform's SceneObject is null.");
+            return;
+        }
+        cellObj.setParent(parentObj);
+    
+        // 3. Add a ScreenTransform for UI positioning
+        const transform = cellObj.createComponent("Component.ScreenTransform");
+        if (!transform) {
+            print("Failed to create ScreenTransform on CellObject.");
+            return;
+        }
+    
+        // 4. Add the Image component
+        const newImage = cellObj.createComponent("Component.Image");
+        if (!newImage) {
+            print("Failed to create Image component on CellObject.");
+            return;
+        }
+    
+        // 5. Clone the material and assign
+        const matClone = this.getCellMatClone();
+        if (!matClone) {
+            print("Material clone is null. Check that cellMaterial is assigned.");
+            return;
+        }
+    
+        newImage.mainPass.material = matClone;
+    
+        // 6. Apply the texture
+        if (newImage.mainPass) {
+            newImage.mainPass.baseTex = this.whiteCell;
+        } else {
+            print("newImage.mainPass is null — check if material has valid shader with baseTex input.");
+        }
+    
+        // 7. Set transform position and scale
+        newImage.getSceneObject().getTransform().setLocalPosition(localPos);
+        newImage.getSceneObject().getTransform().setLocalScale(new vec3(1, 1, 1));
+    }
 
+    
     
     //main helper function for coloring the cells of the mini map
     renderMiniMapCell(gridX: number, gridY: number, cellState: CellState | null): void {

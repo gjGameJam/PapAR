@@ -26,9 +26,11 @@
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
+    cellMaterial: false
     miniMapCells: false
     screenTransform: false
     uiText: false
+    whiteCell: false
   ScriptTypesHidden:
     {}
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
@@ -37,10 +39,14 @@
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
       miniMapCells: !<reference.Image[]>
         []
+      whiteCell: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input Component.Text uiText
     - // @input Component.ScreenTransform screenTransform
+    - // @input Asset.Material cellMaterial
+    - // @input Asset.Texture whiteCell
     - "// @input Component.Image[] miniMapCells"
