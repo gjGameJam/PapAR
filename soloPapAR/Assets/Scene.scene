@@ -702,10 +702,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.123800
-    bottom: 0.123078
-    right: 0.341153
-    top: 0.243914
+    left: 0.271519
+    bottom: 0.144020
+    right: 0.488872
+    top: 0.264856
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1041,10 +1041,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.557135
-    bottom: 0.245083
-    right: 0.774488
-    top: 0.365918
+    left: 0.604477
+    bottom: 0.262832
+    right: 0.821830
+    top: 0.383667
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1205,10 +1205,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.341146
-    bottom: 0.242060
-    right: 0.558499
-    top: 0.362895
+    left: 0.438507
+    bottom: 0.265329
+    right: 0.655860
+    top: 0.386164
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1491,10 +1491,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.341146
-    bottom: 0.371220
-    right: 0.558499
-    top: 0.492055
+    left: 0.438658
+    bottom: 0.386995
+    right: 0.656011
+    top: 0.507830
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1576,10 +1576,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: -0.090924
-    bottom: 0.499740
-    right: 0.126429
-    top: 0.620575
+    left: 0.105208
+    bottom: 0.506023
+    right: 0.322561
+    top: 0.626858
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1935,6 +1935,7 @@
     - !<own> 83531609-9564-461f-bf02-4031a8297795
     - !<own> e4157e65-9f91-4aa6-81db-939f71bed4cc
     - !<own> a9539018-9a85-4a5e-a3dc-cc309885caf1
+    - !<own> 5778304f-0377-45ce-b690-0156e46dfdbe
     - !<own> b17fc773-8976-4ac2-945c-a8501fbf779e
     - !<own> 39218f88-30fa-41c7-ad72-dbafad0a42c3
     - !<own> 11e37e5d-b886-4c3e-9a9d-90eeed40cdda
@@ -1946,6 +1947,7 @@
     - !<own> 2474c9f7-11cc-4ccb-9ee4-fa854079608b
     - !<own> 1179c0e7-9947-403d-bc72-9c4535ff86b3
     - !<own> 89d84254-4214-46ca-800c-879dd138887f
+    - !<own> c36f2237-3fdb-47c0-980f-4e67f647ceff
   Components:
     - !<own> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
     - !<own> e07dd510-181d-4056-8e1d-d1b5e882e6bd
@@ -2058,6 +2060,25 @@
     bottom: 0.000000
     right: 0.000000
     top: 0.000000
+- !<Image/220105cb-f3ad-4d1e-b062-c78eca75f0b3>
+  PrefabRemaps:
+    []
+  Name: Image
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Fit
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 49abb26a-1314-4fb4-956d-636925bb646e
+  FlipX: false
+  FlipY: false
+  RotationAngle: 0
+  Pivot: {x: 0.000000, y: 0.000000}
+  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
 - !<ScriptComponent/222020fa-9b67-4b77-a05e-2ec82f2def49>
   PrefabRemaps:
     []
@@ -2146,10 +2167,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.341146
-    bottom: 0.498113
-    right: 0.558499
-    top: 0.618948
+    left: 0.438066
+    bottom: 0.505801
+    right: 0.655419
+    top: 0.626636
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -2562,10 +2583,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: -0.090924
-    bottom: 0.124153
-    right: 0.126429
-    top: 0.244989
+    left: 0.103601
+    bottom: 0.143233
+    right: 0.320954
+    top: 0.264069
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -3478,10 +3499,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.123800
-    bottom: 0.499228
-    right: 0.341153
-    top: 0.620063
+    left: 0.270278
+    bottom: 0.506907
+    right: 0.487631
+    top: 0.627742
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -4135,9 +4156,9 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.761934
+    left: 0.773037
     bottom: 0.625411
-    right: 0.979287
+    right: 0.987509
     top: 0.746246
   Offset:
     left: 0.000000
@@ -4221,9 +4242,9 @@
   ForceBasic: true
   Anchor:
     left: -1.000000
-    bottom: -0.991874
+    bottom: -0.992781
     right: 1.000000
-    top: 1.008126
+    top: 1.007219
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -5080,6 +5101,8 @@
       screenTransform: !<reference.ScreenTransform> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
       cellMaterial: !<reference.Material> dad3d640-66f7-49b4-8346-7fc3c97bc69d
       whiteCell: !<reference.Texture> 669abc47-c20c-41cf-bb3f-1df0a45176aa
+      playerArrow: !<reference.ScreenTransform> 700d951c-1d98-48a6-a3b6-8afea21aef15
+      deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
         - !<reference> 9a3bbacc-8a4f-48a8-af8e-f342b8373b9d
@@ -5697,10 +5720,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.765962
-    bottom: 0.374243
-    right: 0.983315
-    top: 0.495078
+    left: 0.773410
+    bottom: 0.383318
+    right: 0.990763
+    top: 0.504153
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -5813,10 +5836,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.123800
-    bottom: 0.249972
-    right: 0.341153
-    top: 0.370807
+    left: 0.271366
+    bottom: 0.264991
+    right: 0.488719
+    top: 0.385826
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -6043,6 +6066,22 @@
     bottom: 0.000000
     right: 0.000000
     top: 0.000000
+- !<SceneObject/5778304f-0377-45ce-b690-0156e46dfdbe>
+  PrefabRemaps:
+    []
+  Name: PlayerArrow
+  Enabled: true
+  Layers: 1048576
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 700d951c-1d98-48a6-a3b6-8afea21aef15
+    - !<own> 220105cb-f3ad-4d1e-b062-c78eca75f0b3
 - !<ScriptComponent/5862e88e-8f5d-430e-8831-4ade0f892295>
   PrefabRemaps:
     []
@@ -7401,6 +7440,39 @@
   ScriptTypes:
     "":
       {}
+- !<ScreenTransform/700d951c-1d98-48a6-a3b6-8afea21aef15>
+  PrefabRemaps:
+    []
+  Name: Screen Transform
+  Enabled: true
+  IsAdvanced: false
+  Constraints:
+    pinToLeft: false
+    pinToTop: false
+    pinToRight: false
+    pinToBottom: false
+    fixedWidth: false
+    fixedHeight: false
+    deactivatedFixedSprite: false
+    deactivatedFixedPivot: false
+  Pivot: {x: 0.000000, y: 0.000000}
+  Transform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  RawMode: true
+  ForceBasic: true
+  Anchor:
+    left: 0.441023
+    bottom: 0.382943
+    right: 0.658376
+    top: 0.503778
+  Offset:
+    left: 0.000000
+    bottom: 0.000000
+    right: 0.000000
+    top: 0.000000
 - !<ScreenTransform/701f58da-d628-40fd-a5d0-eb07dc7bde4c>
   PrefabRemaps:
     []
@@ -7425,10 +7497,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.557135
-    bottom: 0.498871
-    right: 0.774488
-    top: 0.619706
+    left: 0.605719
+    bottom: 0.505896
+    right: 0.823072
+    top: 0.626731
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -8504,10 +8576,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.557135
-    bottom: 0.625411
-    right: 0.774488
-    top: 0.746246
+    left: 0.602564
+    bottom: 0.626109
+    right: 0.819917
+    top: 0.746944
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -8750,10 +8822,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.337117
-    bottom: 0.117432
-    right: 0.554470
-    top: 0.238267
+    left: 0.439345
+    bottom: 0.143439
+    right: 0.656698
+    top: 0.264274
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -8783,10 +8855,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.123800
-    bottom: 0.625767
-    right: 0.341153
-    top: 0.746603
+    left: 0.266346
+    bottom: 0.626475
+    right: 0.483699
+    top: 0.747311
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -10886,10 +10958,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.765962
-    bottom: 0.242818
-    right: 0.983315
-    top: 0.363653
+    left: 0.773853
+    bottom: 0.262046
+    right: 0.991206
+    top: 0.382881
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -11702,10 +11774,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: -0.090924
-    bottom: 0.626280
-    right: 0.126429
-    top: 0.747115
+    left: 0.097760
+    bottom: 0.625582
+    right: 0.315113
+    top: 0.746417
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -11946,10 +12018,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.557135
-    bottom: 0.376509
-    right: 0.774488
-    top: 0.497344
+    left: 0.604306
+    bottom: 0.384886
+    right: 0.821659
+    top: 0.505721
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -12425,10 +12497,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: -0.090924
-    bottom: 0.372965
-    right: 0.126429
-    top: 0.493800
+    left: 0.101484
+    bottom: 0.384832
+    right: 0.318837
+    top: 0.505667
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -12524,10 +12596,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.765962
-    bottom: 0.115924
-    right: 0.983315
-    top: 0.236759
+    left: 0.775472
+    bottom: 0.141136
+    right: 0.992825
+    top: 0.261971
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -12627,6 +12699,21 @@
     []
   Components:
     - !<own> ddbe9726-d672-4760-ae9e-c1f10d442706
+- !<SceneObject/c36f2237-3fdb-47c0-980f-4e67f647ceff>
+  PrefabRemaps:
+    []
+  Name: Image
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 32.000000, y: 32.000000, z: 32.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> cbf92b82-e1d8-4fb2-a539-20f2ac233911
 - !<SceneObject/c3a23844-423b-44b4-be0c-c3f6f5a7c5be>
   PrefabRemaps:
     []
@@ -13088,10 +13175,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.761934
-    bottom: 0.498871
-    right: 0.979287
-    top: 0.619706
+    left: 0.774427
+    bottom: 0.504170
+    right: 0.991780
+    top: 0.625005
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -13137,6 +13224,25 @@
   ShadowDensity: 1.000000
   Materials:
     - !<reference> dad3d640-66f7-49b4-8346-7fc3c97bc69d
+  FlipX: false
+  FlipY: false
+  RotationAngle: 0
+  Pivot: {x: 0.000000, y: 0.000000}
+  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
+- !<Image/cbf92b82-e1d8-4fb2-a539-20f2ac233911>
+  PrefabRemaps:
+    []
+  Name: Image
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    []
   FlipX: false
   FlipY: false
   RotationAngle: 0
@@ -13877,10 +13983,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.123800
-    bottom: 0.374600
-    right: 0.341153
-    top: 0.495435
+    left: 0.271045
+    bottom: 0.386296
+    right: 0.488398
+    top: 0.507131
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -14750,10 +14856,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: -0.090924
-    bottom: 0.251047
-    right: 0.126429
-    top: 0.371882
+    left: 0.101484
+    bottom: 0.265707
+    right: 0.318837
+    top: 0.386542
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -15190,10 +15296,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.557135
-    bottom: 0.115924
-    right: 0.774488
-    top: 0.236759
+    left: 0.606043
+    bottom: 0.141900
+    right: 0.823396
+    top: 0.262735
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -15298,10 +15404,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.341146
-    bottom: 0.624653
-    right: 0.558499
-    top: 0.745488
+    left: 0.434246
+    bottom: 0.626049
+    right: 0.651599
+    top: 0.746884
   Offset:
     left: 0.000000
     bottom: 0.000000

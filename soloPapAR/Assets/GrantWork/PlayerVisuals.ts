@@ -1,5 +1,6 @@
 import { SparseGrid } from './GridClaimer';
 import { CellState } from './GridClaimer';
+import { LocationTracker } from './LocationTracker';
 
 @component
 export class PlayerVisuals extends BaseScriptComponent {
@@ -18,9 +19,16 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     whiteCell: Texture;
     
+    @input
+    playerArrow: ScreenTransform;
+    
+    @input
+    deviceTracker: LocationTracker;
+    
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
+   
 
     //returns true if new worldPos == previous position
     isInSameCell(gridPos: vec2): boolean{
@@ -28,6 +36,28 @@ export class PlayerVisuals extends BaseScriptComponent {
             return true;
         }
         return false;
+    }
+    
+    onAwake(){
+        this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
+    }
+    
+    onUpdate() {
+        // get radians rotation in z
+        const yawRadians = this.deviceTracker.getDeviceTrackerRotation();
+        //convert cartesian to quaterian
+        let rotationQuat = quat.fromEulerAngles(0, 0, yawRadians);
+        this.rotatePlayerArrow(rotationQuat);
+    }
+    
+    //main function to adjust player direction facing arrow
+    rotatePlayerArrow(newRotation: quat){
+        //print('rotating arrow: ' + newRotation);
+        // Access the transform component of the playerArrow img
+        let arrowTransform = this.playerArrow.getTransform();
+        
+        // Set the rotation of the transform component
+        arrowTransform.setLocalRotation(newRotation);
     }
     
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)

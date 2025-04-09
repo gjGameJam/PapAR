@@ -43,6 +43,7 @@ export class GridClaimer extends BaseScriptComponent {
                 //stake owner dies and their stakes + claims return unclaimed
                 //TODO: create function to remove all stakes & claims
                 print('player hit their own stake');
+                this.handlePlayerDeath(this.playerID);
             }
             else if (currState === CellState.UNCLAIMED) {
                 // player drops stake on unclaimed land
@@ -66,6 +67,31 @@ export class GridClaimer extends BaseScriptComponent {
             //update the minimap with new cell colors
             this.PlayerVisuals.updateMiniMap(gridPos, this.grid);
         }
+    }
+    
+    //unclaim and unstake all
+    handlePlayerDeath(deadPlayerID: number){
+        // Collect all staked cells belonging to the player
+        const stakePositions = this.grid.getPlayerStakes(deadPlayerID);
+        const claimPositions = this.grid.getPlayerClaims(deadPlayerID);
+        
+        // Unstake all
+        for (const cell of stakePositions) {
+            const [x, y] = cell.split(',').map(Number);
+            this.grid.unstakeCell(x, y);
+        }
+    
+        // Unclaim all
+        for (const cell of claimPositions) {
+            const [x, y] = cell.split(',').map(Number);
+            this.grid.unclaimCell(x, y);
+        }
+        
+        const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currY));
+        //world origin is device handler's (0,0,0)
+        this.grid.claimCell(GridPos.x, GridPos.y, deadPlayerID);
+        
+        
     }
     
     //converts the world coords to grid row and column number
@@ -96,6 +122,7 @@ export class GridClaimer extends BaseScriptComponent {
                 const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currY));
                 //world origin is device handler's (0,0,0)
                 this.grid.claimCell(GridPos.x, GridPos.y, this.playerID);
+                print('player claimed home region');
                 return;
             }
             // Second call: Set previous position
@@ -144,8 +171,69 @@ export class GridClaimer extends BaseScriptComponent {
 
     //main function for scanline fill algorithm, takes in loop of cells
     findAndFillEnclosedRegion(loop: GridCell[]) {
-        return;
+        const visited = new Set<string>();
+        const queue: GridCell[] = [];
+    
+        // Step 1: Bounding box of the loop
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const key of loop) {
+            const [x, y] = key.split(',').map(Number);
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+        }
+    
+        // Step 2: Try to find a fill start point inside the bounding box
+        let found = false;
+        for (let x = minX + 1; x < maxX && !found; x++) {
+            for (let y = minY + 1; y < maxY && !found; y++) {
+                const key = `${x},${y}` as GridCell;
+                if (this.grid.isUnclaimed(x, y)) {
+                    queue.push(key);
+                    visited.add(key);
+                    found = true;
+                }
+            }
+        }
+    
+        if (!found) {
+            print("No valid fill start point found.");
+            return;
+        }
+    
+        // Step 3: Flood fill in 8 directions
+        const directions = [
+            [1, 0], [-1, 0], [0, 1], [0, -1],
+            [1, 1], [-1, -1], [-1, 1], [1, -1]
+        ];
+    
+        while (queue.length > 0) {
+            const cell = queue.shift();
+            const [x, y] = cell.split(',').map(Number);
+    
+            this.grid.claimCell(x, y, this.playerID); // Claim the cell
+    
+            for (const [dx, dy] of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+                const key = `${nx},${ny}` as GridCell;;
+    
+                if (
+                    nx >= minX && nx <= maxX &&
+                    ny >= minY && ny <= maxY &&
+                    !visited.has(key) &&
+                    this.grid.isUnclaimed(nx, ny)
+                ) {
+                    visited.add(key);
+                    queue.push(key);
+                }
+            }
+        }
+    
+        print("8-directional fill complete!");
     }
+
 }
 
 
@@ -197,6 +285,14 @@ export class SparseGrid {
         if (this.claimedCells.has(key)) return CellState.CLAIMED;
         return CellState.UNCLAIMED;
     }
+    
+    isUnclaimed(x: number, y: number): boolean{
+        const key: GridCell = `${x},${y}`;
+
+        if (this.stakedCells.has(key)) return false;
+        if (this.claimedCells.has(key)) return false;
+        return true;
+    }
 
     // Get the claim owner of a cell
     getClaimOwner(x: number, y: number): PlayerID {
@@ -228,4 +324,12 @@ export class SparseGrid {
             .filter(([_, owner]) => owner === playerID)
             .map(([cell, _]) => cell);
     }
+    
+    //gets all claimed cells from the player id
+    getPlayerClaims(playerID: number): GridCell[] {
+        return Array.from(this.claimedCells.entries())
+            .filter(([_, data]) => data.claimOwner === playerID)
+            .map(([cell, _]) => cell);
+    }
+
 }

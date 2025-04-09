@@ -1,4 +1,3 @@
-require('LensStudio:RawLocationModule');
 import { GridClaimer } from './GridClaimer';
 
 @component
@@ -29,6 +28,33 @@ export class LocationTracker extends BaseScriptComponent {
       //this.initializeLocationTracking();
 
   }
+  
+  //returns the rotation of the device in world space (for player arrow visual)   
+    // Convert quaternion to Euler and return Z (yaw)
+    getDeviceTrackerRotation(): number {
+        const rot = this.playerTracker.getTransform().getWorldRotation();
+        print('device rot: ' + rot);
+        // Convert quaternion to Euler angles and extract yaw (z-axis rotation)
+        const siny_cosp = 2 * (rot.w * rot.z + rot.x * rot.y);
+        const cosy_cosp = 1 - 2 * (rot.y * rot.y + rot.z * rot.z);
+        let yaw = Math.atan2(siny_cosp, cosy_cosp);
+    
+        // Normalize the yaw to be in range 0 to 2π
+        if (yaw < 0) yaw += 2 * Math.PI;
+    
+        // Now subtract π/2 to make 0 = North, π = South
+        yaw -= Math.PI / 2;
+    
+        // Normalize the yaw to the range 0 to 2π
+        if (yaw < 0) yaw += 2 * Math.PI;
+        if (yaw >= 2 * Math.PI) yaw -= 2 * Math.PI;
+    
+        // Return the yaw, now representing 0 = North, π = South, etc.
+        return yaw;
+    }
+    
+
+
   
     
   //return player device tracking position (world origin is 0, 0, 0)
