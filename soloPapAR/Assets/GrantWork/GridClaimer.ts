@@ -4,7 +4,7 @@ import { PlayerVisuals } from './PlayerVisuals';
 export class GridClaimer extends BaseScriptComponent {
     
     unitsPerCell: number = 100;//cells are this number by this number meters
-    gridRadius: number = 10;
+    gridRadius: number = 20;
     grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     currX: number = 400;
     currY: number = 400;
@@ -23,50 +23,50 @@ export class GridClaimer extends BaseScriptComponent {
         //print('location has been updated');
         this.setCurrAndPrev(worldX, worldZ);
         
-        if (this.hasPrev) {
-            //convert world coordinates to get game grid cell
-            const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
+        //if (this.hasPrev) {
+        //convert world coordinates to get game grid cell
+        const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
             
-            //TODO: remove debugging update player visuals with coords and grid pos
-            this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);
+        //TODO: remove debugging update player visuals with coords and grid pos
+        this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);
             
-            //return early if player is in same grid as last updatePos call
-            if (this.PlayerVisuals.isInSameCell(gridPos)){
-                return; 
-            }
+        //return early if player is in same grid as last updatePos call
+        if (this.PlayerVisuals.isInSameCell(gridPos)){
+            return; 
+        }
             
-            //get the CellState of the grid cell
-            const currState = this.grid.getCellState(gridPos.x, gridPos.y);
+        //get the CellState of the grid cell
+        const currState = this.grid.getCellState(gridPos.x, gridPos.y);
             
-            //the state of the grid cell matters, handle interaction
-            if (currState === CellState.STAKED) {
-                //stake owner dies and their stakes + claims return unclaimed
-                //TODO: create function to remove all stakes & claims
-                print('player hit their own stake');
-                this.handlePlayerDeath(this.playerID);
-            }
-            else if (currState === CellState.UNCLAIMED) {
-                // player drops stake on unclaimed land
-                this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
-            }
-            else if (currState === CellState.CLAIMED) {
-                //once player returns to their own claim. claim any staked region
-                this.addStakedRegionToClaim();
-//                const owner = this.grid.getClaimOwner(gridPos.x, gridPos.y);
-//                if (owner === this.playerID) {
-//                    // expand claim to include area encompassed by claim loop
-//                    this.addStakedRegionToClaim();
-//                }
-//                else {
-//                    //multiplayer: if the claim owner is in the entered cell, you die
-//                    // player drops stake on claim (that isn't theirs yet)
-//                    this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
-//                }
+        //the state of the grid cell matters, handle interaction
+        if (currState === CellState.STAKED) {
+            //stake owner dies and their stakes + claims return unclaimed
+            //TODO: create function to remove all stakes & claims
+            print('player hit their own stake');
+            this.handlePlayerDeath(this.playerID);
+        }
+        else if (currState === CellState.UNCLAIMED) {
+            // player drops stake on unclaimed land
+            this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+        }
+        else if (currState === CellState.CLAIMED) {
+            //once player returns to their own claim. claim any staked region
+            this.addStakedRegionToClaim();
+//          const owner = this.grid.getClaimOwner(gridPos.x, gridPos.y);
+//            if (owner === this.playerID) {
+//                // expand claim to include area encompassed by claim loop
+//                this.addStakedRegionToClaim();
+//            }
+//            else {
+//                //multiplayer: if the claim owner is in the entered cell, you die
+//                // player drops stake on claim (that isn't theirs yet)
+//                this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+//            }
             }
             
             //update the minimap with new cell colors
             this.PlayerVisuals.updateMiniMap(gridPos, this.grid);
-        }
+        //}
     }
     
     //unclaim and unstake all
@@ -152,9 +152,13 @@ export class GridClaimer extends BaseScriptComponent {
     
     //add the staked cells to claim, then claim all cells inside stake loop and claim line
     addStakedRegionToClaim(){
-        print('adding staked region to claim');
         // Collect all staked cells belonging to the player
         const stakePositions = this.grid.getPlayerStakes(this.playerID);
+        if (stakePositions.length == 0){
+            print('no staked region to add to claim');
+            return;
+        }
+        print('adding staked region to claim');
     
         // Convert all staked cells in the loop to claims
         for (const key of stakePositions) {

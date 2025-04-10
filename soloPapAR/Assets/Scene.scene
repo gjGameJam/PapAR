@@ -703,9 +703,9 @@
   ForceBasic: true
   Anchor:
     left: 0.271519
-    bottom: 0.144020
+    bottom: 0.146071
     right: 0.488872
-    top: 0.264856
+    top: 0.266907
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1042,9 +1042,9 @@
   ForceBasic: true
   Anchor:
     left: 0.604477
-    bottom: 0.262832
+    bottom: 0.266935
     right: 0.821830
-    top: 0.383667
+    top: 0.387770
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1206,9 +1206,9 @@
   ForceBasic: true
   Anchor:
     left: 0.438507
-    bottom: 0.265329
+    bottom: 0.267728
     right: 0.655860
-    top: 0.386164
+    top: 0.388563
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -1567,7 +1567,7 @@
     fixedHeight: false
     deactivatedFixedSprite: false
     deactivatedFixedPivot: false
-  Pivot: {x: 0.000000, y: 0.000000}
+  Pivot: {x: 0.000000, y: -0.016976}
   Transform:
     position: {x: 0.000000, y: 0.000000, z: 0.000000}
     rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
@@ -1576,9 +1576,9 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.105208
+    left: 0.103383
     bottom: 0.506023
-    right: 0.322561
+    right: 0.320736
     top: 0.626858
   Offset:
     left: 0.000000
@@ -2584,9 +2584,9 @@
   ForceBasic: true
   Anchor:
     left: 0.103601
-    bottom: 0.143233
+    bottom: 0.145379
     right: 0.320954
-    top: 0.264069
+    top: 0.266215
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -5720,10 +5720,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.773410
-    bottom: 0.383318
-    right: 0.990763
-    top: 0.504153
+    left: 0.769216
+    bottom: 0.388230
+    right: 0.986569
+    top: 0.509065
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -5837,9 +5837,9 @@
   ForceBasic: true
   Anchor:
     left: 0.271366
-    bottom: 0.264991
+    bottom: 0.268068
     right: 0.488719
-    top: 0.385826
+    top: 0.388903
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -8822,10 +8822,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.439345
-    bottom: 0.143439
-    right: 0.656698
-    top: 0.264274
+    left: 0.437520
+    bottom: 0.146516
+    right: 0.654873
+    top: 0.267351
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -10958,10 +10958,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.773853
-    bottom: 0.262046
-    right: 0.991206
-    top: 0.382881
+    left: 0.770203
+    bottom: 0.267152
+    right: 0.987556
+    top: 0.387987
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -11774,10 +11774,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.097760
-    bottom: 0.625582
-    right: 0.315113
-    top: 0.746417
+    left: 0.099585
+    bottom: 0.626608
+    right: 0.316938
+    top: 0.747443
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -12019,9 +12019,9 @@
   ForceBasic: true
   Anchor:
     left: 0.604306
-    bottom: 0.384886
+    bottom: 0.385956
     right: 0.821659
-    top: 0.505721
+    top: 0.506790
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -12497,9 +12497,9 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.101484
+    left: 0.103619
     bottom: 0.384832
-    right: 0.318837
+    right: 0.320972
     top: 0.505667
   Offset:
     left: 0.000000
@@ -12596,10 +12596,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.775472
-    bottom: 0.141136
-    right: 0.992825
-    top: 0.261971
+    left: 0.767706
+    bottom: 0.146242
+    right: 0.985059
+    top: 0.267077
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -13166,7 +13166,7 @@
     fixedHeight: false
     deactivatedFixedSprite: false
     deactivatedFixedPivot: false
-  Pivot: {x: 0.000000, y: 0.000000}
+  Pivot: {x: 0.000000, y: -0.017702}
   Transform:
     position: {x: 0.000000, y: 0.000000, z: 0.000000}
     rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
@@ -13175,10 +13175,10 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.774427
-    bottom: 0.504170
-    right: 0.991780
-    top: 0.625005
+    left: 0.772524
+    bottom: 0.505240
+    right: 0.989877
+    top: 0.626075
   Offset:
     left: 0.000000
     bottom: 0.000000
@@ -14856,9 +14856,9 @@
   RawMode: true
   ForceBasic: true
   Anchor:
-    left: 0.101484
+    left: 0.103619
     bottom: 0.265707
-    right: 0.318837
+    right: 0.320972
     top: 0.386542
   Offset:
     left: 0.000000
@@ -15297,9 +15297,9 @@
   ForceBasic: true
   Anchor:
     left: 0.606043
-    bottom: 0.141900
+    bottom: 0.146003
     right: 0.823396
-    top: 0.262735
+    top: 0.266838
   Offset:
     left: 0.000000
     bottom: 0.000000
