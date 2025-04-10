@@ -45,19 +45,22 @@ export class PlayerVisuals extends BaseScriptComponent {
     onUpdate() {
         // get radians rotation in z
         const yawRadians = this.deviceTracker.getDeviceTrackerRotation();
-        //convert cartesian to quaterian
-        let rotationQuat = quat.fromEulerAngles(0, 0, yawRadians);
-        this.rotatePlayerArrow(rotationQuat);
+        
+        
+        this.rotatePlayerArrow(yawRadians);
     }
     
-    //main function to adjust player direction facing arrow
-    rotatePlayerArrow(newRotation: quat){
-        //print('rotating arrow: ' + newRotation);
+    //main function to adjust player direction facing arrow given rotation
+    rotatePlayerArrow(yawRads: number){
+        const yawDegrees = (yawRads * 180) / Math.PI;
+        print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
+        let rotationQuat = quat.fromEulerAngles(0, 0, yawRads);
         
         // Set the rotation of the transform component
-        arrowTransform.setLocalRotation(newRotation);
+        arrowTransform.setLocalRotation(rotationQuat);
+        //arrowTransform.setLocalRotation(quat.angleAxis(yawDegrees, vec3.back()));
     }
     
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)

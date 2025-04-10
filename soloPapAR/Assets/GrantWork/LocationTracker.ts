@@ -33,25 +33,19 @@ export class LocationTracker extends BaseScriptComponent {
     // Convert quaternion to Euler and return Z (yaw)
     getDeviceTrackerRotation(): number {
         const rot = this.playerTracker.getTransform().getWorldRotation();
-        print('device rot: ' + rot);
-        // Convert quaternion to Euler angles and extract yaw (z-axis rotation)
-        const siny_cosp = 2 * (rot.w * rot.z + rot.x * rot.y);
-        const cosy_cosp = 1 - 2 * (rot.y * rot.y + rot.z * rot.z);
+
+        // Calculate yaw from quaternion assuming Y-up (rotation around Y axis)
+        const siny_cosp = 2 * (rot.w * rot.y + rot.z * rot.x);
+        const cosy_cosp = 1 - 2 * (rot.y * rot.y + rot.x * rot.x);
         let yaw = Math.atan2(siny_cosp, cosy_cosp);
     
-        // Normalize the yaw to be in range 0 to 2π
+        // Normalize yaw to 0 - 2π
         if (yaw < 0) yaw += 2 * Math.PI;
     
-        // Now subtract π/2 to make 0 = North, π = South
-        yaw -= Math.PI / 2;
-    
-        // Normalize the yaw to the range 0 to 2π
-        if (yaw < 0) yaw += 2 * Math.PI;
-        if (yaw >= 2 * Math.PI) yaw -= 2 * Math.PI;
-    
-        // Return the yaw, now representing 0 = North, π = South, etc.
         return yaw;
     }
+
+
     
 
 
@@ -65,7 +59,7 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         var position = this.playerTracker.getTransform().getWorldPosition();
-        print('X: '+ position.x + ', Z: '+ position.z);
+        //print('X: '+ position.x + ', Z: '+ position.z);
         this.GridClaimer.updatePos(position.x, position.z);
         this.getNewPosition.reset(.5); // delay in seconds
     });
