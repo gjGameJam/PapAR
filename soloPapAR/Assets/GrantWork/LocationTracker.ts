@@ -33,7 +33,7 @@ export class LocationTracker extends BaseScriptComponent {
     // Convert quaternion to Euler and return Z (yaw)
     getDeviceTrackerRotation(): number {
         const rot = this.playerTracker.getTransform().getWorldRotation();
-
+        
         // Calculate yaw from quaternion assuming Y-up (rotation around Y axis)
         const siny_cosp = 2 * (rot.w * rot.y + rot.z * rot.x);
         const cosy_cosp = 1 - 2 * (rot.y * rot.y + rot.x * rot.x);
@@ -42,7 +42,7 @@ export class LocationTracker extends BaseScriptComponent {
         // Normalize yaw to 0 - 2π
         if (yaw < 0) yaw += 2 * Math.PI;
     
-        return yaw;
+        return yaw
     }
 
 

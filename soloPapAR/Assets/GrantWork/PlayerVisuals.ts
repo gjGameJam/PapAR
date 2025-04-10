@@ -22,6 +22,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     playerArrow: ScreenTransform;
     
+    
     @input
     deviceTracker: LocationTracker;
     
@@ -40,6 +41,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
+        let arrowTransform = this.playerArrow.getTransform();
+        const scale = arrowTransform.getLocalScale();
+        
+        arrowTransform.setLocalScale(new vec3(scale.x, scale.y, scale.z));
     }
     
     onUpdate() {
@@ -53,10 +58,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     //main function to adjust player direction facing arrow given rotation
     rotatePlayerArrow(yawRads: number){
         const yawDegrees = (yawRads * 180) / Math.PI;
-        //print('rotating arrow: ' + yawDegrees);
+        print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
-        const adjustedRads = -yawRads + Math.PI / 2;
+        const adjustedRads = -yawRads + (Math.PI / 2);
         let rotationQuat = quat.fromEulerAngles(0, 0, adjustedRads);
         
         // Set the rotation of the transform component

@@ -3,7 +3,7 @@ import { PlayerVisuals } from './PlayerVisuals';
 @component
 export class GridClaimer extends BaseScriptComponent {
     
-    unitsPerCell: number = 100;//cells are this number by this number meters
+    unitsPerCell: number = 200;//cells are this number by this number meters
     gridRadius: number = 20;
     grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     currX: number = 400;
