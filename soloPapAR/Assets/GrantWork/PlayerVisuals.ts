@@ -56,7 +56,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
-        let rotationQuat = quat.fromEulerAngles(0, 0, yawRads);
+        const adjustedRads = -yawRads + Math.PI / 2;
+        let rotationQuat = quat.fromEulerAngles(0, 0, adjustedRads);
         
         // Set the rotation of the transform component
         arrowTransform.setLocalRotation(rotationQuat);
