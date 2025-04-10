@@ -53,7 +53,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     //main function to adjust player direction facing arrow given rotation
     rotatePlayerArrow(yawRads: number){
         const yawDegrees = (yawRads * 180) / Math.PI;
-        print('rotating arrow: ' + yawDegrees);
+        //print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
         const adjustedRads = -yawRads + Math.PI / 2;
