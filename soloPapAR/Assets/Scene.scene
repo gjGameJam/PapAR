@@ -5104,6 +5104,7 @@
       whiteCell: !<reference.Texture> 669abc47-c20c-41cf-bb3f-1df0a45176aa
       playerArrow: !<reference.ScreenTransform> 700d951c-1d98-48a6-a3b6-8afea21aef15
       deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
+      claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
         - !<reference> 9a3bbacc-8a4f-48a8-af8e-f342b8373b9d

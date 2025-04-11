@@ -60,7 +60,7 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition.bind(() => {
         var position = this.playerTracker.getTransform().getWorldPosition();
         //print('X: '+ position.x + ', Z: '+ position.z);
-        this.GridClaimer.updatePos(position.x, position.z);
+        this.GridClaimer.updatePos(position.x, position.y, position.z);
         this.getNewPosition.reset(.5); // delay in seconds
     });
     

@@ -26,6 +26,9 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     deviceTracker: LocationTracker;
     
+    @input
+    claimCellObj: ObjectPrefab;
+    
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
@@ -37,6 +40,34 @@ export class PlayerVisuals extends BaseScriptComponent {
             return true;
         }
         return false;
+    }
+    
+    //creates a cell cube visual for claimed cell
+    createWorldClaimVolume(x: number, y: number, z: number, scale: number){
+        //create new claimCell
+        var parent = this.getSceneObject();
+        var cellObject = this.claimCellObj.instantiate(parent);
+        
+        //use y passed in but convert x and z (grid pos) to world pos
+        var newPosition = new vec3(x, y, z);
+        cellObject.getTransform().setLocalPosition(newPosition);
+        
+        // Set new scale
+        var newScale = new vec3(scale, scale, scale);
+        cellObject.getTransform().setLocalScale(newScale);
+        print('created claim cell prefab');
+    }
+    
+    //destroy all visible color volumes (player death destroy both stakes and claims)
+    DestroyAllVolumes(){
+        //destroy stakes then claims for quickest feedback
+        
+    }
+   
+    
+    //helper function to convert grid pos to spawning position of cell volume visual
+    gridToWorld(){
+        
     }
     
     onAwake(){
@@ -58,7 +89,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     //main function to adjust player direction facing arrow given rotation
     rotatePlayerArrow(yawRads: number){
         const yawDegrees = (yawRads * 180) / Math.PI;
-        print('rotating arrow: ' + yawDegrees);
+        //print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
         const adjustedRads = -yawRads + (Math.PI / 2);
@@ -113,7 +144,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
     
     //creates cell image ui attached to screen transform
-    createCell(localPos: vec3) {
+    createUICell(localPos: vec3) {
         // 1. Create SceneObject
         const cellObj = global.scene.createSceneObject("CellObject");
         if (!cellObj) {

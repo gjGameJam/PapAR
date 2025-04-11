@@ -27,6 +27,7 @@
   MaxVisibility: Editable
   ScriptInputsHidden:
     cellMaterial: false
+    claimCellObj: false
     deviceTracker: false
     miniMapCells: false
     playerArrow: false
@@ -45,6 +46,7 @@
       cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       playerArrow: !<reference.Image> 00000000-0000-0000-0000-000000000000
       deviceTracker: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
+      claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -55,4 +57,5 @@
     - // @input Asset.Texture whiteCell
     - // @input Component.ScreenTransform playerArrow
     - // @input LocationTracker deviceTracker
+    - // @input Asset.ObjectPrefab claimCellObj
     - "// @input Component.Image[] miniMapCells"

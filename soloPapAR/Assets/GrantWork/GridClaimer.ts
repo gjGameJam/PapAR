@@ -8,8 +8,9 @@ export class GridClaimer extends BaseScriptComponent {
     grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     currX: number = 400;
     currY: number = 400;
+    currZ: number = 400;
     prevX: number = 400;
-    prevY: number = 400;
+    prevZ: number = 400;
     hasPrev: boolean = false; //has prev coords
     playerID: number = 0;
     DEGREES_TO_RADIANS = Math.PI / 180;
@@ -19,9 +20,9 @@ export class GridClaimer extends BaseScriptComponent {
 
     
     //function called by location tracker script whenever coordinates change
-    updatePos(worldX : number, worldZ : number){
+    updatePos(worldX : number, worldY : number, worldZ : number){
         //print('location has been updated');
-        this.setCurrAndPrev(worldX, worldZ);
+        this.setCurrAndPrev(worldX, worldY, worldZ);
         
         //if (this.hasPrev) {
         //convert world coordinates to get game grid cell
@@ -87,10 +88,12 @@ export class GridClaimer extends BaseScriptComponent {
             this.grid.unclaimCell(x, y);
         }
         
-        const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currY));
+        const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currZ));
         //world origin is device handler's (0,0,0)
-        this.grid.claimCell(GridPos.x, GridPos.y, deadPlayerID);
+        this.claimSparseCell(GridPos.x, GridPos.y, deadPlayerID);
         
+        //Destroy all volumes for cell claims and stakes
+        this.PlayerVisuals.DestroyAllVolumes();
         
     }
     
@@ -110,33 +113,35 @@ export class GridClaimer extends BaseScriptComponent {
     }
     
     //updates the current and previous world pos x and z (we dont care about y)
-    setCurrAndPrev(newX: number, newY: number) {
+    setCurrAndPrev(newX: number, newY: number, newZ: number) {
         if (!this.hasPrev) {
             if (this.currX === 400) {
                 // First call: Initialize current position
                 this.currX = newX;
                 this.currY = newY;
+                this.currZ = newZ;
                 //create grid on start
                 this.createInitialGrid(); // Create the grid when the world origin is set
                 //TODO: create home claim on start
-                const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currY));
+                const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currZ));
                 //world origin is device handler's (0,0,0)
-                this.grid.claimCell(GridPos.x, GridPos.y, this.playerID);
+                this.claimSparseCell(GridPos.x, GridPos.y, this.playerID);
                 print('player claimed home region');
                 return;
             }
             // Second call: Set previous position
             this.prevX = this.currX;
-            this.prevY = this.currY;
+            this.prevZ = this.currZ;
             this.hasPrev = true;
         } else {
             // 3rd+ call: Shift current to previous and update new position
             this.prevX = this.currX;
-            this.prevY = this.currY;
+            this.prevZ = this.currZ;
         }
         // Always update the current position
         this.currX = newX;
         this.currY = newY;
+        this.currZ = newZ;
     }
     
     //function to create big unclaimed grid around player
@@ -163,13 +168,32 @@ export class GridClaimer extends BaseScriptComponent {
         // Convert all staked cells in the loop to claims
         for (const key of stakePositions) {
             const [x, y] = key.split(',').map(Number);
-            this.grid.claimCell(x, y, this.playerID);
+            this.claimSparseCell(x, y, this.playerID);
         }
     
         // Find the enclosed area, now surrounded by claimed cells and claim it
         this.findAndFillEnclosedRegion(stakePositions);
     
         print('Claim expansion complete!');
+    }
+    
+    //wrapper function for creating world objects before passing to sparsegrid
+    claimSparseCell(x: number, y: number, player: number){
+        //pass in xy of grid pos and world height of y
+        const worldXZ = this.gridPosToWorldCoords(x, y);
+        this.PlayerVisuals.createWorldClaimVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
+        this.grid.claimCell(x, y, player);
+    }
+    
+    // Converts grid row and column number back to world coordinates (center of the cell)
+    gridPosToWorldCoords(col: number, row: number): vec2 {
+        const halfCell = this.unitsPerCell / 2;
+    
+        // Undo the offset applied in worldCoordsToGridPos
+        const x = (col - this.gridRadius) * this.unitsPerCell - halfCell;
+        const y = (row - this.gridRadius) * this.unitsPerCell - halfCell;
+    
+        return new vec2(x, y);
     }
 
 
@@ -216,7 +240,7 @@ export class GridClaimer extends BaseScriptComponent {
             const cell = queue.shift();
             const [x, y] = cell.split(',').map(Number);
     
-            this.grid.claimCell(x, y, this.playerID); // Claim the cell
+            this.claimSparseCell(x, y, this.playerID); // Claim the cell
     
             for (const [dx, dy] of directions) {
                 const nx = x + dx;

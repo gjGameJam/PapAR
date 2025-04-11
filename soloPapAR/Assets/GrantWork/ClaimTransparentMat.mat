@@ -108,11 +108,11 @@
     - ENABLE_BASE_TEX
     - ENABLE_LIGHTING
     - ENABLE_NORMALMAP
-  BlendMode: Glass
+  BlendMode: PremultipliedAlphaAuto
   Properties:
     Port_Value_N008:
       typeIdx: 5
-      value: {x: 0.000000, y: 1.000000, z: 0.164706, w: 0.215686}
+      value: {x: 0.000000, y: 1.000000, z: 0.164706, w: 0.294118}
     PreviewEnabled:
       typeIdx: 0
       value: 0
