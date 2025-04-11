@@ -108,7 +108,7 @@
     - ENABLE_BASE_TEX
     - ENABLE_LIGHTING
     - ENABLE_NORMALMAP
-  BlendMode: ColoredGlass
+  BlendMode: Glass
   Properties:
     Port_Value_N008:
       typeIdx: 5
