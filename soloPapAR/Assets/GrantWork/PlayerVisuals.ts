@@ -52,8 +52,9 @@ export class PlayerVisuals extends BaseScriptComponent {
         var newPosition = new vec3(x, y, z);
         cellObject.getTransform().setLocalPosition(newPosition);
         
-        // Set new scale
-        var newScale = new vec3(scale, scale, scale);
+        // Set new scale (make y larger so it's taller than a cube)
+        const height = scale * 3;
+        var newScale = new vec3(scale, height, scale);
         cellObject.getTransform().setLocalScale(newScale);
         print('created claim cell prefab');
     }
