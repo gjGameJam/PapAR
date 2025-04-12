@@ -189,12 +189,13 @@ export class GridClaimer extends BaseScriptComponent {
     gridPosToWorldCoords(col: number, row: number): vec2 {
         const halfCell = this.unitsPerCell / 2;
     
-        // Undo the offset applied in worldCoordsToGridPos
-        const x = (col - this.gridRadius) * this.unitsPerCell - halfCell;
-        const y = (row - this.gridRadius) * this.unitsPerCell - halfCell;
+        // Start from grid origin, scale by cell size, and shift to center of cell
+        const x = (col - this.gridRadius) * this.unitsPerCell + halfCell;
+        const y = (row - this.gridRadius) * this.unitsPerCell + halfCell;
     
         return new vec2(x, y);
     }
+
 
 
     //main function for scanline fill algorithm, takes in loop of cells
