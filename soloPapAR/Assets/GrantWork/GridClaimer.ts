@@ -97,20 +97,33 @@ export class GridClaimer extends BaseScriptComponent {
         
     }
     
-    //converts the world coords to grid row and column number
+    // Converts world coordinates to grid position (centered at 0,0 = center of center cell)
     worldCoordsToGridPos(wPos: vec2): vec2 {
-        //get half of cell
-        const halfCell = this.unitsPerCell / 2;
-        //make player spawn (origin) in center of cell
-        const xOffset = wPos.x + halfCell;
-        const yOffset = wPos.y + halfCell;
-        // The center of the grid corresponds to (gridRadius, gridRadius)
-        //so consider 0,0,0 to be center of grid, add offset to be in center of cell, then divide by cells to determine which cell to be in
-        const col = Math.floor(this.gridRadius + (xOffset / this.unitsPerCell));
-        const row = Math.floor(this.gridRadius + (yOffset / this.unitsPerCell));
+        //world offset units divided by unit per cell = cell offset
+        const cellX = wPos.x / this.unitsPerCell;
+        const cellY = wPos.y / this.unitsPerCell;
+        //want to be in center of cell so add .5
+        //want to be in center of grid so add gridradius
+        const offset = this.gridRadius + 0.5;
+        //always want grid # to be int so floor offset + cellPos to get grid #
+        const col = Math.floor(cellX + offset);
+        const row = Math.floor(cellY + offset);
     
         return new vec2(col, row);
     }
+
+    
+    // Converts grid position back to world coordinates (center of the cell)
+    gridPosToWorldCoords(col: number, row: number): vec2 {
+        //current cell (0-40) - 20 = signed number of cells away from origin
+        const xOffset = col - this.gridRadius;
+        const yOffset = row - this.gridRadius;
+        //multiply # of cells from origin by units per cell to get units from origin
+        const x = xOffset * this.unitsPerCell;
+        const y = yOffset * this.unitsPerCell;
+        return new vec2(x, y);
+    }
+
     
     //updates the current and previous world pos x and z (we dont care about y)
     setCurrAndPrev(newX: number, newY: number, newZ: number) {
@@ -184,19 +197,6 @@ export class GridClaimer extends BaseScriptComponent {
         this.PlayerVisuals.createWorldClaimVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
         this.grid.claimCell(x, y, player);
     }
-    
-    // Converts grid row and column number back to world coordinates (center of the cell)
-    gridPosToWorldCoords(col: number, row: number): vec2 {
-        const halfCell = this.unitsPerCell / 2;
-    
-        // Start from grid origin, scale by cell size, and shift to center of cell
-        const x = (col - this.gridRadius) * this.unitsPerCell + halfCell;
-        const y = (row - this.gridRadius) * this.unitsPerCell + halfCell;
-    
-        return new vec2(x, y);
-    }
-
-
 
     //main function for scanline fill algorithm, takes in loop of cells
     findAndFillEnclosedRegion(loop: GridCell[]) {
