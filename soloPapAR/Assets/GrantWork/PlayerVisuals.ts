@@ -33,7 +33,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
    
-
+    // Global array to hold all instances of stakes and claims
+    spawnedVolumes: SceneObject[] = [];
+    
+    
     //returns true if new worldPos == previous position
     isInSameCell(gridPos: vec2): boolean{
         if (gridPos.equal(this.prevGridPos)){
@@ -47,22 +50,35 @@ export class PlayerVisuals extends BaseScriptComponent {
         //create new claimCell
         var parent = this.getSceneObject();
         var cellObject = this.claimCellObj.instantiate(parent);
+        if (!cellObject) {
+            print("Failed to instantiate prefab — check prefab reference!");
+            return;
+        }
         
         //use y passed in but convert x and z (grid pos) to world pos
-        var newPosition = new vec3(x, y, z);
+        //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
+        var newPosition = new vec3(x, y - (scale / 6), z);
         cellObject.getTransform().setLocalPosition(newPosition);
         
-        // Set new scale (make y larger so it's taller than a cube)
-        const height = scale * 3;
-        var newScale = new vec3(scale, height, scale);
+        // Set new scale (make y larger so it's taller than a cube?)
+        //const height = scale * 3;
+        var newScale = new vec3(scale, scale, scale);
         cellObject.getTransform().setLocalScale(newScale);
         print('created claim cell prefab');
+        this.spawnedVolumes.push(cellObject);
     }
     
     //destroy all visible color volumes (player death destroy both stakes and claims)
     DestroyAllVolumes(){
         //destroy stakes then claims for quickest feedback
-        
+        for (let obj of this.spawnedVolumes) {
+            if (obj && obj.destroy) {
+                obj.destroy();
+            }
+        }
+        //set length to 0 to be reused
+        this.spawnedVolumes.length = 0;
+        print('removed all home claims');
     }
    
     

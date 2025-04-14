@@ -9,7 +9,6 @@
     - !<own> eda8583b-66ae-425c-a85d-80482dc0e091
     - !<own> f4188b2f-24c1-41cd-baed-7ca85729f147
     - !<own> 4effdfde-d91e-4309-ad72-6c157619b8f6
-    - !<own> 5298efb2-7d8d-4ed5-8872-29644dfb79cd
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -5847,22 +5846,6 @@
     bottom: 0.000000
     right: 0.000000
     top: 0.000000
-- !<SceneObject/5298efb2-7d8d-4ed5-8872-29644dfb79cd>
-  PrefabRemaps:
-    - 5298efb2-7d8d-4ed5-8872-29644dfb79cd: 45255640-aab9-42a3-aa3e-4872f23c6278
-    - 6306156f-b295-492a-8563-110314a554f9: 03449a56-7250-4c44-a870-32e5c414c7f5
-  Name: CellCube
-  Enabled: true
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 10.000000, y: 10.000000, z: 10.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 6306156f-b295-492a-8563-110314a554f9
 - !<ScriptComponent/530e490a-6682-4e63-aa56-7aa71daf2a2c>
   PrefabRemaps:
     []
@@ -6712,26 +6695,6 @@
     bottom: 0.000000
     right: 0.000000
     top: 0.000000
-- !<RenderMeshVisual/6306156f-b295-492a-8563-110314a554f9>
-  PrefabRemaps:
-    []
-  Name: Render Mesh Visual
-  Enabled: true
-  RenderOrder: 0
-  StretchMode: Stretch
-  VerticalAlignment: Center
-  HorizontalAlignment: Center
-  MeshShadowMode: None
-  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-  ShadowDensity: 1.000000
-  Materials:
-    - !<reference> d630718d-320d-48c7-a837-b605cb6f3c6c
-  Mesh: !<reference> e542623c-1432-4bfa-881d-a28905bd9e57
-  Skin: !<reference> 00000000-0000-0000-0000-000000000000
-  BlendShapesEnabled: true
-  BlendNormals: false
-  BlendShapes:
-    {}
 - !<BodyComponent/632e1469-1b91-44e2-a2b3-e34420d72e29>
   PrefabRemaps:
     []
