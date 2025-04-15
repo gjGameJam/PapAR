@@ -112,7 +112,7 @@
   Properties:
     Port_Value_N008:
       typeIdx: 5
-      value: {x: 0.000000, y: 1.000000, z: 0.164706, w: 0.058824}
+      value: {x: 0.000000, y: 1.000000, z: 0.000000, w: 0.215686}
     PreviewEnabled:
       typeIdx: 0
       value: 0

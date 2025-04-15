@@ -29,12 +29,18 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     claimCellObj: ObjectPrefab;
     
+    @input
+    stakeCellObj: ObjectPrefab;
+    
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
    
-    // Global array to hold all instances of stakes and claims
-    spawnedVolumes: SceneObject[] = [];
+    // Global array to hold all instances of claims
+    spawnedClaims: SceneObject[] = [];
+    
+    // Global array to hold all instances of stakes 
+    spawnedStakes: SceneObject[] = [];
     
     
     //returns true if new worldPos == previous position
@@ -50,10 +56,6 @@ export class PlayerVisuals extends BaseScriptComponent {
         //create new claimCell
         var parent = this.getSceneObject();
         var cellObject = this.claimCellObj.instantiate(parent);
-        if (!cellObject) {
-            print("Failed to instantiate prefab — check prefab reference!");
-            return;
-        }
         
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
@@ -65,28 +67,54 @@ export class PlayerVisuals extends BaseScriptComponent {
         var newScale = new vec3(scale, scale, scale);
         cellObject.getTransform().setLocalScale(newScale);
         print('created claim cell prefab');
-        this.spawnedVolumes.push(cellObject);
+        this.spawnedClaims.push(cellObject);
     }
     
-    //destroy all visible color volumes (player death destroy both stakes and claims)
-    DestroyAllVolumes(){
-        //destroy stakes then claims for quickest feedback
-        for (let obj of this.spawnedVolumes) {
+    //creates a cell cube visual for staked cell
+    createWorldStakeVolume(x: number, y: number, z: number, scale: number){
+        //create new claimCell
+        var parent = this.getSceneObject();
+        var cellObject = this.stakeCellObj.instantiate(parent);
+        
+        //use y passed in but convert x and z (grid pos) to world pos
+        //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
+        var newPosition = new vec3(x, y - (scale / 6), z);
+        cellObject.getTransform().setLocalPosition(newPosition);
+        
+        // Set new scale (make y larger so it's taller than a cube?)
+        //const height = scale * 3;
+        var newScale = new vec3(scale, scale, scale);
+        cellObject.getTransform().setLocalScale(newScale);
+        print('created stake cell prefab');
+        this.spawnedStakes.push(cellObject);
+    }
+    
+    //destroy all visible color volumes representing home claims
+    DestroyAllClaims(){
+        //destroyall claims
+        for (let obj of this.spawnedClaims) {
             if (obj && obj.destroy) {
                 obj.destroy();
             }
         }
         //set length to 0 to be reused
-        this.spawnedVolumes.length = 0;
+        this.spawnedClaims.length = 0;
         print('removed all home claims');
     }
-   
     
-    //helper function to convert grid pos to spawning position of cell volume visual
-    gridToWorld(){
-        
+    //destroy all visible color volumes representing staked cells
+    DestroyAllStakes(){
+        //destroy all stakes
+        for (let obj of this.spawnedStakes) {
+            if (obj && obj.destroy) {
+                obj.destroy();
+            }
+        }
+        //set length to 0 to be reused
+        this.spawnedStakes.length = 0;
+        print('removed all stakes');
     }
-    
+   
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
         let arrowTransform = this.playerArrow.getTransform();

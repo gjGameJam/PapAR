@@ -24,16 +24,16 @@ metaInfo:
     []
   tags:
     []
-  lensName: Specs Starter
+  lensName: ClaimAR
   lensDescriptors:
-    []
+    - GEN_AI_ICON
   lensApplicability:
     - Front
     - Back
   lensClientCompatibilities:
     - Spectacles
   platformBundlesEnabled: false
-  iconHash: ""
+  iconHash: 43f7737562f0c532cfcae44fb3fbe68e
   videoPreviewHash: ""
   fromTemplateName: Spectacles
   fromTemplateUrl: Lens Studio 5.7.2.25030805

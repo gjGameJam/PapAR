@@ -1947,7 +1947,6 @@
     - !<own> 2474c9f7-11cc-4ccb-9ee4-fa854079608b
     - !<own> 1179c0e7-9947-403d-bc72-9c4535ff86b3
     - !<own> 89d84254-4214-46ca-800c-879dd138887f
-    - !<own> c36f2237-3fdb-47c0-980f-4e67f647ceff
   Components:
     - !<own> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
     - !<own> e07dd510-181d-4056-8e1d-d1b5e882e6bd
@@ -5104,6 +5103,7 @@
       playerArrow: !<reference.ScreenTransform> 700d951c-1d98-48a6-a3b6-8afea21aef15
       deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
       claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
+      stakeCellObj: !<reference.ObjectPrefab> 2197170f-c771-43f9-8d6c-371cea55b242
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
         - !<reference> 9a3bbacc-8a4f-48a8-af8e-f342b8373b9d
@@ -12700,21 +12700,6 @@
     []
   Components:
     - !<own> ddbe9726-d672-4760-ae9e-c1f10d442706
-- !<SceneObject/c36f2237-3fdb-47c0-980f-4e67f647ceff>
-  PrefabRemaps:
-    []
-  Name: Image
-  Enabled: true
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 32.000000, y: 32.000000, z: 32.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> cbf92b82-e1d8-4fb2-a539-20f2ac233911
 - !<SceneObject/c3a23844-423b-44b4-be0c-c3f6f5a7c5be>
   PrefabRemaps:
     []
@@ -13225,25 +13210,6 @@
   ShadowDensity: 1.000000
   Materials:
     - !<reference> dad3d640-66f7-49b4-8346-7fc3c97bc69d
-  FlipX: false
-  FlipY: false
-  RotationAngle: 0
-  Pivot: {x: 0.000000, y: 0.000000}
-  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
-- !<Image/cbf92b82-e1d8-4fb2-a539-20f2ac233911>
-  PrefabRemaps:
-    []
-  Name: Image
-  Enabled: true
-  RenderOrder: 0
-  StretchMode: Stretch
-  VerticalAlignment: Center
-  HorizontalAlignment: Center
-  MeshShadowMode: None
-  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-  ShadowDensity: 1.000000
-  Materials:
-    []
   FlipX: false
   FlipY: false
   RotationAngle: 0

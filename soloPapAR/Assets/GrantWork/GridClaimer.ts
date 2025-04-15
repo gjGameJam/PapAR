@@ -48,7 +48,7 @@ export class GridClaimer extends BaseScriptComponent {
         }
         else if (currState === CellState.UNCLAIMED) {
             // player drops stake on unclaimed land
-            this.grid.stakeCell(gridPos.x, gridPos.y, this.playerID);
+            this.stakeNewCell(gridPos.x, gridPos.y, this.playerID);
         }
         else if (currState === CellState.CLAIMED) {
             //once player returns to their own claim. claim any staked region
@@ -72,6 +72,11 @@ export class GridClaimer extends BaseScriptComponent {
     
     //unclaim and unstake all
     handlePlayerDeath(deadPlayerID: number){
+                
+        //Destroy all volumes for cell claims and stakes
+        this.PlayerVisuals.DestroyAllClaims();
+        this.PlayerVisuals.DestroyAllStakes();
+        
         // Collect all staked cells belonging to the player
         const stakePositions = this.grid.getPlayerStakes(deadPlayerID);
         const claimPositions = this.grid.getPlayerClaims(deadPlayerID);
@@ -91,9 +96,6 @@ export class GridClaimer extends BaseScriptComponent {
         const GridPos = this.worldCoordsToGridPos(new vec2(this.currX, this.currZ));
         //world origin is device handler's (0,0,0)
         this.claimSparseCell(GridPos.x, GridPos.y, deadPlayerID);
-        
-        //Destroy all volumes for cell claims and stakes
-        this.PlayerVisuals.DestroyAllVolumes();
         
     }
     
@@ -122,6 +124,15 @@ export class GridClaimer extends BaseScriptComponent {
         const x = xOffset * this.unitsPerCell;
         const y = yOffset * this.unitsPerCell;
         return new vec2(x, y);
+    }
+    
+    //wrapped function for staking a new cell
+    stakeNewCell(x: number, y: number, player: number){
+        //create visual for stake by getting appropriate world pos then calling player visuals
+        const worldXZ = this.gridPosToWorldCoords(x, y);
+        this.PlayerVisuals.createWorldStakeVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
+        //update the sparse grid
+        this.grid.stakeCell(x, y, player);
     }
 
     
@@ -177,6 +188,8 @@ export class GridClaimer extends BaseScriptComponent {
             return;
         }
         print('adding staked region to claim');
+        //remove all stake visuals from playervisuals here
+        this.PlayerVisuals.DestroyAllStakes();
     
         // Convert all staked cells in the loop to claims
         for (const key of stakePositions) {
