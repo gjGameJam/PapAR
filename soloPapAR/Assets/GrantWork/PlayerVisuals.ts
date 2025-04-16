@@ -52,6 +52,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
     
     //creates a cell cube visual for claimed cell
+    //TODO: get this functionality to be handled by the instantiator
     createWorldClaimVolume(x: number, y: number, z: number, scale: number){
         //create new claimCell
         var parent = this.getSceneObject();
@@ -71,6 +72,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
     
     //creates a cell cube visual for staked cell
+    //TODO: get this functionality to be handled by the instantiator
     createWorldStakeVolume(x: number, y: number, z: number, scale: number){
         //create new claimCell
         var parent = this.getSceneObject();

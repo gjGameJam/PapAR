@@ -1,4 +1,5 @@
 import { PlayerVisuals } from './PlayerVisuals';
+import {SessionController} from '../../SpectacleSyncKit/Core/SessionController';
 
 @component
 export class GridClaimer extends BaseScriptComponent {
@@ -17,6 +18,9 @@ export class GridClaimer extends BaseScriptComponent {
     
     @input
     PlayerVisuals: PlayerVisuals;
+    
+//    @input
+//    seshController: SessionController;
 
     
     //function called by location tracker script whenever coordinates change
