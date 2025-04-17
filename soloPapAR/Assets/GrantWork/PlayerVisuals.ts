@@ -1,6 +1,8 @@
 import { SparseGrid } from './GridClaimer';
 import { CellState } from './GridClaimer';
 import { LocationTracker } from './LocationTracker';
+import {Instantiator} from '../SpectaclesSyncKit/Components/Instantiator';
+
 
 @component
 export class PlayerVisuals extends BaseScriptComponent {
@@ -31,6 +33,9 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     @input
     stakeCellObj: ObjectPrefab;
+    
+    @input
+    networkedInstantiator: Instantiator;
     
     //array of cells going one column at a time
     @input

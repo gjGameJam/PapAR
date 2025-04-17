@@ -45,13 +45,10 @@ export class LocationTracker extends BaseScriptComponent {
         return yaw
     }
 
-
-    
-
-
   
     
   //return player device tracking position (world origin is 0, 0, 0)
+  //TODO: might have to use sessioncontroller's colocated space for world origin
   getDeviceTrackerPosition() {
     //var position = this.playerTracker.getTransform().getWorldPosition();
     //print("Device Tracker Position: " + position);

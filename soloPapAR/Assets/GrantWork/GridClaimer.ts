@@ -29,6 +29,8 @@ export class GridClaimer extends BaseScriptComponent {
         //print('location has been updated');
         this.setCurrAndPrev(worldX, worldY, worldZ);
         
+        this.seshController.getIsReady();
+        
         //if (this.hasPrev) {
         //convert world coordinates to get game grid cell
         const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
