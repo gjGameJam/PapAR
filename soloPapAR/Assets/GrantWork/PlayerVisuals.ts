@@ -24,7 +24,6 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     playerArrow: ScreenTransform;
     
-    
     @input
     deviceTracker: LocationTracker;
     

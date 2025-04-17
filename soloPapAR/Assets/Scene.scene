@@ -16158,7 +16158,7 @@
   Name: Located At
   Enabled: true
   Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-  Location: !<reference> 00000000-0000-0000-0000-000000000000
+  Location: !<reference> 0f26cd31-89fd-4ec7-ad99-d8d3a1b746eb
 - !<Image/e34470e3-66d2-48c8-9566-3b6235e67f0d>
   PrefabRemaps:
     []
