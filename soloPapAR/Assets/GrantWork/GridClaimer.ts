@@ -1,5 +1,5 @@
 import { PlayerVisuals } from './PlayerVisuals';
-import {SessionController} from '../../SpectacleSyncKit/Core/SessionController';
+import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
 
 @component
 export class GridClaimer extends BaseScriptComponent {
@@ -16,11 +16,12 @@ export class GridClaimer extends BaseScriptComponent {
     playerID: number = 0;
     DEGREES_TO_RADIANS = Math.PI / 180;
     
+    
     @input
     PlayerVisuals: PlayerVisuals;
     
-//    @input
-//    seshController: SessionController;
+    //session controller singleton instance
+    seshController: SessionController = SessionController.getInstance();
 
     
     //function called by location tracker script whenever coordinates change
