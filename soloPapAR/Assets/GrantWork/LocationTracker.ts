@@ -28,21 +28,22 @@ export class LocationTracker extends BaseScriptComponent {
   //on awake, start tracking once session controller starts up
   onAwake() {
       //print('' + this.playerTracker.getTransform().getWorldPosition());
-      this.getDeviceTrackerPosition();
-      //this.initializeLocationTracking();
-          //session controller singleton instance
+      
+      //session controller singleton instance
       this.seshController = SessionController.getInstance();
       //TODO: incorporate this if/else in getDeviceTrackerPosition
       //only send location (relative to colocated world space) if seshController is ready
 
-
+      //TODO: use sessioncontroller's colocated world space as world origin
+      this.seshController.notifyOnReady(() => {
+        // SessionController is ready to use
+        print('session controller notify on ready');
+        //start sending position to grid claimer
+        this.getDeviceTrackerPosition();
+      });
   }
     
-    //TODO: use sessioncontroller's colocated world space as world origin
-//    this.seshController.notifyOnReady(() => {
-//      // SessionController is ready to use
-//      print('session controller done with sleepy time');
-//    });
+
 
   
   //returns the rotation of the device in world space (for player arrow visual)   
