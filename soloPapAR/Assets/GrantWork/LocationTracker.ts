@@ -1,4 +1,6 @@
 import { GridClaimer } from './GridClaimer';
+import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
+
 
 @component
 export class LocationTracker extends BaseScriptComponent {
@@ -20,14 +22,28 @@ export class LocationTracker extends BaseScriptComponent {
   private getNewPosition: DelayedCallbackEvent;
   private locationService: LocationService;
   private hasStarted: boolean = false;
+  private seshController: SessionController;
+
 
   //on awake, start tracking once session controller starts up
   onAwake() {
       //print('' + this.playerTracker.getTransform().getWorldPosition());
       this.getDeviceTrackerPosition();
       //this.initializeLocationTracking();
+          //session controller singleton instance
+      this.seshController = SessionController.getInstance();
+      //TODO: incorporate this if/else in getDeviceTrackerPosition
+      //only send location (relative to colocated world space) if seshController is ready
+
 
   }
+    
+    //TODO: use sessioncontroller's colocated world space as world origin
+//    this.seshController.notifyOnReady(() => {
+//      // SessionController is ready to use
+//      print('session controller done with sleepy time');
+//    });
+
   
   //returns the rotation of the device in world space (for player arrow visual)   
     // Convert quaternion to Euler and return Z (yaw)
@@ -57,7 +73,14 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition.bind(() => {
         var position = this.playerTracker.getTransform().getWorldPosition();
         //print('X: '+ position.x + ', Z: '+ position.z);
-        this.GridClaimer.updatePos(position.x, position.y, position.z);
+        if (this.seshController.getIsReady()) {
+            // Session is ready (after singleplayer or multiplayer button click)
+            print('session controller done with sleepy time');
+            this.GridClaimer.updatePos(position.x, position.y, position.z);
+        }
+        else{
+            print('session controller still sleeping');
+        }
         this.getNewPosition.reset(.5); // delay in seconds
     });
     

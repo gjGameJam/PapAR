@@ -15195,7 +15195,6 @@
   Enabled: true
   ScriptAsset: !<reference> 0f0500cb-c58a-434d-a171-94167130d106
   ScriptInputsDefault:
-    prefabs: true
     spawnerOwnsObject: true
     spawnAsChildren: true
     spawnUnderParent: true
@@ -15208,7 +15207,8 @@
   ScriptInputs:
     "":
       prefabs: !<reference.ObjectPrefab[]>
-        []
+        - !<reference> 99267dff-1b24-4308-a022-dc67892f14e8
+        - !<reference> 2197170f-c771-43f9-8d6c-371cea55b242
       spawnerOwnsObject: false
       spawnAsChildren: false
       spawnUnderParent: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000

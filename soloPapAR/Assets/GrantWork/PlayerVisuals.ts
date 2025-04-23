@@ -81,6 +81,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         //create new claimCell
         var parent = this.getSceneObject();
         var cellObject = this.stakeCellObj.instantiate(parent);
+        //TODO: use instantiator like below line (WIP)
+        //var cellObject = this.networkedInstantiator.instantiate(this.stakeCellObj);
         
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
@@ -252,7 +254,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     renderMiniMapCell(gridX: number, gridY: number, cellState: CellState | null): void {
         //get color of cell to draw via cellstate
         const color = this.getCellColor(cellState);
-        //TODO: color correct cell given pos and color
+        //color correct cell given pos and color
         const img = this.miniMapCells[gridY * 5 + gridX] as any;
         if (img && img.mainPass) {
             // If this image doesn't already have its own material, clone it

@@ -22,7 +22,9 @@ export class GridClaimer extends BaseScriptComponent {
     
     //session controller singleton instance
     seshController: SessionController = SessionController.getInstance();
-
+    //TODO: get session controller working
+    //this.seshController;
+    
     
     //function called by location tracker script whenever coordinates change
     updatePos(worldX : number, worldY : number, worldZ : number){
