@@ -34,6 +34,7 @@
     playerArrow: false
     screenTransform: false
     stakeCellObj: false
+    stakePillarObj: false
     uiText: false
     whiteCell: false
   ScriptTypesHidden:
@@ -51,6 +52,7 @@
       claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
+      stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -63,5 +65,6 @@
     - // @input LocationTracker deviceTracker
     - // @input Asset.ObjectPrefab claimCellObj
     - // @input Asset.ObjectPrefab stakeCellObj
+    - // @input Asset.ObjectPrefab stakePillarObj
     - // @input Instantiator networkedInstantiator
     - "// @input Component.Image[] miniMapCells"

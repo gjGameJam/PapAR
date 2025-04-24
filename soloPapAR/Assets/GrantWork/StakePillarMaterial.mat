@@ -1,8 +1,8 @@
-- !<Material/584be4e9-73ec-4f1a-887d-3efb0f6b9baf>
+- !<Material/b394265a-3a96-4303-8ceb-600a587d2b36>
   PackagePath: ""
   PassesInfo:
-    - !<own> 9797b49e-8e90-4762-b1d4-7c45f570451b
-- !<PassInfo/9797b49e-8e90-4762-b1d4-7c45f570451b>
+    - !<own> bb4bd999-96d8-4603-bf9c-4d96e9bb9a2e
+- !<PassInfo/bb4bd999-96d8-4603-bf9c-4d96e9bb9a2e>
   CachedProperties:
     - Port_Center_N016:
         typeIdx: 3
@@ -34,9 +34,6 @@
     - Port_LODValue_N009:
         typeIdx: 1
         value: 0.000000
-    - Port_Output_N008:
-        typeIdx: 5
-        value: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
     - Port_RayDirection_N004:
         typeIdx: 4
         value: {x: 0.000000, y: 1.000000, z: 0.000000}
@@ -97,7 +94,7 @@
   DepthWrite: true
   DepthTest: true
   DepthFunction: LessEqual
-  TwoSided: true
+  TwoSided: false
   ColorMask: {x: true, y: true, z: true, w: true}
   CullMode: Back
   PolygonOffset: {x: 0.000000, y: 0.000000}
@@ -108,12 +105,12 @@
     - ENABLE_BASE_TEX
     - ENABLE_LIGHTING
     - ENABLE_NORMALMAP
-  BlendMode: PremultipliedAlphaAuto
+  BlendMode: Disabled
   Properties:
     Port_Value_N008:
       typeIdx: 5
-      value: {x: 0.000000, y: 0.882353, z: 0.000000, w: 0.117647}
+      value: {x: 0.000000, y: 0.686275, z: 0.000000, w: 1.000000}
     PreviewEnabled:
       typeIdx: 0
       value: 0
-  Pass: !<reference> 3a302b27-4864-4f36-b3b7-a0167d0cf521
+  Pass: !<reference> 68fb3aa9-1e01-47ff-95ab-d669bed3bc1a

@@ -34,6 +34,9 @@ export class PlayerVisuals extends BaseScriptComponent {
     stakeCellObj: ObjectPrefab;
     
     @input
+    stakePillarObj: ObjectPrefab;
+    
+    @input
     networkedInstantiator: Instantiator;
     
     //array of cells going one column at a time
@@ -81,6 +84,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         //create new claimCell
         var parent = this.getSceneObject();
         var cellObject = this.stakeCellObj.instantiate(parent);
+        var stakeObject = this.stakePillarObj.instantiate(parent);
+        
         //TODO: use instantiator like below line (WIP)
         //var cellObject = this.networkedInstantiator.instantiate(this.stakeCellObj);
         
@@ -88,13 +93,18 @@ export class PlayerVisuals extends BaseScriptComponent {
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
         var newPosition = new vec3(x, y - (scale / 6), z);
         cellObject.getTransform().setLocalPosition(newPosition);
+        stakeObject.getTransform().setLocalPosition(newPosition);
         
         // Set new scale (make y larger so it's taller than a cube?)
         //const height = scale * 3;
-        var newScale = new vec3(scale, scale, scale);
-        cellObject.getTransform().setLocalScale(newScale);
-        print('created stake cell prefab');
+        var cellScale = new vec3(scale, scale, scale);
+        var pillarScale = new vec3(1, scale, 1);
+        cellObject.getTransform().setLocalScale(cellScale);
+        stakeObject.getTransform().setLocalScale(pillarScale);
+        print('created stake visuals prefabs');
         this.spawnedStakes.push(cellObject);
+        this.spawnedStakes.push(stakeObject);
+        //TODO: also make a stake pillar in the center of each volume
     }
     
     //destroy all visible color volumes representing home claims

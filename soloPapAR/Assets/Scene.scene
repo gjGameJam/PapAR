@@ -5391,6 +5391,7 @@
       deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
       claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
       stakeCellObj: !<reference.ObjectPrefab> 2197170f-c771-43f9-8d6c-371cea55b242
+      stakePillarObj: !<reference.ObjectPrefab> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
       networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc

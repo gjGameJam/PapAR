@@ -65,24 +65,18 @@ export class LocationTracker extends BaseScriptComponent {
   
     
   //return player device tracking position (world origin is 0, 0, 0)
-  //TODO: might have to use sessioncontroller's colocated space for world origin
   getDeviceTrackerPosition() {
     //var position = this.playerTracker.getTransform().getWorldPosition();
     //print("Device Tracker Position: " + position);
     //this.getDeviceTrackerPosition.reset(1.0);
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
+        // Session is ready (after singleplayer or multiplayer button click)
+        print('session controller done with sleepy time');
+        //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
-        //print('X: '+ position.x + ', Z: '+ position.z);
-        if (this.seshController.getIsReady()) {
-            // Session is ready (after singleplayer or multiplayer button click)
-            print('session controller done with sleepy time');
-            this.GridClaimer.updatePos(position.x, position.y, position.z);
-        }
-        else{
-            print('session controller still sleeping');
-        }
-        this.getNewPosition.reset(.5); // delay in seconds
+        this.GridClaimer.updatePos(position.x, position.y, position.z);
+        this.getNewPosition.reset(.5); // delay in seconds before repeat call
     });
     
     // Kick it off immediately
