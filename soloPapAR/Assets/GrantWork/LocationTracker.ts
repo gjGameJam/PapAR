@@ -31,14 +31,13 @@ export class LocationTracker extends BaseScriptComponent {
       
       //session controller singleton instance
       this.seshController = SessionController.getInstance();
-      //TODO: incorporate this if/else in getDeviceTrackerPosition
-      //only send location (relative to colocated world space) if seshController is ready
-
       //TODO: use sessioncontroller's colocated world space as world origin
+      //only send location (relative to colocated world space) if seshController is ready
       this.seshController.notifyOnReady(() => {
         // SessionController is ready to use
         print('session controller notify on ready');
         //start sending position to grid claimer
+             
         this.getDeviceTrackerPosition();
       });
   }
@@ -72,7 +71,7 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         // Session is ready (after singleplayer or multiplayer button click)
-        print('session controller done with sleepy time');
+        //print('session controller done with sleepy time');
         //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
         this.GridClaimer.updatePos(position.x, position.y, position.z);

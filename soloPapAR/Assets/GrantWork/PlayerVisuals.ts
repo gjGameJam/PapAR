@@ -3,7 +3,6 @@ import { CellState } from './GridClaimer';
 import { LocationTracker } from './LocationTracker';
 import {Instantiator} from '../SpectaclesSyncKit/Components/Instantiator';
 
-
 @component
 export class PlayerVisuals extends BaseScriptComponent {
     
@@ -50,6 +49,8 @@ export class PlayerVisuals extends BaseScriptComponent {
     spawnedStakes: SceneObject[] = [];
     
     
+    
+    
     //returns true if new worldPos == previous position
     isInSameCell(gridPos: vec2): boolean{
         if (gridPos.equal(this.prevGridPos)){
@@ -58,53 +59,57 @@ export class PlayerVisuals extends BaseScriptComponent {
         return false;
     }
     
-    //creates a cell cube visual for claimed cell
-    //TODO: get this functionality to be handled by the instantiator
+    //creates a cell cube visual for claimed cell via instantiator.instantiate
     createWorldClaimVolume(x: number, y: number, z: number, scale: number){
-        //create new claimCell
-        var parent = this.getSceneObject();
-        var cellObject = this.claimCellObj.instantiate(parent);
-        
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
         var newPosition = new vec3(x, y - (scale / 6), z);
-        cellObject.getTransform().setLocalPosition(newPosition);
         
-        // Set new scale (make y larger so it's taller than a cube?)
-        //const height = scale * 3;
-        var newScale = new vec3(scale, scale, scale);
-        cellObject.getTransform().setLocalScale(newScale);
-        print('created claim cell prefab');
-        this.spawnedClaims.push(cellObject);
+        //spawn the cell via the instantiator
+        this.networkedInstantiator.instantiate(this.claimCellObj, undefined, (networkRoot) => {
+          const cellObject = networkRoot.sceneObject;
+          //set appropriate position
+          cellObject.getTransform().setLocalPosition(newPosition);
+          //set scale
+          var cellScale = new vec3(scale, scale, scale);
+          cellObject.getTransform().setLocalScale(cellScale);
+          //push volume (might need to network differently)
+          this.spawnedClaims.push(cellObject);
+        });
     }
     
-    //creates a cell cube visual for staked cell
-    //TODO: get this functionality to be handled by the instantiator
+    
+    //creates cube visuals for staked cell via instantiator.instantiate
     createWorldStakeVolume(x: number, y: number, z: number, scale: number){
-        //create new claimCell
-        var parent = this.getSceneObject();
-        var cellObject = this.stakeCellObj.instantiate(parent);
-        var stakeObject = this.stakePillarObj.instantiate(parent);
-        
-        //TODO: use instantiator like below line (WIP)
-        //var cellObject = this.networkedInstantiator.instantiate(this.stakeCellObj);
-        
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
-        var newPosition = new vec3(x, y - (scale / 6), z);
-        cellObject.getTransform().setLocalPosition(newPosition);
-        stakeObject.getTransform().setLocalPosition(newPosition);
+        var newPosition = new vec3(x, y - (scale / 6), z);        
         
-        // Set new scale (make y larger so it's taller than a cube?)
-        //const height = scale * 3;
-        var cellScale = new vec3(scale, scale, scale);
-        var pillarScale = new vec3(1, scale, 1);
-        cellObject.getTransform().setLocalScale(cellScale);
-        stakeObject.getTransform().setLocalScale(pillarScale);
-        print('created stake visuals prefabs');
-        this.spawnedStakes.push(cellObject);
-        this.spawnedStakes.push(stakeObject);
-        //TODO: also make a stake pillar in the center of each volume
+        //spawn the cell via the instantiator
+        this.networkedInstantiator.instantiate(this.stakeCellObj, undefined, (networkRoot) => {
+          const cellObject = networkRoot.sceneObject;
+          //set appropriate position
+          cellObject.getTransform().setLocalPosition(newPosition);
+          //set scale
+          var cellScale = new vec3(scale, scale, scale);
+          cellObject.getTransform().setLocalScale(cellScale);
+          //push volume (might need to network differently)
+          this.spawnedStakes.push(cellObject);
+        });
+        
+        //spawn the pillar via the instantiator
+        this.networkedInstantiator.instantiate(this.stakePillarObj, undefined, (networkRoot) => {
+          const stakeObject = networkRoot.sceneObject;
+          //set appropriate position
+          stakeObject.getTransform().setLocalPosition(newPosition);
+          //set scale
+          //TODO: figure out why I have to divide by 10 to get scaled correctly
+          var pillarScale = new vec3(.1, scale / 10, .1);
+          stakeObject.getTransform().setLocalScale(pillarScale);
+          //push prefab (might need to network differently)
+          this.spawnedStakes.push(stakeObject);
+        });
+        
     }
     
     //destroy all visible color volumes representing home claims
