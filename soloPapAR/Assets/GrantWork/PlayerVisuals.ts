@@ -48,7 +48,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     // Global array to hold all instances of stakes 
     spawnedStakes: SceneObject[] = [];
     
-    
+    private previousRotation: number = 0;
     
     
     //returns true if new worldPos == previous position
@@ -140,18 +140,21 @@ export class PlayerVisuals extends BaseScriptComponent {
    
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
-        let arrowTransform = this.playerArrow.getTransform();
-        const scale = arrowTransform.getLocalScale();
-        
-        arrowTransform.setLocalScale(new vec3(scale.x, scale.y, scale.z));
+        // change scale of player direction arrow if needed
+        //let arrowTransform = this.playerArrow.getTransform();
+        //const scale = arrowTransform.getLocalScale();
+        //arrowTransform.setLocalScale(new vec3(scale.x, scale.y, scale.z));
     }
     
     onUpdate() {
         // get radians rotation in z
         const yawRadians = this.deviceTracker.getDeviceTrackerRotation();
+        //update arrow if new rotation is found
+        if (this.previousRotation != yawRadians){
+            // update the player arrow with appropriate rotation
+            this.rotatePlayerArrow(yawRadians);
+        }
         
-        
-        this.rotatePlayerArrow(yawRadians);
     }
     
     //main function to adjust player direction facing arrow given rotation

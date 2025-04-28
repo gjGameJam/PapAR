@@ -36,8 +36,8 @@ export class LocationTracker extends BaseScriptComponent {
       this.seshController.notifyOnReady(() => {
         // SessionController is ready to use
         print('session controller notify on ready');
-        //start sending position to grid claimer
-             
+        //start sending position to grid claimer 
+        //now session controller (colocated space) is ready
         this.getDeviceTrackerPosition();
       });
   }
