@@ -219,13 +219,35 @@ export class GridClaimer extends BaseScriptComponent {
         this.PlayerVisuals.createWorldClaimVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
         this.grid.claimCell(x, y, player);
     }
-
-    //main function for scanline fill algorithm, takes in loop of cells
-    findAndFillEnclosedRegion(loop: GridCell[]) {
-        const visited = new Set<string>();
-        const queue: GridCell[] = [];
     
-        // Step 1: Bounding box of the loop
+    // Step 1: Convert loop to array of segments
+    getLoopEdges(loop: GridCell[]): [number, number, number, number][] {
+        const edges: [number, number, number, number][] = [];
+        for (let i = 0; i < loop.length; i++) {
+            const [x1, y1] = loop[i].split(',').map(Number);
+            const [x2, y2] = loop[(i + 1) % loop.length].split(',').map(Number);
+            edges.push([x1, y1, x2, y2]);
+        }
+        return edges;
+    }
+    
+    // Step 2: Check if a point is inside the loop using ray casting
+    isInLoop(x: number, y: number, edges: [number, number, number, number][]): boolean {
+        let count = 0;
+        for (const [x1, y1, x2, y2] of edges) {
+            if ((y1 > y) !== (y2 > y)) {
+                const xCross = ((x2 - x1) * (y - y1)) / (y2 - y1) + x1;
+                if (xCross > x) count++;
+            }
+        }
+        return count % 2 === 1;
+    }
+
+    //main function for filling loop of cells (grid loop can be part/completely diagonal and multiple cells thick)
+    findAndFillEnclosedRegion(loop: GridCell[]) {
+        const loopSet = new Set(loop);
+        const edges = this.getLoopEdges(loop);
+    
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (const key of loop) {
             const [x, y] = key.split(',').map(Number);
@@ -235,55 +257,23 @@ export class GridClaimer extends BaseScriptComponent {
             maxY = Math.max(maxY, y);
         }
     
-        // Step 2: Try to find a fill start point inside the bounding box
-        let found = false;
-        for (let x = minX + 1; x < maxX && !found; x++) {
-            for (let y = minY + 1; y < maxY && !found; y++) {
+        for (let x = minX + 1; x < maxX; x++) {
+            for (let y = minY + 1; y < maxY; y++) {
                 const key = `${x},${y}` as GridCell;
-                if (this.grid.isUnclaimed(x, y)) {
-                    queue.push(key);
-                    visited.add(key);
-                    found = true;
+                if (!loopSet.has(key) && this.isInLoop(x, y, edges)) {
+                    this.claimSparseCell(x, y, this.playerID);
                 }
             }
         }
     
-        if (!found) {
-            print("No valid fill start point found.");
-            return;
-        }
-    
-        // Step 3: Flood fill in 8 directions
-        const directions = [
-            [1, 0], [-1, 0], [0, 1], [0, -1],
-            [1, 1], [-1, -1], [-1, 1], [1, -1]
-        ];
-    
-        while (queue.length > 0) {
-            const cell = queue.shift();
-            const [x, y] = cell.split(',').map(Number);
-    
-            this.claimSparseCell(x, y, this.playerID); // Claim the cell
-    
-            for (const [dx, dy] of directions) {
-                const nx = x + dx;
-                const ny = y + dy;
-                const key = `${nx},${ny}` as GridCell;;
-    
-                if (
-                    nx >= minX && nx <= maxX &&
-                    ny >= minY && ny <= maxY &&
-                    !visited.has(key) &&
-                    this.grid.isUnclaimed(nx, ny)
-                ) {
-                    visited.add(key);
-                    queue.push(key);
-                }
-            }
-        }
-    
-        print("8-directional fill complete!");
+        print("Scanline region fill complete!");
     }
+
+
+
+
+
+
 
 }
 

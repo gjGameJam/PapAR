@@ -17,8 +17,8 @@ viewConfig:
     viewport: Maximized
     output: Live
     stereoOutputEye: Center
-    deviceTypeOverride: Spectacles
-  cameraType: Back
+    deviceTypeOverride: Unknown
+  cameraType: Front
 metaInfo:
   hints:
     []
