@@ -1,5 +1,6 @@
 import { PlayerVisuals } from './PlayerVisuals';
 import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
+//import {ConnectedLens} from '../SpectaclesSyncKit/ConnectedLensModule';
 
 @component
 export class GridClaimer extends BaseScriptComponent {
@@ -16,14 +17,40 @@ export class GridClaimer extends BaseScriptComponent {
     playerID: number = 0;
     DEGREES_TO_RADIANS = Math.PI / 180;
     
-    
+    //player visuals script for minimap and world objects
     @input
     PlayerVisuals: PlayerVisuals;
     
     //session controller singleton instance
     seshController: SessionController = SessionController.getInstance();
-    //TODO: get session controller working
-    //this.seshController;
+    
+    //function to create real time store for grid
+    //callled by notify on ready in session controller, meaning session is already made
+    createGrid() {
+        //get connected lens module from session controller
+        //ASK: if there is a better convention for getting this
+        const clm = this.seshController.connectedLensModuleToUse;
+        print('the sesh has begun :) ' + clm);
+        
+        var options = RealtimeStoreCreateOptions.create();
+        options.ownership = RealtimeStoreCreateOptions.Ownership.Unowned;
+        options.persistence = RealtimeStoreCreateOptions.Persistence.Session;
+        //TODO: ask about below line
+        //options.initialStore = ;
+        
+        //TODO: with connected lens session, create real time store for shared game grid
+        //const gridStore = cls.getOrCreateRealtimeStore("SharedClaimGrid"); //UNOWNED so any player can modify
+//        this.seshController.session.createRealtimeStore(options,
+//            function onSuccess(store) {
+//              print('Store created! In On connected');
+//            
+//            },
+//            function onError(message) {
+//              print('Unable to create a store: ' + message)
+//            }
+//        )
+        
+    }
     
     
     //function called by location tracker script whenever coordinates change

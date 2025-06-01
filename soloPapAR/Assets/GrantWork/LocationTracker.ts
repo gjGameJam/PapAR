@@ -36,6 +36,8 @@ export class LocationTracker extends BaseScriptComponent {
       this.seshController.notifyOnReady(() => {
         // SessionController is ready to use
         print('session controller notify on ready');
+        //create real time store if necessary
+        this.GridClaimer.createGrid();
         //start sending position to grid claimer 
         //now session controller (colocated space) is ready
         this.getDeviceTrackerPosition();
@@ -75,7 +77,7 @@ export class LocationTracker extends BaseScriptComponent {
         //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
         this.GridClaimer.updatePos(position.x, position.y, position.z);
-        this.getNewPosition.reset(.5); // delay in seconds before repeat call
+        this.getNewPosition.reset(.35); // delay in seconds before repeat call
     });
     
     // Kick it off immediately
