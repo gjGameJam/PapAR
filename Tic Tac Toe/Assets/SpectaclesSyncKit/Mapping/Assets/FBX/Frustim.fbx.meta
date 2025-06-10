@@ -2,13 +2,13 @@
   ImportedAssetIds:
     .hidden/Material: !<reference> e8c85fcf-3694-43d1-817d-34004875e0ac
     .hidden/white: !<reference> 314b3962-787b-4131-a9e1-85144822d892
-    0bf53db6bcd0d22d: !<reference> 62206422-70b1-41f4-8cfd-a8cd67d1d1ae
-    0dfa601c88d69301: !<reference> f8a4bda9-2d93-40f0-a8d4-6642444cfe95
-    18c03df3ed80d78e: !<reference> 1572be70-50b2-47c1-a5ad-be4e2e324153
-    1dbc37d2d6523f4c: !<reference> 278afbfd-6ef5-45ea-8f89-d1fc522178f0
-    5093f8f08b9298a3: !<reference> 42661f59-c691-4d60-9b2a-4964203c009b
-    59ef272fd14ae541: !<reference> aa996303-a24c-4bcf-842e-a660623b5f5c
-    66780cf3a4dcb2b8: !<reference> 088b62df-0208-4696-b857-d687f073c61d
+    22eff6470d87ad56: !<reference> a4b92653-e3b0-47df-9746-4484eb02c2d7
+    3e3dc356886ff817: !<reference> 14c4fce7-e711-465f-82cf-56e76682dd04
+    652c32b24b7da130: !<reference> ca56f8f4-8563-4fe2-9ae1-ea57522db4a9
+    658144b45af39c17: !<reference> 2a6e75d9-b92f-43d9-9183-3cb25b5bc486
+    7a0dd5cd69df73fa: !<reference> 6ada6fac-3601-4c9e-a5fb-2a8093291aa6
+    7b33ea4ba809f7ae: !<reference> 6f45f20c-28ff-4072-82ba-3e5ae12ed951
+    8daedd39ba194326: !<reference> 49fea6e7-ab8a-4c1c-aaa2-f879d6b1fcb8
     Materials/Material: !<reference> 07e295f5-774b-4ceb-a587-2d7a649ec56e
     Materials/Material|Material|GraphPassInfo: !<reference> 8030b6c4-2ca0-45bb-a1c2-1a4bf0cf3812
     Materials/phong1: !<reference> 5911b9e3-281e-42d8-8ffb-a16e304a6d14
@@ -18,9 +18,9 @@
     Meshes/screen.001: !<reference> ba6b0d81-5747-404f-b81f-d02e587f580d
     Meshes/screen.002: !<reference> f10d03b0-f9d9-4882-885d-d2f193513834
     Scene: !<reference> e8d4cf06-48b4-443a-9534-aca54925c845
-    d597de9cd48d1fcd: !<reference> 9ac1fec7-d8df-4dc8-921d-e203571fb6b1
-    d94a4a92faa237c9: !<reference> 50def0b5-df21-48af-9d4e-631ea2e405f6
-    ffd621289fd7eb94: !<reference> 2fc5b21b-351b-4592-ab73-b9a3a738021b
+    cd027a4e93799af1: !<reference> ab023256-e4cf-44fa-b4c4-7f4a843fff07
+    f6ac3a2742877e55: !<reference> 6c7ce078-734b-40be-9b8a-d7e983926dd4
+    f850f3686c590910: !<reference> ef1bb347-f39b-4021-8cb2-1cf2f3b709e8
   ImporterName: FbxImporter
   PrimaryAsset: !<reference> e8d4cf06-48b4-443a-9534-aca54925c845
   PackageType: LegacyPackage
@@ -29,7 +29,7 @@
     Scene: !<own> 36c2ddd9-4fde-407b-82c9-7ebca5885bcc
   DependentFiles:
     []
-  ImporterSettings: !<FbxImporterSettings/250c7e2d-eda0-4336-a642-8e7d798cc3ab>
+  ImporterSettings: !<FbxImporterSettings>
     UseLegacyImporter: false
     WithMaterials: true
     NamingConvention: ByCategorySanitize
@@ -45,20 +45,20 @@
     GeneratePivots: true
     TriangulateNURBS: true
     UseLegacyFbxLoader: false
-  CompressionSettings: !<ComplexCompressionSettings/5a66bba6-4a1a-48c6-808f-cd9af91aa169>
+  CompressionSettings: !<ComplexCompressionSettings>
     Presets:
-      None Compression: !<SingleCompressionSettings/fef4eb30-448a-4a3a-abc5-af617561b036>
+      None Compression: !<SingleCompressionSettings>
         CompressorName: Draco
-        CompressionSettings: !<MeshCompressionSettings/9b443161-f752-40a2-97c9-753ce8ad4d86>
+        CompressionSettings: !<MeshCompressionSettings>
           EnableDracoCompression: true
           CompressionLevel: 10
           PositionBits: 11
           TexcoordBits: 10
           NormalBits: 8
           ColorBits: 8
-      Performance Compression: !<SingleCompressionSettings/adb4c69b-cdf7-4fd1-8c53-be78e900e8d2>
+      Performance Compression: !<SingleCompressionSettings>
         CompressorName: Performance
-        CompressionSettings: !<TextureCompressionSettings/a48eeb01-6fc7-483a-9fa7-61251a3a9ac2>
+        CompressionSettings: !<TextureCompressionSettings>
           Level: Medium
     ExtensionMappings:
       mesh: None Compression

@@ -9,7 +9,7 @@
     JavaScriptAsset: !<own> bda90cec-4d7e-471a-bf4d-599b1d3a387d
   DependentFiles:
     []
-  ImporterSettings: !<AssetImporterSettings/f2af6532-96d7-43ad-9155-9e87485947d8>
+  ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
   ExtraData:
@@ -21,7 +21,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 557a0939-dd57-43f9-90ba-2a8ce9800c87
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -30,8 +30,11 @@
     prefab: false
   ScriptTypesHidden:
     Instantiator: false
+    "Instantiator\r": false
   DefaultScriptInputs:
     - instantiator: !<RequiredType.Instantiator> 00000000-0000-0000-0000-000000000000
       prefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     - Instantiator: !<reference.ScriptAsset> 00000000-0000-0000-0000-000000000000
+      "Instantiator\r": !<reference.ScriptAsset> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000

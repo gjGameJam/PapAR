@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> d2f2f05f-c8bf-4bf7-bc93-bd903a417365
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/ed4ef9f1-0e3a-4ae6-bf52-90101782d1aa>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/ed4ef9f1-0e3a-4ae6-bf52-90101782d1aa> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/d2f2f05f-c8bf-4bf7-bc93-bd903a417365>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: f0e0536e-5bf2-44ea-8146-a1f8efe90ae8
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -31,8 +28,7 @@
     textMappingHintTimingsInput: false
     tutorialNotificationInput: false
     tutorialParametersInput: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - tutorialNotificationInput: !<MappingBased.TutorialNotificationInput> 00000000-0000-0000-0000-000000000000
       textMappingHintInput: !<MappingBased.TextMappingHintInput> 00000000-0000-0000-0000-000000000000
@@ -40,8 +36,7 @@
       textMappingHintTimingsInput: !<MappingBased.TextMappingHintTimingsInput> 00000000-0000-0000-0000-000000000000
       tutorialParametersInput: !<MappingBased.TutorialParametersInput> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input TutorialInput tutorialNotificationInput
     - // @input TextMappingHintInput textMappingHintInput

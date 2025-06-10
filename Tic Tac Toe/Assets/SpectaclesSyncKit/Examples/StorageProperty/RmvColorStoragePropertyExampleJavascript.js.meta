@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     JavaScriptAsset: !<own> 2eb55ec4-b9d2-45d2-a1f5-54fe0290f16a
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/3393db39-5abb-4efd-b10d-b43dc6234aaf>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/3393db39-5abb-4efd-b10d-b43dc6234aaf> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<ScriptAssetData/2eb55ec4-b9d2-45d2-a1f5-54fe0290f16a>
   SvgIcon: ""
   Description: ""
@@ -21,16 +18,14 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: ae1e8a71-6a07-4ff9-a3f2-a7d80e026e5a
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
     myRmv: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - myRmv: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}

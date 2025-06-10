@@ -61,6 +61,11 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //creates a cell cube visual for claimed cell via instantiator.instantiate
     createWorldClaimVolume(x: number, y: number, z: number, scale: number){
+        //return early if networked instantiator is not ready
+        if (!this.networkedInstantiator.isReady()){
+            print('instantiator not ready:(');
+            return;
+        }
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
         var newPosition = new vec3(x, y - (scale / 6), z);
@@ -81,6 +86,11 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //creates cube visuals for staked cell via instantiator.instantiate
     createWorldStakeVolume(x: number, y: number, z: number, scale: number){
+        //return early if networked instantiator is not ready
+        if (!this.networkedInstantiator.isReady()){
+            print('instantiator not ready:(');
+            return;
+        }
         //use y passed in but convert x and z (grid pos) to world pos
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
         var newPosition = new vec3(x, y - (scale / 6), z);        

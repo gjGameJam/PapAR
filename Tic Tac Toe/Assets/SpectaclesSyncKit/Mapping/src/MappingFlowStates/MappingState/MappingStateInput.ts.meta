@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 75142845-1554-4cb5-a476-c5aa810a8ab6
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/8409d060-4568-401d-a893-07c0f2fc5568>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/8409d060-4568-401d-a893-07c0f2fc5568> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/75142845-1554-4cb5-a476-c5aa810a8ab6>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: d713d978-c3e0-4706-b612-5e60be07949f
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -32,8 +29,7 @@
     textMappingHintTimingsInput: false
     tutorialNotificationInput: false
     tutorialParametersInput: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - tutorialNotificationInput: !<MappingBased.TutorialNotificationInput> 00000000-0000-0000-0000-000000000000
       mappingProgressInput: !<MappingBased.MappingProgressInput> 00000000-0000-0000-0000-000000000000
@@ -42,8 +38,7 @@
       tutorialParametersInput: !<MappingBased.TutorialParametersInput> 00000000-0000-0000-0000-000000000000
       progressBarParametersInput: !<MappingBased.ProgressBarParametersInput> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input TutorialInput tutorialNotificationInput
     - // @input ProgressBarInput mappingProgressInput

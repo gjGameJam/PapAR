@@ -1,7 +1,6 @@
 import { GridClaimer } from './GridClaimer';
 import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
 
-
 @component
 export class LocationTracker extends BaseScriptComponent {
   latitude: number;
@@ -23,25 +22,28 @@ export class LocationTracker extends BaseScriptComponent {
   private locationService: LocationService;
   private hasStarted: boolean = false;
   private seshController: SessionController;
+  //id number of client to use for material color and unique claim ability
+  private clientID: number;
 
 
   //on awake, start tracking once session controller starts up
   onAwake() {
-      //print('' + this.playerTracker.getTransform().getWorldPosition());
-      
       //session controller singleton instance
       this.seshController = SessionController.getInstance();
       //TODO: use sessioncontroller's colocated world space as world origin
       //only send location (relative to colocated world space) if seshController is ready
-      this.seshController.notifyOnReady(() => {
+      this.seshController.notifyOnReady(() => { //session controller (colocated space) is ready
         // SessionController is ready to use
-        print('session controller notify on ready');
-        //create real time store if necessary
-        this.GridClaimer.createGrid();
-        //start sending position to grid claimer 
-        //now session controller (colocated space) is ready
+        print('session controller notify on ready for location tracker');
+        //Networker contains sync entity with grid storage property
+        //start sending position to for processing by networker
         this.getDeviceTrackerPosition();
       });
+      //get snapchat display name (unique)
+      var displayName = this.seshController.getLocalUserName();
+      //create a unique player id via hashing instead of using string
+      this.clientID = this.getDeterministicPlayerId(displayName);
+      
   }
     
 
@@ -68,21 +70,35 @@ export class LocationTracker extends BaseScriptComponent {
   //return player device tracking position (world origin is 0, 0, 0)
   getDeviceTrackerPosition() {
     //var position = this.playerTracker.getTransform().getWorldPosition();
-    //print("Device Tracker Position: " + position);
-    //this.getDeviceTrackerPosition.reset(1.0);
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         // Session is ready (after singleplayer or multiplayer button click)
-        //print('session controller done with sleepy time');
         //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
         this.GridClaimer.updatePos(position.x, position.y, position.z);
-        this.getNewPosition.reset(.35); // delay in seconds before repeat call
+        //TODO: send position and this.clientID to networker for processing
+        
+        // delay in seconds before repeat call
+        this.getNewPosition.reset(.35);
     });
     
     // Kick it off immediately
     this.getNewPosition.reset(0.0);
   }
+    
+    //helper function for hashing string (hash unique display name to unique ID)
+    getDeterministicPlayerId(displayName: string): number {
+        if (displayName == null){
+            return 0;
+        }
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < displayName.length; i++) {
+            hash ^= displayName.charCodeAt(i);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return hash >>> 0; // Convert to unsigned 32-bit int
+    }
+
 
 
 

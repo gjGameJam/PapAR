@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> a0fc29ef-2c94-4839-83c1-ae2e0a5e1993
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/3b36f920-fbe9-40fa-ac78-59d616aa71c5>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/3b36f920-fbe9-40fa-ac78-59d616aa71c5> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/a0fc29ef-2c94-4839-83c1-ae2e0a5e1993>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 214e9607-eeb6-44ca-bb64-ece6caca115a
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -32,8 +29,7 @@
     locatedAtComponent: false
     locationCloudStorageModule: false
     skipUiInStudio: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - connectedLensModule: !<reference.ConnectedLensModule> 00000000-0000-0000-0000-000000000000
       locationCloudStorageModule: !<reference.LocationCloudStorageModule> 00000000-0000-0000-0000-000000000000
@@ -42,14 +38,13 @@
       locatedAtComponent: !<reference.LocatedAtComponent> 00000000-0000-0000-0000-000000000000
       landmarksVisual3d: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input Asset.ConnectedLensModule connectedLensModule
     - // @input Asset.LocationCloudStorageModule locationCloudStorageModule
-    - '// @input boolean skipUiInStudio = "false" {"label":"Skip UI in Lens Studio"}'
-    - '// @input boolean isColocated = "true"'
-    - '// @ui {"widget":"group_start", "label":"Colocation", "showIf":"isColocated"}'
+    - // @input boolean skipUiInStudio = "false" {"label":"Skip UI in Lens Studio"}
+    - // @input boolean isColocated = "true"
+    - // @ui {"widget":"group_start", "label":"Colocation", "showIf":"isColocated"}
     - // @input Component.LocatedAtComponent locatedAtComponent
     - // @input Component.RenderMeshVisual landmarksVisual3d
-    - '// @ui {"widget":"group_end"}'
+    - // @ui {"widget":"group_end"}

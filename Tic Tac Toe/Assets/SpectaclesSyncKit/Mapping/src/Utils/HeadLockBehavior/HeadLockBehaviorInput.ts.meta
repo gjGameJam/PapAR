@@ -7,30 +7,27 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> f1946427-6148-4771-9a54-ddec39e18258
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/ba335d42-7d48-46de-a4dc-a6fafc3889b6>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/ba335d42-7d48-46de-a4dc-a6fafc3889b6> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
   NativePackageRoot: !<reference> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/f1946427-6148-4771-9a54-ddec39e18258>
   InputLines:
-    - '// @input float distance = "120.0" {"hint":"How far away the target will be from the camera"}'
-    - '// @input float bufferRotationDegrees = "0.0" {"hint":"The magnitude of change in degrees of leeway in any direction before a change starts to occur"}'
-    - '// @input float bufferTranslationCentimeters = "0.0" {"hint":"The magnitude of change needed to activate a translation for the target to follow the camera (centimeters)"}'
-    - '// @input float frequencyCoefficient = "1.0"'
-    - '// @input float dampingCoefficient = "0.8"'
-    - '// @input float underShockCoefficient = "0.0"'
-    - '// @input float timeCoefficient = "1.0"'
+    - // @input float distance = "120.0" {"hint":"How far away the target will be from the camera"}
+    - // @input float bufferRotationDegrees = "0.0" {"hint":"The magnitude of change in degrees of leeway in any direction before a change starts to occur"}
+    - // @input float bufferTranslationCentimeters = "0.0" {"hint":"The magnitude of change needed to activate a translation for the target to follow the camera (centimeters)"}
+    - // @input float frequencyCoefficient = "1.0"
+    - // @input float dampingCoefficient = "0.8"
+    - // @input float underShockCoefficient = "0.0"
+    - // @input float timeCoefficient = "1.0"
   SvgIcon: ""
   Description: ""
   InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: fbabd656-f3e4-4bfe-9246-adae061f8d83
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -42,8 +39,7 @@
     frequencyCoefficient: false
     timeCoefficient: false
     underShockCoefficient: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - distance: !<float> 110.000000
       frequencyCoefficient: 0.750000
@@ -53,5 +49,4 @@
       bufferRotationDegrees: !<float> 18.000000
       bufferTranslationCentimeters: !<float> 20.000000
   ScriptTypes:
-    -
-      {}
+    - {}

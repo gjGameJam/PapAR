@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 37c19c1e-50da-46d1-affc-4ffcd5a01db2
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/ae5d1530-4675-4c25-8a82-b0b4cb02ceeb>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/ae5d1530-4675-4c25-8a82-b0b4cb02ceeb> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/37c19c1e-50da-46d1-affc-4ffcd5a01db2>
   SvgIcon: ""
   Description: ""
@@ -21,21 +18,19 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 8642f26f-cdd3-48f4-a06c-28e4c0e5e659
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
     progressBar: false
     root: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - root: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       progressBar: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input SceneObject root
     - // @input Component.RenderMeshVisual progressBar

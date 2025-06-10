@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 4ddb4b23-90b3-4caa-8ad3-b838e57405ae
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/a15b156c-1c02-4431-a2aa-cf0503d3467b>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/a15b156c-1c02-4431-a2aa-cf0503d3467b> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/4ddb4b23-90b3-4caa-8ad3-b838e57405ae>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: e679e739-9788-42c6-a176-0a5fda9053b0
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -35,8 +32,7 @@
     startPointObject: false
     startPointRoot: false
     teachingText: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - arrow: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
       root: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
@@ -48,8 +44,7 @@
       startPointRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       teachingText: !<reference.Text> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input SceneObject root
     - // @input SceneObject hintRoot
@@ -58,5 +53,5 @@
     - // @input SceneObject startPointObject
     - // @input Component.Text hintText
     - // @input Component.Text teachingText
-    - '// @input float scalingInTime = "0.3" {"hint":"Time in seconds for scaling the object locator In"}'
-    - '// @input float scalingOutTime = "0.3" {"hint":"Time in seconds for scaling the object locator Out"}'
+    - // @input float scalingInTime = "0.3" {"hint":"Time in seconds for scaling the object locator In"}
+    - // @input float scalingOutTime = "0.3" {"hint":"Time in seconds for scaling the object locator Out"}

@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 1680d65a-3b7b-487b-b350-f646ca09ca48
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/badb2f13-36ac-43ba-b134-953ada848683>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/badb2f13-36ac-43ba-b134-953ada848683> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/1680d65a-3b7b-487b-b350-f646ca09ca48>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 38b9d2ed-a599-4243-941c-96ddb915a6e6
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -37,8 +34,7 @@
     rocketAnimationPlayer: false
     rocketConf: false
     slider: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - slider: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       animationAButton: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
@@ -52,8 +48,7 @@
       launchPlatformToggleButton: !<MappingBased.ToggleButton> 00000000-0000-0000-0000-000000000000
       launchPlatform: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input Slider slider
     - // @input SceneObject animationAButton

@@ -2,15 +2,15 @@
   ImportedAssetIds:
     .hidden/lambert36: !<reference> 6226388d-8e3e-4582-bc00-df44d80f5b7c
     .hidden/white: !<reference> 70331a50-3707-4571-a4ab-cf0264310a09
-    66780cf3a4dcb2b8: !<reference> ebb7398a-589f-4203-8475-561b158ce331
-    6f8141229e6d9f05: !<reference> 8d2672fa-34a8-427f-8125-ca2fed0662bf
+    109a8268968f9ae3: !<reference> 15984b5e-c358-4930-9744-2a60c2686a07
+    2028ca51e4a54211: !<reference> 3c07a5e0-d5b8-4604-b5e7-d6f9cd0493f9
+    7a0dd5cd69df73fa: !<reference> 0db84ba9-ff0a-4fc4-8da7-f3b2157a8f20
     BaseLayer: !<reference> 83e803e8-f589-4b21-aed4-fd9b6bceb042
     Materials/lambert36: !<reference> 28885a1c-0e50-4516-b321-627d27d57f4e
     Materials/lambert36|lambert36|GraphPassInfo: !<reference> f7c852c6-0d85-4016-a091-d29519fa6dca
     Meshes/room_all: !<reference> 7687f1d3-ca30-4880-b88e-c44ff04a3c68
     Scene: !<reference> e749b96f-c63a-4c36-a62e-b2f486a71e90
-    a6228f7525bf5ac2: !<reference> ca7466d8-090d-402a-b8a3-f96cdc9ebf57
-    d56449042852f529: !<reference> 317fc9c9-c996-4c4c-852d-0f035e356917
+    b6e4281f8a5236c8: !<reference> 337f509b-60f1-4782-9502-c5d03f2639e1
   ImporterName: FbxImporter
   PrimaryAsset: !<reference> e749b96f-c63a-4c36-a62e-b2f486a71e90
   PackageType: LegacyPackage
@@ -19,7 +19,7 @@
     Scene: !<own> 2f3fe269-5d04-483a-b191-c55a17fb037d
   DependentFiles:
     []
-  ImporterSettings: !<FbxImporterSettings/ae7f8c75-4472-4106-92b5-dfabb522d8f8>
+  ImporterSettings: !<FbxImporterSettings>
     UseLegacyImporter: false
     WithMaterials: true
     NamingConvention: ByCategorySanitize
@@ -35,20 +35,20 @@
     GeneratePivots: true
     TriangulateNURBS: true
     UseLegacyFbxLoader: false
-  CompressionSettings: !<ComplexCompressionSettings/fe1beafa-4951-49f5-985a-23a46fb2e987>
+  CompressionSettings: !<ComplexCompressionSettings>
     Presets:
-      None Compression: !<SingleCompressionSettings/673b79a0-7f2d-457a-8984-aac222d8f4ff>
+      None Compression: !<SingleCompressionSettings>
         CompressorName: Draco
-        CompressionSettings: !<MeshCompressionSettings/93ec4467-1b78-4eac-a7bb-831a8e23babb>
+        CompressionSettings: !<MeshCompressionSettings>
           EnableDracoCompression: true
           CompressionLevel: 10
           PositionBits: 11
           TexcoordBits: 10
           NormalBits: 8
           ColorBits: 8
-      Performance Compression: !<SingleCompressionSettings/53cbeb00-712f-4023-b722-40e7861ecde3>
+      Performance Compression: !<SingleCompressionSettings>
         CompressorName: Performance
-        CompressionSettings: !<TextureCompressionSettings/caae4d0e-06b3-43a8-8f13-1598d70eed80>
+        CompressionSettings: !<TextureCompressionSettings>
           Level: Medium
     ExtensionMappings:
       mesh: None Compression

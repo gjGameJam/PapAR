@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 69c8f8df-8aca-4bf7-9560-5e560a981b56
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/2952d4e8-47a3-4384-ac47-52ae002990a3>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/2952d4e8-47a3-4384-ac47-52ae002990a3> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/69c8f8df-8aca-4bf7-9560-5e560a981b56>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 071905ab-c7fd-40b6-b627-e93cd1198111
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -33,8 +30,7 @@
     storagePropertyText: false
     syncEntityScript: false
     targetTypeString: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - targetTypeString: SyncEntity
       syncEntityScript: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
@@ -44,19 +40,18 @@
       ownerIdText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       storagePropertyText: !<reference.Text> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Entity Target"}'
-    - '// @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}'
-    - '// @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_start", "label":"Text Labels"}'
+    - // @ui {"widget":"group_start", "label":"Entity Target"}
+    - // @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}
+    - // @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_start", "label":"Text Labels"}
     - // @input Component.Text networkIdText
-    - '// @ui {"widget":"label", "label":"Owner Info"}'
+    - // @ui {"widget":"label", "label":"Owner Info"}
     - // @input Component.Text ownerDisplayNameText
     - // @input PinchButton ownershipButton
     - // @input Component.Text ownerIdText
-    - '// @ui {"widget":"label", "label":"Store Info"}'
+    - // @ui {"widget":"label", "label":"Store Info"}
     - // @input Component.Text storagePropertyText
-    - '// @ui {"widget":"group_end"}'
+    - // @ui {"widget":"group_end"}

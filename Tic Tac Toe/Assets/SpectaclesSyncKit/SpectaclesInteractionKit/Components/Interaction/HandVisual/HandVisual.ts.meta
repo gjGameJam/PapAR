@@ -4,27 +4,24 @@
   ImporterName: TypeScriptAssetImporter
   PrimaryAsset: !<reference> f9b29b39-ec8c-41bd-8b53-769ae9b818b8
   PackageType: NotAPackage
-  ImporterSettings: !<AssetImporterSettings/b9a42489-1f02-4c09-8556-5beb2f5506c9>
-    {}
+  ImporterSettings: !<AssetImporterSettings/b9a42489-1f02-4c09-8556-5beb2f5506c9> {}
   AssetDataMap:
     TypeScriptAsset: !<own> 719f3e6e-2bab-40f7-8e7b-670074986fae
   PackagePolicy: CannotBeUnpacked
-  DependentFiles:
-    []
+  DependentFiles: []
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/719f3e6e-2bab-40f7-8e7b-670074986fae>
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Hand Visual"}'
-    - '// @input string handType {"widget":"combobox", "values":[{"label":"Left", "value":"left"}, {"label":"Right", "value":"right"}]}'
-    - '// @input string selectVisual = "Default" {"widget":"combobox", "values":[{"label":"Default", "value":"Default"}, {"label":"Occluder", "value":"Occluder"}]}'
+    - // @ui {"widget":"group_start", "label":"Hand Visual"}
+    - // @input string handType {"widget":"combobox", "values":[{"label":"Left", "value":"left"}, {"label":"Right", "value":"right"}]}
+    - // @input string selectVisual = "Default" {"widget":"combobox", "values":[{"label":"Default", "value":"Default"}, {"label":"Occluder", "value":"Occluder"}]}
     - // @input HandInteractor handInteractor
     - // @input Component.RenderMeshVisual handMesh
-    - '// @input float handMeshRenderOrder = 9999 {"hint":"The desired render order of the handMesh"}'
-    - '// @input SceneObject root {"hint":"Parent of both the rig and the mesh"}'
-    - '// @input bool autoJointMapping = true {"hint":"If checked the HandVisual will attempt to automatically wire joints"}'
-    - '// @ui {"widget":"group_start", "label":"Joint Setup", "showIf":"autoJointMapping", "showIfValue":false}'
+    - // @input float handMeshRenderOrder = 9999 {"hint":"The desired render order of the handMesh"}
+    - // @input SceneObject root {"hint":"Parent of both the rig and the mesh"}
+    - // @input bool autoJointMapping = true {"hint":"If checked the HandVisual will attempt to automatically wire joints"}
+    - // @ui {"widget":"group_start", "label":"Joint Setup", "showIf":"autoJointMapping", "showIfValue":false}
     - // @input SceneObject wrist
     - // @input SceneObject thumbToWrist
     - // @input SceneObject thumbBaseJoint
@@ -51,36 +48,36 @@
     - // @input SceneObject pinkyMidJoint
     - // @input SceneObject pinkyUpperJoint
     - // @input SceneObject pinkyTip
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_start", "label":"Glow Effect"}'
-    - '// @input bool shouldThumbPokeGlow {"hint":"Whether or not the thumb should glow when poking"}'
-    - '// @input Asset.RenderMesh unitPlaneMesh {"hint":"The plane mesh on which the glow texture/material will be rendered"}'
-    - '// @input Asset.Material tipGlowMaterial {"hint":"The material which will be manipulated to create the glow effect"}'
-    - '// @input vec4 idleColor {"hint":"The color the glow will be when you are not pinching", "widget":"color"}'
-    - '// @input vec4 pinchDownColor {"hint":"The color the glow will be when you are pinching", "widget":"color"}'
-    - '// @input float tapProximityThreshold {"hint":"How close index finger of tapping hand has to be to tapped hand to initiate tap glow"}'
-    - '// @input Asset.Texture pinchTexture {"hint":"The texture applied to the hand when creating pinch glow effect"}'
-    - '// @input Asset.Texture tapTexture {"hint":"The texture applied to the hand when creating tap glow effect"}'
-    - '// @input float tipGlowRenderOrder = 10000 {"hint":"The render order of the quad on which the tip glow effect occurs"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_start", "label":"Radial Gradient Occlusion"}'
-    - '// @input bool occluderEnabled {"hint":"Whether or not the radial gradient occluder is enabled"}'
-    - '// @input Asset.RenderMesh occluderUnitPlaneMesh {"hint":"The plane mesh the radial gradient occluder will be rendered"}'
-    - '// @input Asset.Material radialGradientOcclusionMaterial {"hint":"The material which will be create the gradient occlusion effect"}'
-    - '// @input float gradientQuadRenderOrder = 9997 {"hint":"The render order of the gradient quad tracked to the hand"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_start", "label":"Hand Mesh Materials"}'
-    - '// @input Asset.Material handOutlineMaterial {"hint":"The material which will be create the default visual effect on the hand mesh"}'
-    - '// @input Asset.Material handOccluderMaterial {"hint":"The material which will be create the occluder visual effect on the hand mesh"}'
-    - '// @ui {"widget":"group_end"}'
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_start", "label":"Glow Effect"}
+    - // @input bool shouldThumbPokeGlow {"hint":"Whether or not the thumb should glow when poking"}
+    - // @input Asset.RenderMesh unitPlaneMesh {"hint":"The plane mesh on which the glow texture/material will be rendered"}
+    - // @input Asset.Material tipGlowMaterial {"hint":"The material which will be manipulated to create the glow effect"}
+    - // @input vec4 idleColor {"hint":"The color the glow will be when you are not pinching", "widget":"color"}
+    - // @input vec4 pinchDownColor {"hint":"The color the glow will be when you are pinching", "widget":"color"}
+    - // @input float tapProximityThreshold {"hint":"How close index finger of tapping hand has to be to tapped hand to initiate tap glow"}
+    - // @input Asset.Texture pinchTexture {"hint":"The texture applied to the hand when creating pinch glow effect"}
+    - // @input Asset.Texture tapTexture {"hint":"The texture applied to the hand when creating tap glow effect"}
+    - // @input float tipGlowRenderOrder = 10000 {"hint":"The render order of the quad on which the tip glow effect occurs"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_start", "label":"Radial Gradient Occlusion"}
+    - // @input bool occluderEnabled {"hint":"Whether or not the radial gradient occluder is enabled"}
+    - // @input Asset.RenderMesh occluderUnitPlaneMesh {"hint":"The plane mesh the radial gradient occluder will be rendered"}
+    - // @input Asset.Material radialGradientOcclusionMaterial {"hint":"The material which will be create the gradient occlusion effect"}
+    - // @input float gradientQuadRenderOrder = 9997 {"hint":"The render order of the gradient quad tracked to the hand"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_start", "label":"Hand Mesh Materials"}
+    - // @input Asset.Material handOutlineMaterial {"hint":"The material which will be create the default visual effect on the hand mesh"}
+    - // @input Asset.Material handOccluderMaterial {"hint":"The material which will be create the occluder visual effect on the hand mesh"}
+    - // @ui {"widget":"group_end"}
   Icon: ""
   Description: ""
   InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: eb626a2c-95b6-47fc-8cf3-dda49d5c406c
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -133,8 +130,7 @@
     tipGlowRenderOrder: true
     unitPlaneMesh: false
     wrist: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - handType: ""
       handMesh: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
@@ -185,6 +181,5 @@
       handOutlineMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       handOccluderMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   SvgIcon: ""

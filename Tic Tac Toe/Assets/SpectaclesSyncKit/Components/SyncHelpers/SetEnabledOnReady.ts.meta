@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 919db7a0-35e3-4f27-a720-0cd755ea41dd
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/9df27ca3-05ac-4735-af97-d7c712db0601>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/9df27ca3-05ac-4735-af97-d7c712db0601> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/919db7a0-35e3-4f27-a720-0cd755ea41dd>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 67539998-545d-4518-9dd6-dc4e3f11398c
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -30,22 +27,18 @@
     readyObjects: false
     syncEntityScript: false
     targetTypeString: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - syncEntityScript: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
-      readyObjects: !<reference.SceneObject[]>
-        []
-      notReadyObjects: !<reference.SceneObject[]>
-        []
+      readyObjects: !<reference.SceneObject[]> []
+      notReadyObjects: !<reference.SceneObject[]> []
       targetTypeString: SyncEntity
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Entity Target"}'
-    - '// @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}'
-    - '// @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}'
-    - '// @ui {"widget":"group_end"}'
-    - "// @input SceneObject[] readyObjects"
-    - "// @input SceneObject[] notReadyObjects"
+    - // @ui {"widget":"group_start", "label":"Entity Target"}
+    - // @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}
+    - // @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}
+    - // @ui {"widget":"group_end"}
+    - // @input SceneObject[] readyObjects
+    - // @input SceneObject[] notReadyObjects

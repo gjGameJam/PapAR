@@ -6,66 +6,63 @@
   PackageType: NotAPackage
   AssetDataMap:
     TypeScriptAsset: !<own> 543073b2-90b4-4ebc-8af1-8808852fd4c3
-  ImporterSettings: !<AssetImporterSettings/82e8eb11-a986-41b9-ba90-ac9367667edc>
-    {}
+  ImporterSettings: !<AssetImporterSettings/82e8eb11-a986-41b9-ba90-ac9367667edc> {}
   PackagePolicy: CannotBeUnpacked
-  DependentFiles:
-    []
+  DependentFiles: []
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/543073b2-90b4-4ebc-8af1-8808852fd4c3>
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Frame Settings"}'
+    - // @ui {"widget":"group_start", "label":"Frame Settings"}
     - // @input bool autoShowHide = true
-    - '// @input vec2 innerSize = "{32,32}"'
+    - // @input vec2 innerSize = "{32,32}"
     - // @input float border = 7
-    - '// @input vec2 constantPadding = "{0,0}" {"hint":"In world units (cm), stays constant through scaling"}'
+    - // @input vec2 constantPadding = "{0,0}" {"hint":"In world units (cm), stays constant through scaling"}
     - // @input bool allowScaling = true
     - // @input bool autoScaleContent = true
     - // @input bool isContentInteractable
     - // @input bool allowTranslation = true
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"label", "label":""}'
-    - '// @ui {"widget":"group_start", "label":"Min/Max Size"}'
-    - '// @input vec2 minimumSize = "{10,10}" {"hint":"In world units (cm)"}'
-    - '// @input vec2 maximumSize = "{150,150}" {"hint":"In world units (cm)"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"label", "label":""}'
-    - '// @ui {"widget":"group_start", "label":"Billboarding"}'
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"label", "label":""}
+    - // @ui {"widget":"group_start", "label":"Min/Max Size"}
+    - // @input vec2 minimumSize = "{10,10}" {"hint":"In world units (cm)"}
+    - // @input vec2 maximumSize = "{150,150}" {"hint":"In world units (cm)"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"label", "label":""}
+    - // @ui {"widget":"group_start", "label":"Billboarding"}
     - // @input bool useBillboarding
-    - '// @input bool xOnTranslate {"showIf":"useBillboarding"}'
-    - '// @input bool xAlways {"showIf":"xOnTranslate"}'
-    - '// @input bool yOnTranslate {"showIf":"useBillboarding"}'
-    - '// @input bool yAlways {"showIf":"yOnTranslate"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"label", "label":""}'
-    - '// @ui {"widget":"group_start", "label":"Snapping"}'
-    - '// @input bool useSnapping {"hint":"Use Snapping Behaviors"}'
-    - '// @input bool itemSnapping {"hint":"Container to Container Snapping", "showIf":"useSnapping"}'
-    - '// @input bool worldSnapping {"hint":"Container to World Snapping", "showIf":"useSnapping"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"label", "label":""}'
-    - '// @ui {"widget":"group_start", "label":"Follow Behavior"}'
+    - // @input bool xOnTranslate {"showIf":"useBillboarding"}
+    - // @input bool xAlways {"showIf":"xOnTranslate"}
+    - // @input bool yOnTranslate {"showIf":"useBillboarding"}
+    - // @input bool yAlways {"showIf":"yOnTranslate"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"label", "label":""}
+    - // @ui {"widget":"group_start", "label":"Snapping"}
+    - // @input bool useSnapping {"hint":"Use Snapping Behaviors"}
+    - // @input bool itemSnapping {"hint":"Container to Container Snapping", "showIf":"useSnapping"}
+    - // @input bool worldSnapping {"hint":"Container to World Snapping", "showIf":"useSnapping"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"label", "label":""}
+    - // @ui {"widget":"group_start", "label":"Follow Behavior"}
     - // @input bool showFollowButton
-    - '// @input bool useFOVFollow {"label":"Front Follow Behavior", "showIf":"showFollowButton"}'
-    - '// @input bool isFollowing {"showIf":"useFOVFollow"}'
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"label", "label":""}'
-    - '// @ui {"widget":"group_start", "label":"Close Button"}'
+    - // @input bool useFOVFollow {"label":"Front Follow Behavior", "showIf":"showFollowButton"}
+    - // @input bool isFollowing {"showIf":"useFOVFollow"}
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"label", "label":""}
+    - // @ui {"widget":"group_start", "label":"Close Button"}
     - // @input bool showCloseButton = true
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"group_start", "label":"Interaction Plane"}'
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"group_start", "label":"Interaction Plane"}
     - // @input bool _enableInteractionPlane
-    - '// @ui {"widget":"group_end"}'
-    - '// @ui {"widget":"separator"}'
+    - // @ui {"widget":"group_end"}
+    - // @ui {"widget":"separator"}
   SvgIcon: ""
   Description: ""
   InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: e36c1dda-b5f4-47b1-8982-6b6052432554
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -93,8 +90,7 @@
     xOnTranslate: false
     yAlways: false
     yOnTranslate: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - allowScaling: true
       useBillboarding: false
@@ -120,5 +116,4 @@
       itemSnapping: false
       _enableInteractionPlane: false
   ScriptTypes:
-    -
-      {}
+    - {}

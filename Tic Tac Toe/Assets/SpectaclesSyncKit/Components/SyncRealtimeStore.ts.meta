@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 650cb54c-1f21-4b72-924a-c8b1433c3ada
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/3626871b-e7e8-4580-a54d-cd79f7251799>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/3626871b-e7e8-4580-a54d-cd79f7251799> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/650cb54c-1f21-4b72-924a-c8b1433c3ada>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: d5492e7b-ebca-4ec9-a7da-d6e44f01c759
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -29,16 +26,14 @@
     customNetworkId: false
     networkIdTypeString: false
     ownershipTypeString: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - networkIdTypeString: objectId
       customNetworkId: enter_unique_id
       ownershipTypeString: none
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @input string networkIdTypeString = "objectId" {"label":"Network Id Type", "widget":"combobox", "values":[{"label":"Object Id", "value":"objectId"}, {"label":"Custom", "value":"custom"}]}'
-    - '// @input string customNetworkId = "enter_unique_id" {"showIf":"networkIdTypeString", "showIfValue":"custom"}'
-    - '// @input string ownershipTypeString = "none" {"label":"Ownership Type", "widget":"combobox", "values":[{"label":"None", "value":"none"}, {"label":"Request if Available", "value":"requestIfAvailable"}]}'
+    - // @input string networkIdTypeString = "objectId" {"label":"Network Id Type", "widget":"combobox", "values":[{"label":"Object Id", "value":"objectId"}, {"label":"Custom", "value":"custom"}]}
+    - // @input string customNetworkId = "enter_unique_id" {"showIf":"networkIdTypeString", "showIfValue":"custom"}
+    - // @input string ownershipTypeString = "none" {"label":"Ownership Type", "widget":"combobox", "values":[{"label":"None", "value":"none"}, {"label":"Request if Available", "value":"requestIfAvailable"}]}

@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> c24a0332-4d7a-4235-9ccc-5e98ffc95604
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/1f672787-ec7a-4e0f-b8ae-ec0ddf8e3354>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/1f672787-ec7a-4e0f-b8ae-ec0ddf8e3354> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/c24a0332-4d7a-4235-9ccc-5e98ffc95604>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 14c5cb08-8d9f-4233-8cbc-94896bd183f9
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -33,8 +30,7 @@
     minScaleCoefficient: false
     scalingInTime: false
     scalingOutTime: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - delayBeforeShowing: !<float> 1.000000
       scalingInTime: 0.300000
@@ -44,13 +40,12 @@
       minScaleCoefficient: 0.900000
       maxScaleCoefficient: 1.050000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @input float delayBeforeShowing = "4.0" {"hint":"The delay in seconds before showing the progress bar (via alpha)"}'
-    - '// @input float scalingInTime = "0.4" {"hint":"Time in seconds for scaling the progress bar In"}'
-    - '// @input float scalingOutTime = "0.3" {"hint":"Time in seconds for scaling the progress bar Out"}'
-    - '// @input float fadeInTime = "0.5" {"hint":"The duration in seconds for the progress bar to gradually fade in (via alpha)"}'
-    - '// @input float fadeOutTime = "0.3" {"hint":"The duration in seconds for the progress bar to gradually fade out (via alpha)"}'
-    - '// @input float minScaleCoefficient = "0.8" {"hint":"Minimum coefficient for the progress bar size"}'
-    - '// @input float maxScaleCoefficient = "1.15" {"hint":"Maximum coefficient for the progress bar size"}'
+    - // @input float delayBeforeShowing = "4.0" {"hint":"The delay in seconds before showing the progress bar (via alpha)"}
+    - // @input float scalingInTime = "0.4" {"hint":"Time in seconds for scaling the progress bar In"}
+    - // @input float scalingOutTime = "0.3" {"hint":"Time in seconds for scaling the progress bar Out"}
+    - // @input float fadeInTime = "0.5" {"hint":"The duration in seconds for the progress bar to gradually fade in (via alpha)"}
+    - // @input float fadeOutTime = "0.3" {"hint":"The duration in seconds for the progress bar to gradually fade out (via alpha)"}
+    - // @input float minScaleCoefficient = "0.8" {"hint":"Minimum coefficient for the progress bar size"}
+    - // @input float maxScaleCoefficient = "1.15" {"hint":"Maximum coefficient for the progress bar size"}

@@ -5,14 +5,11 @@
   PrimaryAsset: !<reference> 9facf8a8-1b92-4e50-a39a-e8914aea4c5b
   PackageType: NotAPackage
   PackagePolicy: CannotBeUnpacked
-  ExtraData:
-    {}
+  ExtraData: {}
   AssetDataMap:
     TypeScriptAsset: !<own> c71898e3-b3bb-47f9-9f2e-0d04592aa73f
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/69aaac91-24de-42c5-bf2c-9b424cb33518>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/69aaac91-24de-42c5-bf2c-9b424cb33518> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
 - !<TypeScriptAssetData/c71898e3-b3bb-47f9-9f2e-0d04592aa73f>
   SvgIcon: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 1246c177-0963-4097-8b59-f10ff9420a5a
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -29,15 +26,13 @@
     controller: false
     manipulatable: false
     showLogs: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - showLogs: false
       controller: !<MappingBased.Controller> 00000000-0000-0000-0000-000000000000
       manipulatable: !<MappingBased.InteractableManipulation> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input bool showLogs
     - // @input ControllerTS controller

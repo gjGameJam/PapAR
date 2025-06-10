@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 9e919325-b09c-4033-90e1-8006ac05d14e
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/39fdc8d5-0b20-4e9b-8189-d1d9f5bc1cc3>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/39fdc8d5-0b20-4e9b-8189-d1d9f5bc1cc3> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/9e919325-b09c-4033-90e1-8006ac05d14e>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 038977e0-9286-41be-ba02-677d768f5234
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -32,8 +29,7 @@
     syncEntityScript: false
     text: false
     useFormat: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - syncEntityScript: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
       propertyKey: ""
@@ -42,16 +38,15 @@
       formatString: ""
       altText: ""
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Entity Target"}'
+    - // @ui {"widget":"group_start", "label":"Entity Target"}
     - // @input Component.ScriptComponent syncEntityScript
-    - '// @ui {"widget":"group_end"}'
+    - // @ui {"widget":"group_end"}
     - // @input string propertyKey
     - // @input Component.Text text
-    - '// @input boolean useFormat = "false"'
-    - '// @ui {"widget":"label", "label":"String will be formatted using:<br>{value} - current value (or blank)<br>{prevValue} - previous value (or blank)", "showIf":"useFormat"}'
+    - // @input boolean useFormat = "false"
+    - // @ui {"widget":"label", "label":"String will be formatted using:<br>{value} - current value (or blank)<br>{prevValue} - previous value (or blank)", "showIf":"useFormat"}
     - // @input string formatString
-    - '// @ui {"widget":"label", "label":"Text to display if value is undefined"}'
+    - // @ui {"widget":"label", "label":"Text to display if value is undefined"}
     - // @input string altText

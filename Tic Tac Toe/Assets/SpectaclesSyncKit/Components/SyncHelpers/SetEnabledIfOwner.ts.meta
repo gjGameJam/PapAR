@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 6f128bf8-be6e-4304-95f2-9ee18d57d489
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/2b6e0ed8-9926-405f-82e5-7cb65faef124>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/2b6e0ed8-9926-405f-82e5-7cb65faef124> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/6f128bf8-be6e-4304-95f2-9ee18d57d489>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: b007dea9-6879-4071-a807-a86456c04970
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -30,22 +27,18 @@
     ownerObjects: false
     syncEntityScript: false
     targetTypeString: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - targetTypeString: SyncEntity
       syncEntityScript: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
-      ownerObjects: !<reference.SceneObject[]>
-        []
-      nonOwnerObjects: !<reference.SceneObject[]>
-        []
+      ownerObjects: !<reference.SceneObject[]> []
+      nonOwnerObjects: !<reference.SceneObject[]> []
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @ui {"widget":"group_start", "label":"Entity Target"}'
-    - '// @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}'
-    - '// @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}'
-    - '// @ui {"widget":"group_end"}'
-    - "// @input SceneObject[] ownerObjects"
-    - "// @input SceneObject[] nonOwnerObjects"
+    - // @ui {"widget":"group_start", "label":"Entity Target"}
+    - // @input string targetTypeString = "SyncEntity" {"label":"Target Type", "widget":"combobox", "values":[{"label":"Sync Entity", "value":"SyncEntity"}, {"label":"Network Root", "value":"NetworkRoot"}]}
+    - // @input Component.ScriptComponent syncEntityScript {"showIf":"targetTypeString", "showIfValue":"SyncEntity"}
+    - // @ui {"widget":"group_end"}
+    - // @input SceneObject[] ownerObjects
+    - // @input SceneObject[] nonOwnerObjects

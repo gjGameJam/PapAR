@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 910f0354-94c4-4bfe-a322-786e7357f825
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/f64aee00-5b1e-4dea-988a-c333e1415294>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/f64aee00-5b1e-4dea-988a-c333e1415294> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/910f0354-94c4-4bfe-a322-786e7357f825>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 27c887b9-a3b6-423d-99d3-b638b946c9d5
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -31,8 +28,7 @@
     scaleDownTime: false
     scaleUpTime: false
     startDistance: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - startDistance: !<float> 130.000000
       endDistance: !<float> 300.000000
@@ -40,11 +36,10 @@
       scaleDownTime: 0.300000
       scaleCoefficientInitial: 0.700000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @input float startDistance = "150.0" {"hint":"The distance where the tutorial appears on start"}'
-    - '// @input float endDistance = "200.0" {"hint":"The distance where the tutorial appears at the end of the initial animation"}'
-    - '// @input float scaleUpTime = "0.3" {"hint":"The duration in seconds for the tutorial to gradually scale up"}'
-    - '// @input float scaleDownTime = "0.3" {"hint":"The duration in seconds for the tutorial to gradually scale down"}'
-    - '// @input float scaleCoefficientInitial = "0.7" {"hint":"Initial tutorial scale coefficient"}'
+    - // @input float startDistance = "150.0" {"hint":"The distance where the tutorial appears on start"}
+    - // @input float endDistance = "200.0" {"hint":"The distance where the tutorial appears at the end of the initial animation"}
+    - // @input float scaleUpTime = "0.3" {"hint":"The duration in seconds for the tutorial to gradually scale up"}
+    - // @input float scaleDownTime = "0.3" {"hint":"The duration in seconds for the tutorial to gradually scale down"}
+    - // @input float scaleCoefficientInitial = "0.7" {"hint":"Initial tutorial scale coefficient"}

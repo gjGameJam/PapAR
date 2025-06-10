@@ -50,6 +50,10 @@ recordTrackingData:
   type: bool
   value: false
   options: 4
+resolutionScale:
+  type: float
+  value: 1.000000
+  options: 4
 simulatedDevice:
   type: string
   value: Spectacles (2024)

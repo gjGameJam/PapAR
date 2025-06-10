@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> c4c2960c-45e6-4755-9806-078f12030f23
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/b08dbcd3-cf37-4715-a499-16ad34f79d0b>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/b08dbcd3-cf37-4715-a499-16ad34f79d0b> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/c4c2960c-45e6-4755-9806-078f12030f23>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: a2909b46-1579-4ac9-8322-b52ada783330
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -35,8 +32,7 @@
     tutorialGlasses: false
     tutorialText: false
     tutorialTitle: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - root: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       tile: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
@@ -48,8 +44,7 @@
       tutorialAnimationPlayer: !<reference.AnimationPlayer> 00000000-0000-0000-0000-000000000000
       connectedPlayerObject: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input HeadLockBehaviorInput headLockBehaviorInput
     - // @input Component.AnimationPlayer tutorialAnimationPlayer

@@ -1,7 +1,7 @@
 CollapsedEntities:
   type: stringset
   value:
-    size: 596
+    size: 597
     values:
       - Device Camera Texture.deviceCameraTexture
       - Echopark.hdr
@@ -599,4 +599,5 @@ CollapsedEntities:
       - SpectaclesInteractionKit/Utils/views/MeshView.ts
       - SpectaclesInteractionKit/Utils/views/View.ts
       - SpectaclesInteractionKit/package.native
+      - SpectaclesSyncKit
   options: 4

@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> c65f2c2b-0d39-4a75-97b2-e0c956668e73
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/858fa98d-f3ec-4631-b30e-bcf5b302e42b>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/858fa98d-f3ec-4631-b30e-bcf5b302e42b> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/c65f2c2b-0d39-4a75-97b2-e0c956668e73>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 58dff760-923f-430d-ba3c-aefcbc279995
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -41,21 +38,19 @@
       distance: !<float> 160.000000
       tile: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
       titleText: !<reference.Text> 00000000-0000-0000-0000-000000000000
-      hintsText: !<reference.Text[]>
-        []
+      hintsText: !<reference.Text[]> []
       keepLookingButton: !<Typename.PinchButton> 00000000-0000-0000-0000-000000000000
       keepLookingButtonMesh: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
-      hintsTitle: !<reference.Text[]>
-        []
+      hintsTitle: !<reference.Text[]> []
   ScriptTypes:
     - PinchButton: !<reference.ScriptAsset> 00000000-0000-0000-0000-000000000000
   InputLines:
     - // @input SceneObject root
     - // @typename PinchButton
-    - '// @input float distance = "160.0"'
+    - // @input float distance = "160.0"
     - // @input Component.RenderMeshVisual tile
     - // @input Component.Text titleText
-    - "// @input Component.Text[] hintsTitle"
-    - "// @input Component.Text[] hintsText"
+    - // @input Component.Text[] hintsTitle
+    - // @input Component.Text[] hintsText
     - // @input PinchButton keepLookingButton
     - // @input Component.RenderMeshVisual keepLookingButtonMesh

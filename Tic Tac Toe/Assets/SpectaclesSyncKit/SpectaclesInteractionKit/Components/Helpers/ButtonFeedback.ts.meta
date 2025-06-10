@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> e8e9c81c-0f34-40b5-b143-b0d4a262d482
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/fe3f442f-5884-4965-b3aa-a89aa9a0c4d6>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/fe3f442f-5884-4965-b3aa-a89aa9a0c4d6> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/e8e9c81c-0f34-40b5-b143-b0d4a262d482>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 71bd2d1e-2f4b-48ca-894b-aeeb7c640ef4
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -48,8 +45,7 @@
     persistentPinchedState: false
     renderMeshVisual: false
     useGlowMesh: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - renderMeshVisual: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
       maxBlendShapeWeight: !<float> 1.000000
@@ -74,32 +70,31 @@
       glowHoverMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       glowPinchedMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - '// @input int buttonType {"widget":"combobox", "values":[{"label":"Pinch Button", "value":0}, {"label":"Toggle Button", "value":1}, {"label":"State Button", "value":2}]}'
-    - '// @ui {"widget":"separator"}'
+    - // @input int buttonType {"widget":"combobox", "values":[{"label":"Pinch Button", "value":0}, {"label":"Toggle Button", "value":1}, {"label":"State Button", "value":2}]}
+    - // @ui {"widget":"separator"}
     - // @input Component.RenderMeshVisual renderMeshVisual
-    - '// @input bool useGlowMesh {"showIf":"buttonType", "showIfValue":0}'
-    - '// @input Component.RenderMeshVisual glowRenderMeshVisual {"showIf":"useGlowMesh", "showIfValue":true}'
+    - // @input bool useGlowMesh {"showIf":"buttonType", "showIfValue":0}
+    - // @input Component.RenderMeshVisual glowRenderMeshVisual {"showIf":"useGlowMesh", "showIfValue":true}
     - // @input float maxBlendShapeWeight = 1
-    - '// @ui {"widget":"separator"}'
-    - '// @input string meshBlendShapeName = "Pinch"'
+    - // @ui {"widget":"separator"}
+    - // @input string meshBlendShapeName = "Pinch"
     - // @input Asset.Material meshIdleMaterial
     - // @input Asset.Material meshHoverMaterial
     - // @input Asset.Material meshPinchedMaterial
-    - '// @ui {"widget":"separator"}'
-    - '// @input string glowBlendShapeName = "Pinch" {"showIf":"useGlowMesh", "showIfValue":true}'
-    - '// @input Asset.Material glowIdleMaterial {"showIf":"useGlowMesh", "showIfValue":true}'
-    - '// @input Asset.Material glowHoverMaterial {"showIf":"useGlowMesh", "showIfValue":true}'
-    - '// @input Asset.Material glowPinchedMaterial {"showIf":"useGlowMesh", "showIfValue":true}'
-    - '// @input Asset.Material meshToggledPinchedMaterial {"showIf":"buttonType", "showIfValue":1}'
-    - '// @input Asset.Material meshToggledHoverMaterial {"showIf":"buttonType", "showIfValue":1}'
-    - '// @input Asset.Material meshToggledIdleMaterial {"showIf":"buttonType", "showIfValue":1}'
-    - '// @input Asset.Material meshStatePinchedMaterial {"showIf":"buttonType", "showIfValue":2}'
-    - '// @input Asset.Material meshStateHoverMaterial {"showIf":"buttonType", "showIfValue":2}'
-    - '// @input Asset.Material meshStateIdleMaterial {"showIf":"buttonType", "showIfValue":2}'
-    - '// @input bool persistentPinchedState {"showIf":"buttonType", "showIfValue":2}'
-    - '// @ui {"widget":"separator"}'
+    - // @ui {"widget":"separator"}
+    - // @input string glowBlendShapeName = "Pinch" {"showIf":"useGlowMesh", "showIfValue":true}
+    - // @input Asset.Material glowIdleMaterial {"showIf":"useGlowMesh", "showIfValue":true}
+    - // @input Asset.Material glowHoverMaterial {"showIf":"useGlowMesh", "showIfValue":true}
+    - // @input Asset.Material glowPinchedMaterial {"showIf":"useGlowMesh", "showIfValue":true}
+    - // @input Asset.Material meshToggledPinchedMaterial {"showIf":"buttonType", "showIfValue":1}
+    - // @input Asset.Material meshToggledHoverMaterial {"showIf":"buttonType", "showIfValue":1}
+    - // @input Asset.Material meshToggledIdleMaterial {"showIf":"buttonType", "showIfValue":1}
+    - // @input Asset.Material meshStatePinchedMaterial {"showIf":"buttonType", "showIfValue":2}
+    - // @input Asset.Material meshStateHoverMaterial {"showIf":"buttonType", "showIfValue":2}
+    - // @input Asset.Material meshStateIdleMaterial {"showIf":"buttonType", "showIfValue":2}
+    - // @input bool persistentPinchedState {"showIf":"buttonType", "showIfValue":2}
+    - // @ui {"widget":"separator"}
     - // @input Asset.Texture defaultIcon
     - // @input Asset.Texture onIcon

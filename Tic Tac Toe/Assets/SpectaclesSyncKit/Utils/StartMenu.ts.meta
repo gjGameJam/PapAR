@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 2f01fa0c-90ab-4fe6-a05e-ec8cc5b51c10
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/1e50e9f0-1d9b-4ccd-8767-ab97be4eabbf>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/1e50e9f0-1d9b-4ccd-8767-ab97be4eabbf> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/2f01fa0c-90ab-4fe6-a05e-ec8cc5b51c10>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 223d2365-3196-415c-a0a5-ca61fe1259fa
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -31,21 +28,18 @@
     singlePlayerButton: false
     singlePlayerType: false
     startMenuDistanceFromUser: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - singlePlayerButton: !<MappingBased.PinchButton> 00000000-0000-0000-0000-000000000000
       multiPlayerButton: !<MappingBased.PinchButton> 00000000-0000-0000-0000-000000000000
       startMenuDistanceFromUser: !<float> 150.000000
       singlePlayerType: manual
-      enableOnSingleplayerNodes: !<reference.SceneObject[]>
-        []
+      enableOnSingleplayerNodes: !<reference.SceneObject[]> []
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input PinchButton singlePlayerButton
     - // @input PinchButton multiPlayerButton
-    - '// @input float startMenuDistanceFromUser = "150.0"'
-    - '// @input string singlePlayerType = "manual" {"widget":"combobox", "values":[{"label":"Manual", "value":"manual"}, {"label":"Mocked Online (Automatic)", "value":"mocked_online"}]}'
-    - "// @input SceneObject[] enableOnSingleplayerNodes"
+    - // @input float startMenuDistanceFromUser = "150.0"
+    - // @input string singlePlayerType = "manual" {"widget":"combobox", "values":[{"label":"Manual", "value":"manual"}, {"label":"Mocked Online (Automatic)", "value":"mocked_online"}]}
+    - // @input SceneObject[] enableOnSingleplayerNodes

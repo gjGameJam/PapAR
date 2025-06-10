@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> 24747e05-ec7d-4cb1-a935-01d8c1bffb10
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/5575f773-c03b-4140-ba85-c009b434cc80>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/5575f773-c03b-4140-ba85-c009b434cc80> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/24747e05-ec7d-4cb1-a935-01d8c1bffb10>
   SvgIcon: ""
   Description: ""
@@ -21,7 +18,7 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 9bf1312c-9942-47d4-8f4a-d73f9b1ab629
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
@@ -31,8 +28,7 @@
     successAudioTrack: false
     tickAnimation: false
     tickMeshVisual: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
     - root: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       mappingSuccessfullyDoneText: !<reference.Text> 00000000-0000-0000-0000-000000000000
@@ -40,8 +36,7 @@
       tickMeshVisual: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
       tickAnimation: !<reference.AnimationMixer> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
     - // @input SceneObject root
     - // @input Component.Text mappingSuccessfullyDoneText

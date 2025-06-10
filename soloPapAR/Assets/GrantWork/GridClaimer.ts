@@ -24,43 +24,12 @@ export class GridClaimer extends BaseScriptComponent {
     //session controller singleton instance
     seshController: SessionController = SessionController.getInstance();
     
-    //function to create real time store for grid
-    //callled by notify on ready in session controller, meaning session is already made
-    createGrid() {
-        //get connected lens module from session controller
-        //ASK: if there is a better convention for getting this
-        const clm = this.seshController.connectedLensModuleToUse;
-        print('the sesh has begun :) ' + clm);
-        
-        var options = RealtimeStoreCreateOptions.create();
-        options.ownership = RealtimeStoreCreateOptions.Ownership.Unowned;
-        options.persistence = RealtimeStoreCreateOptions.Persistence.Session;
-        //TODO: ask about below line
-        //options.initialStore = ;
-        
-        //TODO: with connected lens session, create real time store for shared game grid
-        //const gridStore = cls.getOrCreateRealtimeStore("SharedClaimGrid"); //UNOWNED so any player can modify
-//        this.seshController.session.createRealtimeStore(options,
-//            function onSuccess(store) {
-//              print('Store created! In On connected');
-//            
-//            },
-//            function onError(message) {
-//              print('Unable to create a store: ' + message)
-//            }
-//        )
-        
-    }
-    
     
     //function called by location tracker script whenever coordinates change
     updatePos(worldX : number, worldY : number, worldZ : number){
         //print('location has been updated');
         this.setCurrAndPrev(worldX, worldY, worldZ);
         
-        this.seshController.getIsReady();
-        
-        //if (this.hasPrev) {
         //convert world coordinates to get game grid cell
         const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
             
@@ -78,7 +47,6 @@ export class GridClaimer extends BaseScriptComponent {
         //the state of the grid cell matters, handle interaction
         if (currState === CellState.STAKED) {
             //stake owner dies and their stakes + claims return unclaimed
-            //TODO: create function to remove all stakes & claims
             print('player hit their own stake');
             this.handlePlayerDeath(this.playerID);
         }

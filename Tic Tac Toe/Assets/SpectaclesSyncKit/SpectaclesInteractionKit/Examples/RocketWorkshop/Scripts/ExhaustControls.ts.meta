@@ -7,13 +7,10 @@
   PackagePolicy: CannotBeUnpacked
   AssetDataMap:
     TypeScriptAsset: !<own> cf5e30c5-7aa2-40db-81cb-6df2010939ad
-  DependentFiles:
-    []
-  ImporterSettings: !<AssetImporterSettings/f76bee28-e4f4-419f-82f2-19d13b1ceab4>
-    {}
+  DependentFiles: []
+  ImporterSettings: !<AssetImporterSettings/f76bee28-e4f4-419f-82f2-19d13b1ceab4> {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-  ExtraData:
-    {}
+  ExtraData: {}
 - !<TypeScriptAssetData/cf5e30c5-7aa2-40db-81cb-6df2010939ad>
   SvgIcon: ""
   Description: ""
@@ -21,23 +18,19 @@
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 077f2942-e455-4ec9-a06b-c9cd9bb01f04
   ExportUid: 00000000-0000-0000-0000-000000000000
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
     exhausts: false
     smokes: false
-  ScriptTypesHidden:
-    {}
+  ScriptTypesHidden: {}
   DefaultScriptInputs:
-    - exhausts: !<reference.SceneObject[]>
-        []
-      smokes: !<reference.SceneObject[]>
-        []
+    - exhausts: !<reference.SceneObject[]> []
+      smokes: !<reference.SceneObject[]> []
   ScriptTypes:
-    -
-      {}
+    - {}
   InputLines:
-    - "// @input SceneObject[] exhausts"
-    - "// @input SceneObject[] smokes"
+    - // @input SceneObject[] exhausts
+    - // @input SceneObject[] smokes
