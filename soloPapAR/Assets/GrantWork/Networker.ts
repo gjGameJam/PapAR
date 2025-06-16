@@ -5,11 +5,11 @@ import {SyncKitLogger} from "SpectaclesSyncKit/Utils/SyncKitLogger"
 
 @component
 export class Networker extends BaseScriptComponent {
-    //connection id of game host
-    gameHost: String = null;
+    //connection id
+    clientID: number;
     gridSyncEntity: SyncEntity;
     
-    private height = 10; //the length and width of the grid cube
+    private height = 40; //the length and width of the grid cube
     //vector 2 array of <0,0> with unique, unrelated elemenets
     private gridArray = new Array(this.height * this.height).fill(null).map(() => vec2.zero()); // OR: new vec2(0, 0)
     private gridData = StorageProperty.manualVec2Array("turnsCount", this.gridArray);
@@ -46,7 +46,30 @@ export class Networker extends BaseScriptComponent {
         
     }
     
+    //to update the shared storage property given a player's location
+    receivePlayerData(ID: number, xpos: number, ypos: number, zpos: number){
+        //calculate the array index based on x and y
+        let idx = this.height * ypos + xpos;
+        //the vector2 state represents the claim and stake status (in order) of the cell
+//        let cellVec = this.gridData.currentValue[idx];
+//        //get owner and staker of grid cell
+//        let claimOwner = cellVec.x;
+//        let stakeOwner = cellVec.y;
+        
+        
+        //if not staked, stake
+        
+        //if staked, owner of stake dies (even if self)
+        
+        //if claimed:
+        //      by self: check if stake loop exists and add to claim
+        //      by other: update stake data in cell without updating claim
+    }
     
+    //setter for player id (hashed display name from session controller)
+    setPlayerID(ID: number){
+        this.clientID = ID;
+    }
     
     
 

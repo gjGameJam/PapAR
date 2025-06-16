@@ -1,5 +1,7 @@
 import { GridClaimer } from './GridClaimer';
+import { Networker } from './Networker';
 import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
+import {Instantiator} from '../SpectaclesSyncKit/Components/Instantiator';
 
 @component
 export class LocationTracker extends BaseScriptComponent {
@@ -16,6 +18,12 @@ export class LocationTracker extends BaseScriptComponent {
     
   @input
   GridClaimer: GridClaimer;
+    
+  @input
+  Networker: Networker;
+    
+  @input
+  networkedInstantiator: Instantiator;
 
   private repeatUpdateUserLocation: DelayedCallbackEvent;
   private getNewPosition: DelayedCallbackEvent;
@@ -35,14 +43,22 @@ export class LocationTracker extends BaseScriptComponent {
       this.seshController.notifyOnReady(() => { //session controller (colocated space) is ready
         // SessionController is ready to use
         print('session controller notify on ready for location tracker');
-        //Networker contains sync entity with grid storage property
+        //get snapchat display name (unique)
+        var displayName = this.seshController.getLocalUserName();
+        //create a unique player id via hashing instead of using string
+        this.clientID = this.getDeterministicPlayerId(displayName);
+        //Networker has to know which player it is attached to
+        this.Networker.setPlayerID(this.clientID);
+        
+      });
+      
+      this.networkedInstantiator.notifyOnReady(() => {
+        // instantiator is ready to instantiate stuff across the network
         //start sending position to for processing by networker
+        //instantiator and session controller are ready now
         this.getDeviceTrackerPosition();
       });
-      //get snapchat display name (unique)
-      var displayName = this.seshController.getLocalUserName();
-      //create a unique player id via hashing instead of using string
-      this.clientID = this.getDeterministicPlayerId(displayName);
+      
       
   }
     
@@ -75,9 +91,10 @@ export class LocationTracker extends BaseScriptComponent {
         // Session is ready (after singleplayer or multiplayer button click)
         //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
+        //want to switch this line with the networker receive player data
         this.GridClaimer.updatePos(position.x, position.y, position.z);
-        //TODO: send position and this.clientID to networker for processing
-        
+        // send position and this.clientID to networker for processing
+        this.Networker.receivePlayerData(this.clientID, position.x, position.y, position.z);
         // delay in seconds before repeat call
         this.getNewPosition.reset(.35);
     });

@@ -9,6 +9,7 @@
     - !<own> eda8583b-66ae-425c-a85d-80482dc0e091
     - !<own> f4188b2f-24c1-41cd-baed-7ca85729f147
     - !<own> 4effdfde-d91e-4309-ad72-6c157619b8f6
+    - !<own> 6c1c197c-0043-49a5-ad83-2c8338f32e73
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       []
@@ -247,6 +248,8 @@
     "":
       playerTracker: !<reference.DeviceTracking> e5553c8a-0b7e-4ef4-92d9-3e1318fb82c1
       GridClaimer: !<MappingBased.GridClaimer> 5e8b2860-accc-47a5-83e6-f9d6f87e4dde
+      Networker: !<MappingBased.Networker> 4c5dfdbe-adcb-41f1-859f-12facad6a924
+      networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
   ScriptTypes:
     "":
       {}
@@ -5702,6 +5705,22 @@
     - !<own> cd14923b-b34a-4bdf-bc62-8e87487281eb
   Components:
     []
+- !<ScriptComponent/4c5dfdbe-adcb-41f1-859f-12facad6a924>
+  PrefabRemaps:
+    []
+  Name: Networker
+  Enabled: true
+  ScriptAsset: !<reference> da4f2f79-e1b1-4e21-b3ea-ff4415321346
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/4c971803-ac9c-40bb-b4e2-eb5f47805f39>
   PrefabRemaps:
     []
@@ -7466,6 +7485,21 @@
     - !<own> fa33ed5d-0993-4161-8533-7f06f1cc25af
   Components:
     []
+- !<SceneObject/6c1c197c-0043-49a5-ad83-2c8338f32e73>
+  PrefabRemaps:
+    []
+  Name: Networker
+  Enabled: true
+  Layers: 1
+  LocalTransform:
+    position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 4c5dfdbe-adcb-41f1-859f-12facad6a924
 - !<SceneObject/6c58f5fb-133d-44bf-a419-085d3616238e>
   PrefabRemaps:
     []
