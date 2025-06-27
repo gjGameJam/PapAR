@@ -51,7 +51,8 @@ export class LocationTracker extends BaseScriptComponent {
         this.Networker.setPlayerID(this.clientID);
         
       });
-      
+      //wait for networked instantiator to be ready for the device tracker to start
+      //sending info because of boundary spawning
       this.networkedInstantiator.notifyOnReady(() => {
         // instantiator is ready to instantiate stuff across the network
         //start sending position to for processing by networker

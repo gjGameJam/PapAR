@@ -11,8 +11,9 @@ export class Networker extends BaseScriptComponent {
     
     private height = 40; //the length and width of the grid cube
     //vector 2 array of <0,0> with unique, unrelated elemenets
-    private gridArray = new Array(this.height * this.height).fill(null).map(() => vec2.zero()); // OR: new vec2(0, 0)
-    private gridData = StorageProperty.manualVec2Array("turnsCount", this.gridArray);
+    private gridArray = new Array(this.height * this.height).fill(0).map(() => vec2.zero()); // OR: new vec2(0, 0)
+    private gridData = StorageProperty.manualVec2Array("serverGrid", this.gridArray);
+    private gridReady = false; //flag for grid being ready to use
     
     //script to manager the grid claim modification permissions
     onAwake() {
@@ -43,18 +44,29 @@ export class Networker extends BaseScriptComponent {
     onReady() {
         print('The session has started and grid entity is ready!')
         // vector 2 array (grid representation) is now ready
-        
+        //print(this.gridArray[0] === this.gridArray[1]); // Should be false if they're independent
+        this.gridData.setPendingValue(this.gridArray);
+        this.gridReady = true;
     }
     
     //to update the shared storage property given a player's location
     receivePlayerData(ID: number, xpos: number, ypos: number, zpos: number){
+        //return early if grid is not ready        
+        if (!this.gridReady){
+            return;
+        }
         //calculate the array index based on x and y
         let idx = this.height * ypos + xpos;
+        //check if index is OOB
+        if (idx < 0 || idx >= this.gridData.currentValue.length) {
+            print(`Invalid grid index: ${idx} for x=${xpos}, y=${ypos}`);
+            return;
+        }
         //the vector2 state represents the claim and stake status (in order) of the cell
-//        let cellVec = this.gridData.currentValue[idx];
-//        //get owner and staker of grid cell
-//        let claimOwner = cellVec.x;
-//        let stakeOwner = cellVec.y;
+        let cellVec = this.gridData.currentValue[idx];
+        //get owner and staker of grid cell
+        let claimOwner = cellVec.x;
+        let stakeOwner = cellVec.y;
         
         
         //if not staked, stake
