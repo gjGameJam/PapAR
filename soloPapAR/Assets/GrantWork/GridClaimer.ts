@@ -1,6 +1,5 @@
 import { PlayerVisuals } from './PlayerVisuals';
 import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
-//import {ConnectedLens} from '../SpectaclesSyncKit/ConnectedLensModule';
 
 @component
 export class GridClaimer extends BaseScriptComponent {
@@ -26,12 +25,12 @@ export class GridClaimer extends BaseScriptComponent {
     
     
     //function called by location tracker script whenever coordinates change
-    updatePos(worldX : number, worldY : number, worldZ : number){
+    updatePos(worldX : number, worldY : number, worldZ : number, gridPos : vec2){
         //print('location has been updated');
         this.setCurrAndPrev(worldX, worldY, worldZ);
         
-        //convert world coordinates to get game grid cell
-        const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
+        //(handled in location tracker) convert world coordinates to get game grid cell
+        //const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
             
         //TODO: remove debugging update player visuals with coords and grid pos
         this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);

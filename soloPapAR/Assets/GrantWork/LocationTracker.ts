@@ -12,6 +12,9 @@ export class LocationTracker extends BaseScriptComponent {
   verticalAccuracy: number;
   timestamp: Date;
   locationSource: string;
+    
+  unitsPerCell: number = 200;//cells are this number by this number meters
+  gridRadius: number = 20;
   
   @input
   playerTracker: DeviceTracking;
@@ -92,10 +95,13 @@ export class LocationTracker extends BaseScriptComponent {
         // Session is ready (after singleplayer or multiplayer button click)
         //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
-        //want to switch this line with the networker receive player data
-        this.GridClaimer.updatePos(position.x, position.y, position.z);
+        //calculate grid position from world pos
+        const gridPos = this.worldCoordsToGridPos(new vec2(position.x, position.z));
+        //want to handle this line with the networker receive player data
+        this.GridClaimer.updatePos(position.x, position.y, position.z, gridPos);
         // send position and this.clientID to networker for processing
-        this.Networker.receivePlayerData(this.clientID, position.x, position.y, position.z);
+        this.Networker.testSend(this.clientID, gridPos.x, gridPos.y);
+        //this.Networker.testReceive(this.clientID, position.x, position.y, position.z);
         // delay in seconds before repeat call
         this.getNewPosition.reset(.35);
     });
@@ -103,6 +109,21 @@ export class LocationTracker extends BaseScriptComponent {
     // Kick it off immediately
     this.getNewPosition.reset(0.0);
   }
+    
+    // Converts world coordinates to grid position (centered at 0,0 = center of center cell)
+    worldCoordsToGridPos(wPos: vec2): vec2 {
+        //world offset units divided by unit per cell = cell offset
+        const cellX = wPos.x / this.unitsPerCell;
+        const cellY = wPos.y / this.unitsPerCell;
+        //want to be in center of cell so add .5
+        //want to be in center of grid so add gridradius
+        const offset = this.gridRadius + 0.5;
+        //always want grid # to be int so floor offset + cellPos to get grid #
+        const col = Math.floor(cellX + offset);
+        const row = Math.floor(cellY + offset);
+    
+        return new vec2(col, row);
+    }
     
     //helper function for hashing string (hash unique display name to unique ID)
     getDeterministicPlayerId(displayName: string): number {
