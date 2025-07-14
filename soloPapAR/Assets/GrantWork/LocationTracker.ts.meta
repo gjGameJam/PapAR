@@ -28,6 +28,7 @@
   ScriptInputsHidden:
     GridClaimer: false
     Networker: false
+    PlayerVisuals: false
     networkedInstantiator: false
     playerTracker: false
   ScriptTypesHidden:
@@ -38,6 +39,7 @@
       playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
       Networker: !<MappingBased.Networker> 00000000-0000-0000-0000-000000000000
       networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
+      PlayerVisuals: !<MappingBased.PlayerVisuals> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -46,3 +48,4 @@
     - // @input GridClaimer GridClaimer
     - // @input Networker Networker
     - // @input Instantiator networkedInstantiator
+    - // @input PlayerVisuals PlayerVisuals

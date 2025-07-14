@@ -24,21 +24,9 @@ export class GridClaimer extends BaseScriptComponent {
     seshController: SessionController = SessionController.getInstance();
     
     
-    //function called by location tracker script whenever coordinates change
+    //function called by location tracker script grid coordinates change
     updatePos(worldX : number, worldY : number, worldZ : number, gridPos : vec2){
         //print('location has been updated');
-        this.setCurrAndPrev(worldX, worldY, worldZ);
-        
-        //(handled in location tracker) convert world coordinates to get game grid cell
-        //const gridPos = this.worldCoordsToGridPos(new vec2(worldX, worldZ));
-            
-        //TODO: remove debugging update player visuals with coords and grid pos
-        this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldX, worldZ, 0, 0);
-            
-        //return early if player is in same grid as last updatePos call
-        if (this.PlayerVisuals.isInSameCell(gridPos)){
-            return; 
-        }
             
         //get the CellState of the grid cell
         const currState = this.grid.getCellState(gridPos.x, gridPos.y);

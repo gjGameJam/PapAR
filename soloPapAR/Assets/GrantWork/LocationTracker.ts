@@ -2,6 +2,7 @@ import { GridClaimer } from './GridClaimer';
 import { Networker } from './Networker';
 import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
 import {Instantiator} from '../SpectaclesSyncKit/Components/Instantiator';
+import { PlayerVisuals } from './PlayerVisuals';
 
 @component
 export class LocationTracker extends BaseScriptComponent {
@@ -27,6 +28,10 @@ export class LocationTracker extends BaseScriptComponent {
     
   @input
   networkedInstantiator: Instantiator;
+    
+  //player visuals script for minimap and world objects
+  @input
+  PlayerVisuals: PlayerVisuals;
 
   private repeatUpdateUserLocation: DelayedCallbackEvent;
   private getNewPosition: DelayedCallbackEvent;
@@ -93,17 +98,30 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         // Session is ready (after singleplayer or multiplayer button click)
-        //TODO: ensure there is no need to update below line to use session controller info
         var position = this.playerTracker.getTransform().getWorldPosition();
         //calculate grid position from world pos
         const gridPos = this.worldCoordsToGridPos(new vec2(position.x, position.z));
-        //want to handle this line with the networker receive player data
-        this.GridClaimer.updatePos(position.x, position.y, position.z, gridPos);
-        // send position and this.clientID to networker for processing
-        this.Networker.testSend(this.clientID, gridPos.x, gridPos.y);
-        //this.Networker.testReceive(this.clientID, position.x, position.y, position.z);
+        //keep track of last world position of player
+        this.GridClaimer.setCurrAndPrev(position.x, position.y, position.z);
+        //update the hud with location data
+        this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, position.x, position.z, 0, 0);
+        //TODO: check for player death here (need to make map of player id and alive status)
+            
+        //update pos or send if not in same cell
+        if (!this.PlayerVisuals.isInSameCell(gridPos)){
+            this.GridClaimer.updatePos(position.x, position.y, position.z, gridPos);
+            // send position and this.clientID to networker for processing
+            this.Networker.sendData(this.clientID, gridPos.x, gridPos.y);
+        }
+        
+        //retrieve the state of the cell that this player is in 
+        //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
+        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y);
+        const claimedBy = cellData.x;
+        const stakedBy = cellData.y;
+        print("cell data post send/receive claimed by: " + claimedBy + " and staked by: " + stakedBy);
         // delay in seconds before repeat call
-        this.getNewPosition.reset(.35);
+        this.getNewPosition.reset(.30);
     });
     
     // Kick it off immediately

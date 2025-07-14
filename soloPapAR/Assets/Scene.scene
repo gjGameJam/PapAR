@@ -250,6 +250,7 @@
       GridClaimer: !<MappingBased.GridClaimer> 5e8b2860-accc-47a5-83e6-f9d6f87e4dde
       Networker: !<MappingBased.Networker> 4c5dfdbe-adcb-41f1-859f-12facad6a924
       networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
+      PlayerVisuals: !<MappingBased.PlayerVisuals> 4777e408-6610-41a7-b07c-ac300141d63c
   ScriptTypes:
     "":
       {}

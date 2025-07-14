@@ -138,17 +138,10 @@ export class Networker extends BaseScriptComponent {
     //sessionController.getLocalUserId()
     
     //meet with spectacles team to:
-    //1: improve/refine understand on below plan 
-    //2: get multiple previews of same session emulating multiplayer
+    //1: get multiple previews of same session emulating multiplayer
     
-    //grid networking plan:
-    //TODO List:
-    //1: debug receive function provided by specs team
-    //1: debug send function provided by specs team
-    //2: update player visuals minimap to use grid's real time store updates
-    
-    // SEND METHOD - Update a grid position
-    testSend(ID: number, xpos: number, zpos: number) {
+    //function to update a grid position (grid cell is vec2 representing claim and stake owner(s))
+    sendData(ID: number, xpos: number, zpos: number) {
         //if not staked, stake
         
         //if staked, owner of stake dies (even if self)
@@ -158,15 +151,6 @@ export class Networker extends BaseScriptComponent {
         //      by other: update stake data in cell without updating claim
         if (this.showLogs) {
             print("NetworkerTS: TEST - Starting send test");
-        }
-        
-        // no longer using hardcoded test values
-        //const testX = 1;
-        //const testY = 1;
-        const newValue = new vec2(xpos, zpos);
-        
-        if (this.showLogs) {
-            print("NetworkerTS: TEST - Updating position (" + xpos + ", " + zpos + ") to " + newValue);
         }
         
         if (!this.gridReady) {
@@ -185,6 +169,7 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
+        //z is vertical (thus multiply by height) and x is horizontal and is 1:1 with cells
         let idx = this.height * zpos + xpos
         if (idx < 0 || idx >= currentData.length) {
             if (this.showLogs) {
@@ -193,8 +178,20 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
+        //use current data at current index to determine next step
+        const oldValue = currentData[idx];
+        const claimedBy = oldValue.x;
+        const stakedBy = oldValue.y;
+        // new value will be claimed by none staked by client ID
+        const newValue = new vec2(0, ID);
+        
+        if (this.showLogs) {
+            print("NetworkerTS: TEST - Updating position (" + xpos + ", " + zpos + ") to " + newValue);
+        }
+        
         // Create a copy of the current array
         let newArray = [...currentData];
+        //update specified index with new value
         newArray[idx] = newValue;
         
         // Set the new value
@@ -206,17 +203,12 @@ export class Networker extends BaseScriptComponent {
     }
     
     
-    // TEST RECEIVE METHOD - Test accessing grid data
-    testReceive(ID: number, xpos: number, zpos: number) {
+    // function for accessing grid data
+    getData(ID: number, xpos: number, zpos: number): vec2 {
         if (this.showLogs) {
             print("NetworkerTS: TEST RECEIVE - Starting receive test");
         }
         
-        // Hardcoded test values
-        // no longer using hardcoded test values
-        //const testX = 1;
-        //const testY = 1;
-        const newValue = new vec2(xpos, zpos);
         
         if (this.showLogs) {
             print("NetworkerTS: TEST RECEIVE - Testing position (" + xpos + ", " + zpos + ")");
@@ -252,7 +244,7 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
-        // This is the problem line. Index is valid but grid data always is undefined?
+        // get the cell vector from the specified retieve index
         let cellVec = currentData[idx];
         
         if (this.showLogs) {
@@ -264,6 +256,8 @@ export class Networker extends BaseScriptComponent {
         } else {
             print("NetworkerTS: TEST RECEIVE - SUCCESS - cellVec retrieved: " + cellVec);
         }
+        //return the vector 2 that the parameters requested
+        return cellVec;
     }
     
     

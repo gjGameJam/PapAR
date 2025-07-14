@@ -56,6 +56,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         if (gridPos.equal(this.prevGridPos)){
             return true;
         }
+        this.prevGridPos = gridPos; // update previous grid pos to current
         return false;
     }
     
@@ -184,10 +185,6 @@ export class PlayerVisuals extends BaseScriptComponent {
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)
     updateMiniMap(gridPos: vec2, grid: SparseGrid) {
 
-        //this.createCell(new vec3(0,0,0));
-    
-        this.prevGridPos = gridPos; // update previous grid pos to current
-    
         const gridLength = grid.getSize();
         const miniMapRadius = 2; // minimap is 5x5 (center + 2 in each direction)
     
