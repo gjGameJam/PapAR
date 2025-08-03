@@ -105,21 +105,22 @@ export class LocationTracker extends BaseScriptComponent {
         this.GridClaimer.setCurrAndPrev(position.x, position.y, position.z);
         //update the hud with location data
         this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, position.x, position.z, 0, 0);
-        //TODO: check for player death here (need to make map of player id and alive status)
+        
+        //retrieve the state of the cell that this player is in 
+        //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
+        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y, position.y); //also pass in height for visuals spawning
+        const claimedBy = cellData.x;
+        const stakedBy = cellData.y;
+        print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
             
         //update pos or send if not in same cell
         if (!this.PlayerVisuals.isInSameCell(gridPos)){
+            //update gridclaimer position (handles deaths, claims, and stakes)
             this.GridClaimer.updatePos(position.x, position.y, position.z, gridPos);
             // send position and this.clientID to networker for processing
             this.Networker.sendData(this.clientID, gridPos.x, gridPos.y);
         }
         
-        //retrieve the state of the cell that this player is in 
-        //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
-        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y);
-        const claimedBy = cellData.x;
-        const stakedBy = cellData.y;
-        print("cell data post send/receive claimed by: " + claimedBy + " and staked by: " + stakedBy);
         // delay in seconds before repeat call
         this.getNewPosition.reset(.30);
     });

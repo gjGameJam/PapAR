@@ -5718,7 +5718,7 @@
     {}
   ScriptInputs:
     "":
-      {}
+      PlayerVisuals: !<MappingBased.PlayerVisuals> 4777e408-6610-41a7-b07c-ac300141d63c
   ScriptTypes:
     "":
       {}

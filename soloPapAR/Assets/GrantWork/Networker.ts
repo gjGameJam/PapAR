@@ -2,6 +2,7 @@ import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
 import {StorageProperty} from "SpectaclesSyncKit/Core/StorageProperty"
 import {SyncEntity} from "SpectaclesSyncKit/Core/SyncEntity"
 import {SyncKitLogger} from "SpectaclesSyncKit/Utils/SyncKitLogger"
+import { PlayerVisuals } from './PlayerVisuals';
 
 @component
 export class Networker extends BaseScriptComponent {
@@ -15,13 +16,19 @@ export class Networker extends BaseScriptComponent {
     private gridArray: vec2[] = []
     
     // Create a storage property for the gridSyncEntity
-    private gridData: StorageProperty<vec2[]>
+    private gridData: StorageProperty<vec2[]> //vector 2 array of <0,0> with unique, unrelated elemenets
     
     private height = 40; //the length and width of the grid cube
-    //vector 2 array of <0,0> with unique, unrelated elemenets
-    //private gridArray = new Array(this.height * this.height).fill(0).map(() => vec2.zero()); // OR: new vec2(0, 0)
-    //private gridData = StorageProperty.manualVec2Array("serverGrid", this.gridArray);
+    
+    private lastIdx = this.height * this.height; //last index in the grid (square of that is height tall and height wide)
+    
     private gridReady = false; //flag for grid being ready to use
+    
+    //player visuals script for minimap and world objects
+    @input
+    PlayerVisuals: PlayerVisuals;
+    
+    stakeList: vec2[] = []; //keep track of stake cells (in order)
     
     //script to manager the grid claim modification permissions
     onAwake() {
@@ -169,8 +176,8 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
-        //z is vertical (thus multiply by height) and x is horizontal and is 1:1 with cells
-        let idx = this.height * zpos + xpos
+        //get index associated with grid coordinates to access grid data (single dimension array)
+        let idx = this.coordsToIndex(xpos, zpos);
         if (idx < 0 || idx >= currentData.length) {
             if (this.showLogs) {
                 print("NetworkerTS: TEST - Invalid index: " + idx);
@@ -179,20 +186,41 @@ export class Networker extends BaseScriptComponent {
         }
         
         //use current data at current index to determine next step
-        const oldValue = currentData[idx];
-        const claimedBy = oldValue.x;
-        const stakedBy = oldValue.y;
-        // new value will be claimed by none staked by client ID
-        const newValue = new vec2(0, ID);
+        const cellValue = currentData[idx];
+        const claimedBy = cellValue.x;
+        const stakedBy = cellValue.y;
+        
+        //a cell can be claimed and staked by different players (not the same)
+        //if staked by a player (will be 0 if not staked)
+        if (stakedBy != 0){
+            //kill player with stakedBy ID (even if it is self)
+            this.handlePlayerDeath(stakedBy);
+        }
+        //if claim is by self (ID param) claim any staked area
+        if (claimedBy == ID){
+            //check for any staked region (continue if no staked region exists)
+            //convert stakes to claims  
+            //fill potential loop area
+            this.addStakedRegionToClaim();
+        }
+        //if claim is not by self (or unclaimed), stake cell
+        else {
+            //stake any cell not claimed by self (update gridData, stakeList, and visuals)
+            cellValue.y = ID; //stake cell information passed to gridData (update y val to ID)
+            this.stakeList.push(new vec2(xpos, zpos)); //add to stakeloop
+            //TODO: create stake visual
+            //this.PlayerVisuals.createWorldStakeVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
+        }
+        
         
         if (this.showLogs) {
-            print("NetworkerTS: TEST - Updating position (" + xpos + ", " + zpos + ") to " + newValue);
+            print("NetworkerTS: TEST - Updating position (" + xpos + ", " + zpos + ") to " + cellValue);
         }
         
         // Create a copy of the current array
         let newArray = [...currentData];
         //update specified index with new value
-        newArray[idx] = newValue;
+        newArray[idx] = cellValue;
         
         // Set the new value
         this.gridData.setPendingValue(newArray);
@@ -204,12 +232,8 @@ export class Networker extends BaseScriptComponent {
     
     
     // function for accessing grid data
-    getData(ID: number, xpos: number, zpos: number): vec2 {
-        if (this.showLogs) {
-            print("NetworkerTS: TEST RECEIVE - Starting receive test");
-        }
-        
-        
+    getData(ID: number, xpos: number, zpos: number, realWorldElevation: number): vec2 {
+
         if (this.showLogs) {
             print("NetworkerTS: TEST RECEIVE - Testing position (" + xpos + ", " + zpos + ")");
         }
@@ -221,8 +245,8 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
-        // Calculate the array index based on x and y
-        let idx = this.height * zpos + xpos;
+        //get index associated with grid coordinates to access grid data (single dimension array)
+        let idx = this.coordsToIndex(xpos, zpos);
         
         // Use currentOrPendingValue as recommended in documentation
         const currentData = this.gridData.currentOrPendingValue;
@@ -259,6 +283,158 @@ export class Networker extends BaseScriptComponent {
         //return the vector 2 that the parameters requested
         return cellVec;
     }
+    
+    //returns index for gridata of the x and z coordinates of the grid (parameters)
+    //z is vertical (thus multiply by height) and x is horizontal and is 1:1 with cells
+    coordsToIndex(xCoord: number, zCoord: number): number {
+        // Calculate the array index based on x and y
+        //each z goes down one row, which increases index by height (grid is square) so multiply z by height
+        //each x is 1:1 with grid columns so just add
+        return this.height * zCoord + xCoord;
+    }
+    
+    //returns vec2 grid coordinate correlating to index of griddata
+    indexToCoords(idx: number): vec2 {
+        const x = idx % this.height;
+        const z = Math.floor(idx / this.height);
+        return new vec2(x, z);
+    }
+
+    
+    
+    //function to remove all stakes and claims associated with specified player
+    //TODO: need to figure out how to destantiate cell visuals
+    //potentially send event across network all players are subscribed to and check for matching player id, if matching destroy all visuals
+    handlePlayerDeath(ID: number){
+        // Use currentOrPendingValue as recommended in documentation
+        const currentData = this.gridData.currentOrPendingValue;
+        
+        // Create a copy of the current array
+        let newArray = [...currentData];
+        
+        //loop through current data grid and remove all stakes and claims of player ID
+        for (var i = 0; i < this.lastIdx; i++){ //have each player keep list of staked and claimed instead
+            //retrieve cell with specified index
+            const currCell = newArray[i];
+            //if either x (claim) or y (stake) == ID, set to 0
+            if (currCell.x == ID){ //check if staked == ID
+                const newValue = new vec2(0, currCell.y); //set claim to 0 and keep staked val
+                newArray[i] = newValue; //update specified index with new value
+            }
+            if (currCell.y == ID){ //check if staked == ID
+                const newValue = new vec2(currCell.x, 0); //set stake to 0 and keep claimed val
+                newArray[i] = newValue; //update specified index with new value
+            }
+        }
+        
+        // Set the grid status (now with no stakes of claims by player with ID)
+        this.gridData.setPendingValue(newArray);
+        //dont worry about respawning/reviving dead players for now
+        //TODO: set player with ID as dead and disable their staking/claiming ability
+    }
+    
+    
+    //function for returning to claimed region and adding staked region to claim
+    addStakedRegionToClaim(){
+        
+        //1: if stakes.length == 0 (there are no stakes) then return early
+        const numOfStakes = this.stakeList.length;
+        if (numOfStakes == 0){
+            return; //if no stakes exist, simply return early
+        }
+        //(at this point there is a staked loop to claim)
+        
+        //2: get all player stakes as a list of integers
+        // Use currentOrPendingValue as recommended in documentation
+        const currentData = this.gridData.currentOrPendingValue;
+        // Create a copy of the current array
+        let newArray = [...currentData];
+        
+        //3: destroy stake visuals
+        this.PlayerVisuals.DestroyAllStakes();
+        
+        //4: convert all stakes to claims (set x val to clientID and y val with 0)
+        for (var i = 0; i < numOfStakes; i++){
+            const currCell = newArray[i];
+            const newValue = new vec2(this.clientID, 0); //set claim to client ID and set stake to 0 (unstaked)
+            newArray[i] = newValue; //update specified index with new value
+        }
+        
+        //5: Find the enclosed area (now surrounded by claimed cells) for each cell on/within stake loop:
+        //5.a: claim it (handled in findAndFill)
+        //5.b: insantiate visuals (handled in findAndFill)
+        this.findAndFillEnclosedRegion(this.stakeList, newArray);
+        
+        //6: update gridData with data from newly computed (by findAndFillEnclosedRegion) grid
+        this.gridData.setPendingValue(newArray);
+    }
+    
+    //TODO: finish functionality for updating newGrid data (it's by ref so no need to return array)
+    //main function for filling loop of cells (grid loop can be part/completely diagonal and multiple cells thick)
+    findAndFillEnclosedRegion(loop: vec2[], newGrid: vec2[]) {
+        //create set of vec2 in order to not repeat claims
+        const loopSet = new Set(loop);
+        //calculate edges of loop
+        const edges = this.getLoopEdges(loop);
+        
+        //start the mins at -infinity and maxes at infinity
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        //iterate over cells in the stake loop (the boundary of the new claim) and update smallest & largest values
+        for (const cell of loop) {
+            //get min and maxes for both x and y
+            minX = Math.min(minX, cell.x);
+            maxX = Math.max(maxX, cell.x);
+            minY = Math.min(minY, cell.y);
+            maxY = Math.max(maxY, cell.y);
+        }
+        
+        //loop from smallest x & y to largest (encompass rectangle spanning the entire loop)
+        for (let x = minX + 1; x < maxX; x++) {
+            for (let y = minY + 1; y < maxY; y++) {
+                //check if loop doesn't already contains key and that it is within stake loop
+                const gridPos = new vec2(x, y);
+                if (!loopSet.has(gridPos) && this.isInLoop(x, y, edges)) {
+                    //claim cell at x, y under clientID
+                    //TODO: claim cell and create player visual for given cell
+                    //this.claimSparseCell(x, y, this.clientID);
+                }
+            }
+        }
+        
+        print("Scanline region fill complete!");
+    }
+    
+    //TODO: test this function (has been converted to use vec2)
+    // Step 1: Convert loop to array of segments
+    getLoopEdges(loop: vec2[]): [number, number, number, number][] {
+        //keep track of all edges
+        const edges: [number, number, number, number][] = [];
+        //iterate over stake loop (now connected to home claim)
+        for (let i = 0; i < loop.length; i++) {
+            const x1 = loop[i].x;
+            const y1 = loop[i].y;
+            const secondCellIdx = (i + 1) % loop.length;
+            const x2 = loop[secondCellIdx].x;
+            const y2 = loop[secondCellIdx].y;
+            edges.push([x1, y1, x2, y2]);
+        }
+        return edges;
+    }
+    
+    // Step 2: Check if a point is inside the loop using ray casting
+    isInLoop(x: number, y: number, edges: [number, number, number, number][]): boolean {
+        let count = 0;
+        //iterate through all edges
+        for (const [x1, y1, x2, y2] of edges) {
+            if ((y1 > y) !== (y2 > y)) {
+                const xCross = ((x2 - x1) * (y - y1)) / (y2 - y1) + x1;
+                if (xCross > x) count++;
+            }
+        }
+        //if raycase hit an odd number of times, coords are inside stake loop
+        return count % 2 === 1;
+    }
+
     
     
     
