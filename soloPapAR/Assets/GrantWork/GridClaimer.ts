@@ -4,7 +4,7 @@ import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
 @component
 export class GridClaimer extends BaseScriptComponent {
     
-    unitsPerCell: number = 200;//cells are this number by this number meters
+    unitsPerCell: number = 200;//cells are this number by this number centimeters (also in networker)
     gridRadius: number = 20;
     grid: SparseGrid = new SparseGrid(this.gridRadius * 2); // Initialize the grid as gridDiameter * gridDiameter
     currX: number = 400;

@@ -98,17 +98,17 @@ export class LocationTracker extends BaseScriptComponent {
     this.getNewPosition = this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         // Session is ready (after singleplayer or multiplayer button click)
-        var position = this.playerTracker.getTransform().getWorldPosition();
+        var worldPosition = this.playerTracker.getTransform().getWorldPosition();
         //calculate grid position from world pos
-        const gridPos = this.worldCoordsToGridPos(new vec2(position.x, position.z));
+        const gridPos = this.worldCoordsToGridPos(new vec2(worldPosition.x, worldPosition.z));
         //keep track of last world position of player
-        this.GridClaimer.setCurrAndPrev(position.x, position.y, position.z);
+        this.GridClaimer.setCurrAndPrev(worldPosition.x, worldPosition.y, worldPosition.z);
         //update the hud with location data
-        this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, position.x, position.z, 0, 0);
+        this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldPosition.x, worldPosition.z, 0, 0);
         
         //retrieve the state of the cell that this player is in 
         //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
-        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y, position.y); //also pass in height for visuals spawning
+        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y); //also pass in height for visuals spawning
         const claimedBy = cellData.x;
         const stakedBy = cellData.y;
         print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
@@ -116,9 +116,9 @@ export class LocationTracker extends BaseScriptComponent {
         //update pos or send if not in same cell
         if (!this.PlayerVisuals.isInSameCell(gridPos)){
             //update gridclaimer position (handles deaths, claims, and stakes)
-            this.GridClaimer.updatePos(position.x, position.y, position.z, gridPos);
-            // send position and this.clientID to networker for processing
-            this.Networker.sendData(this.clientID, gridPos.x, gridPos.y);
+            this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
+            //send position and this.clientID to networker for processing
+            //this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
         }
         
         // delay in seconds before repeat call
