@@ -34,6 +34,10 @@ export class Networker extends BaseScriptComponent {
     
     stakeList: vec2[] = []; //keep track of stake cells (in order)
     
+    isAlive = true; //keep track of alive status of self
+    
+    deathEventString = 'playerDeathEvent';
+    
     //script to manager the grid claim modification permissions
     onAwake() {
         // Initialize the grid array properly
@@ -108,10 +112,17 @@ export class Networker extends BaseScriptComponent {
         print("NetworkerTS: Elements are independent: " + (this.gridArray[0] === this.gridArray[1])) // Should be false if they're independent
         
         // Set the pending value here
-        this.gridData.setPendingValue(this.gridArray)
+        this.gridData.setPendingValue(this.gridArray);
+        
+        //TODO: set up death event listener
+        this.gridSyncEntity.onEventReceived.add(this.deathEventString, (messageInfo) => {
+            //data is vec2 of who got killed (x val) and who killed them (y val)
+            const deathData = messageInfo.data;
+            this.playerDeath(deathData.x, deathData.y);
+        });
         
         // Set ready flag so grid can be used
-        this.gridReady = true
+        this.gridReady = true;
         
         if (this.showLogs) {
             print("NetworkerTS: Grid is ready!")
@@ -143,6 +154,18 @@ export class Networker extends BaseScriptComponent {
         this.clientID = ID;
     }
     
+    //networked event called by one received by all (check if param == self id and if so call handlePlayerDeath)
+    playerDeath(deadID: number, killerID: number) {
+        print("player " + killerID + " killed player " + deadID);
+        //kill player if network event says they are the one who died
+        if (deadID == this.clientID){
+            this.isAlive = false;
+            this.handleDeath();
+        }
+        
+    }
+
+    
 
     //this is the userId of the client with this script
     //sessionController.getLocalUserId()
@@ -150,8 +173,14 @@ export class Networker extends BaseScriptComponent {
     //meet with spectacles team to:
     //1: get multiple previews of same session emulating multiplayer
     
-    //function to update a grid position (grid cell is vec2 representing claim and stake owner(s))
+    //this function is called whenever self moves into a cell
+    //function to update grid data (grid cell is vec2 representing claim and stake owner(s))
     sendData(ID: number, xpos: number, zpos: number, realWorldCoords: vec3) {
+        //if player is dead, return early (they can't stake, claim, or kill)
+        if (!this.isAlive){
+            return;
+        }
+        
         //if not staked, stake
         
         //if staked, owner of stake dies (even if self)
@@ -196,8 +225,9 @@ export class Networker extends BaseScriptComponent {
         //a cell can be claimed and staked by different players (not the same)
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
-            //kill player with stakedBy ID (even if it is self)
-            this.handlePlayerDeath(stakedBy);
+            //TODO: test death event (have killed player call handlePlayerDeath and despawn cell visuals)
+            this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(stakedBy, this.clientID)); //pass who died (x val) and who killed them (y val)
+            
         }
         //if claim is by self (ID param) claim any staked area
         else if (claimedBy == ID){
@@ -318,10 +348,8 @@ export class Networker extends BaseScriptComponent {
 
     
     
-    //function to remove all stakes and claims associated with specified player
-    //TODO: need to figure out how to destantiate cell visuals
-    //potentially send event across network all players are subscribed to and check for matching player id, if matching destroy all visuals
-    handlePlayerDeath(ID: number){
+    //function to remove all stakes and claims (and visuals) associated with self
+    handleDeath(){
         // Use currentOrPendingValue as recommended in documentation
         const currentData = this.gridData.currentOrPendingValue;
         
@@ -333,11 +361,11 @@ export class Networker extends BaseScriptComponent {
             //retrieve cell with specified index
             const currCell = newArray[i];
             //if either x (claim) or y (stake) == ID, set to 0 to indicate player death
-            if (currCell.x == ID){ //check if staked == ID
+            if (currCell.x == this.clientID){ //check if staked == ID
                 const newValue = new vec2(0, currCell.y); //set claim to 0 and keep staked val
                 newArray[i] = newValue; //update specified index with new value
             }
-            if (currCell.y == ID){ //check if staked == ID
+            if (currCell.y == this.clientID){ //check if staked == ID
                 const newValue = new vec2(currCell.x, 0); //set stake to 0 and keep claimed val
                 newArray[i] = newValue; //update specified index with new value
             }
@@ -345,8 +373,14 @@ export class Networker extends BaseScriptComponent {
         
         // Set the grid status (now with no stakes of claims by player with ID)
         this.gridData.setPendingValue(newArray);
+        
+        //despawn all cell visuals (claims and stakes) associated with self
+        this.PlayerVisuals.DestroyAllStakes();
+        this.PlayerVisuals.DestroyAllClaims();
+        
+        //TODO: set player with ID as dead and disable their staking/claiming ability        
+        
         //dont worry about respawning/reviving dead players for now
-        //TODO: set player with ID as dead and disable their staking/claiming ability
         //once dead player reaches unclaimed cell, create new home claim
     }
     
