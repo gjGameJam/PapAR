@@ -56,7 +56,7 @@ export class LocationTracker extends BaseScriptComponent {
         //create a unique player id via hashing instead of using string
         this.clientID = this.getDeterministicPlayerId(displayName);
         //Networker has to know which player it is attached to
-        this.Networker.setPlayerID(this.clientID);
+        this.Networker.setPlayerID(this.clientID, this.seshController.getUsers().length);
         
       });
       //wait for networked instantiator to be ready for the device tracker to start
@@ -118,7 +118,7 @@ export class LocationTracker extends BaseScriptComponent {
             //update gridclaimer position (handles deaths, claims, and stakes)
             this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
             //send position and this.clientID to networker for processing
-            //this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
+            this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
         }
         
         // delay in seconds before repeat call
@@ -154,7 +154,10 @@ export class LocationTracker extends BaseScriptComponent {
             hash ^= displayName.charCodeAt(i);
             hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
         }
-        return hash >>> 0; // Convert to unsigned 32-bit int
+        
+        //ensure number can be stored within 32 bits
+        const MAX_SAFE_FLOAT32_INT = 0xFFFFFF; // 16777215
+        return (hash >>> 0) % MAX_SAFE_FLOAT32_INT;
     }
 
 

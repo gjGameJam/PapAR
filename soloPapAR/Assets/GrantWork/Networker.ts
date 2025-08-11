@@ -10,6 +10,9 @@ export class Networker extends BaseScriptComponent {
     showLogs: boolean = true;
     //connection id
     clientID: number;
+    
+    playerID: number;//equal to numbers of players (after self joined) - 1 (for instantiator prefab list referencing)
+    
     gridSyncEntity: SyncEntity;
     
     // Initialize the array of data (all zeroes on start)
@@ -150,16 +153,19 @@ export class Networker extends BaseScriptComponent {
 //    }
     
     //setter for player id (hashed display name from session controller)
-    setPlayerID(ID: number){
+    setPlayerID(ID: number, playerNum: number){
         this.clientID = ID;
+        this.playerID = playerNum - 1; //have players zero indexed to support unique cell colors
+        print("NetworkerTS: new player has ID of " + ID + " and player number of " + playerNum);
     }
     
     //networked event called by one received by all (check if param == self id and if so call handlePlayerDeath)
     playerDeath(deadID: number, killerID: number) {
-        print("player " + killerID + " killed player " + deadID);
+        print("player " + killerID + " killed player " + deadID + " self is " + this.clientID);
         //kill player if network event says they are the one who died
         if (deadID == this.clientID){
             this.isAlive = false;
+            print("player " + deadID + " is calling handle death");
             this.handleDeath();
         }
         
@@ -222,10 +228,12 @@ export class Networker extends BaseScriptComponent {
         const claimedBy = cellValue.x;
         const stakedBy = cellValue.y;
         
+        print("NetworkerTS: new cell is claimed by " + claimedBy + " and staked by " + stakedBy)
         //a cell can be claimed and staked by different players (not the same)
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
             //TODO: test death event (have killed player call handlePlayerDeath and despawn cell visuals)
+            print("attempting to call death event");            
             this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(stakedBy, this.clientID)); //pass who died (x val) and who killed them (y val)
             
         }
@@ -350,6 +358,7 @@ export class Networker extends BaseScriptComponent {
     
     //function to remove all stakes and claims (and visuals) associated with self
     handleDeath(){
+        print("handle death function called");
         // Use currentOrPendingValue as recommended in documentation
         const currentData = this.gridData.currentOrPendingValue;
         
