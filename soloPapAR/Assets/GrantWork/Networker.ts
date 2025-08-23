@@ -31,6 +31,8 @@ export class Networker extends BaseScriptComponent {
     
     private gridReady = false; //flag for grid being ready to use
     
+    private firstClaim = true; //flag to create home claim on start
+    
     //player visuals script for minimap and world objects
     @input
     PlayerVisuals: PlayerVisuals;
@@ -79,12 +81,13 @@ export class Networker extends BaseScriptComponent {
         // Limit the grid to only send updates out 10 times per second
         this.gridData.sendsPerSecondLimit = 10
         
-        // Add change listener to debug storage property updates
+        // Add change listener for storage property updates
         this.gridData.onAnyChange.add((newVal: vec2[], oldVal: vec2[]) => {
+            //update minimap here if changed cell(s) are within minimap radius
             if (this.showLogs) {
                 print("NetworkerTS: Grid data changed!")
-                print("NetworkerTS: New value length: " + (newVal ? newVal.length : "undefined"))
-                print("NetworkerTS: Old value length: " + (oldVal ? oldVal.length : "undefined"))
+                print("NetworkerTS: New value's length: " + (newVal ? newVal.length : "undefined"))
+                print("NetworkerTS: Old value's length: " + (oldVal ? oldVal.length : "undefined"))
             }
         })
         //print out that onAnyChange has a function
@@ -107,7 +110,7 @@ export class Networker extends BaseScriptComponent {
         // Debug the storage property state
         print("NetworkerTS: Grid array length: " + this.gridArray.length)
         print("NetworkerTS: Grid data current value: " + this.gridData.currentValue)
-        print("NetworkerTS: Grid data current value length: " + (this.gridData.currentValue ? this.gridData.currentValue.length : "undefined"))
+        print("NetworkerTS: Grid data current value's length: " + (this.gridData.currentValue ? this.gridData.currentValue.length : "undefined"))
         print("NetworkerTS: Grid data currentOrPendingValue: " + this.gridData.currentOrPendingValue)
         print("NetworkerTS: Grid data currentOrPendingValue length: " + (this.gridData.currentOrPendingValue ? this.gridData.currentOrPendingValue.length : "undefined"))
         
@@ -188,7 +191,6 @@ export class Networker extends BaseScriptComponent {
         }
         
         //if not staked, stake
-        
         //if staked, owner of stake dies (even if self)
         
         //if claimed:
@@ -221,6 +223,32 @@ export class Networker extends BaseScriptComponent {
                 print("NetworkerTS: TEST - Invalid index: " + idx);
             }
             return;
+        }
+        
+        //special/base case of creating home claim on start
+        if (this.firstClaim == true){
+            print("NetworkerTS: TEST - creating home claim");
+            //set first claim to false to not allow multiple home claims
+            this.firstClaim = false;
+            // Create a copy of the current array
+            let newArray = [...currentData];
+            // Build brand new array + objects
+//            const newArray = currentData.map((cell, i) =>
+//                i === idx ? new vec2(this.clientID, 0) : new vec2(cell.x, cell.y)
+//            )
+            //home claim is claimed by self and staked by none
+            let homeClaimVal = new vec2(0, 0);  // initialize
+            homeClaimVal.x = ID;     // set claimed by client id
+            homeClaimVal.y = 0;
+            //update specified index with new value
+            newArray[idx] = homeClaimVal;
+            // Set the new value
+            this.gridData.setPendingValue(newArray);
+            print("NetworkerTS: new home claim " + newArray[idx])
+            //calculate the center of current cell for visuals
+            const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
+            this.PlayerVisuals.createWorldClaimVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            return;//can return early now that backend and frontend home claim tasks are handled
         }
         
         //use current data at current index to determine next step
