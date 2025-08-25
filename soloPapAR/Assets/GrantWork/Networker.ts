@@ -260,7 +260,7 @@ export class Networker extends BaseScriptComponent {
         //a cell can be claimed and staked by different players (not the same)
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
-            //TODO: test death event (have killed player call handlePlayerDeath and despawn cell visuals)
+            // test death event (have killed player call handlePlayerDeath and despawn cell visuals)
             print("attempting to call death event");            
             this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(stakedBy, this.clientID)); //pass who died (x val) and who killed them (y val)
             
@@ -270,6 +270,7 @@ export class Networker extends BaseScriptComponent {
             //check for any staked region (continue if no staked region exists)
             //convert stakes to claims  
             //fill potential loop area
+            //TODO: test conversion of stakes to claims (staked cells causing unintentional death)
             this.addStakedRegionToClaim(realWorldCoords);
         }
         //if claim is not by self (or unclaimed), stake cell

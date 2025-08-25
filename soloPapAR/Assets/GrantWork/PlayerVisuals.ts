@@ -60,6 +60,78 @@ export class PlayerVisuals extends BaseScriptComponent {
         return false;
     }
     
+    //gets the stake pillar associated with the specified player ID
+    getStakePillarFromPlayerID(ID: number): ObjectPrefab{
+        switch (ID){
+            case 1: //player 1
+            return null;
+            
+            case 2: //player 2
+            return null;
+            
+            case 3: //player 3
+            return null;
+            
+            case 4: //player 4
+            return null;
+            
+            case 5: //player 5
+            return null;
+            
+            default: //when no player ids matching up to switch cases is passed, return null
+            return null;
+        }
+        
+    }
+    
+    //gets the stake cell volume associated with the specified player ID
+    getStakeVolumeFromPlayerID(ID: number): ObjectPrefab{
+        switch (ID){
+            case 1: //player 1
+            return null;
+            
+            case 2: //player 2
+            return null;
+            
+            case 3: //player 3
+            return null;
+            
+            case 4: //player 4
+            return null;
+            
+            case 5: //player 5
+            return null;
+            
+            default: //when no player ids matching up to switch cases is passed, return null
+            return null;
+        }
+        
+    }
+    
+    //gets the claim cell volume associated with the specified player ID
+    getClaimVolumeFromPlayerID(ID: number): ObjectPrefab{
+        switch (ID){
+            case 1: //player 1
+            return null;
+            
+            case 2: //player 2
+            return null;
+            
+            case 3: //player 3
+            return null;
+            
+            case 4: //player 4
+            return null;
+            
+            case 5: //player 5
+            return null;
+            
+            default: //when no player ids matching up to switch cases is passed, return null
+            return null;
+        }
+        
+    }
+    
     //creates a cell cube visual for claimed cell via instantiator.instantiate
     createWorldClaimVolume(x: number, y: number, z: number, scale: number){
         //return early if networked instantiator is not ready
