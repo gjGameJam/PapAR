@@ -175,10 +175,10 @@ export class GridClaimer extends BaseScriptComponent {
         // Collect all staked cells belonging to the player
         const stakePositions = this.grid.getPlayerStakes(this.playerID);
         if (stakePositions.length == 0){
-            print('no staked region to add to claim');
+            //print('no staked region to add to claim');
             return;
         }
-        print('adding staked region to claim');
+        //print('adding staked region to claim');
         //remove all stake visuals from playervisuals here
         this.PlayerVisuals.DestroyAllStakes();
     

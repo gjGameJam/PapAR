@@ -85,9 +85,9 @@ export class Networker extends BaseScriptComponent {
         this.gridData.onAnyChange.add((newVal: vec2[], oldVal: vec2[]) => {
             //update minimap here if changed cell(s) are within minimap radius
             if (this.showLogs) {
-                print("NetworkerTS: Grid data changed!")
-                print("NetworkerTS: New value's length: " + (newVal ? newVal.length : "undefined"))
-                print("NetworkerTS: Old value's length: " + (oldVal ? oldVal.length : "undefined"))
+                //print("NetworkerTS: Grid data changed!")
+                //print("NetworkerTS: New value's length: " + (newVal ? newVal.length : "undefined"))
+                //print("NetworkerTS: Old value's length: " + (oldVal ? oldVal.length : "undefined"))
             }
         })
         //print out that onAnyChange has a function
@@ -120,7 +120,7 @@ export class Networker extends BaseScriptComponent {
         // Set the pending value here
         this.gridData.setPendingValue(this.gridArray);
         
-        //TODO: set up death event listener
+        //set up death event listener
         this.gridSyncEntity.onEventReceived.add(this.deathEventString, (messageInfo) => {
             //data is vec2 of who got killed (x val) and who killed them (y val)
             const deathData = messageInfo.data;
@@ -135,25 +135,6 @@ export class Networker extends BaseScriptComponent {
         }
     }
     
-//    //to update the shared storage property given a player's location
-//    receivePlayerData(ID: number, xpos: number, ypos: number, zpos: number){
-//        //return early if grid is not ready        
-//        if (!this.gridReady){
-//            return;
-//        }
-//        //calculate the array index based on x and y
-//        let idx = this.height * ypos + xpos;
-//        //check if index is OOB
-//        if (idx < 0 || idx >= this.gridData.currentValue.length) {
-//            print(`Invalid grid index: ${idx} for x=${xpos}, y=${ypos}`);
-//            return;
-//        }
-//        //the vector2 state represents the claim and stake status (in order) of the cell
-//        let cellVec = this.gridData.currentValue[idx];
-//        //get owner and staker of grid cell
-//        let claimOwner = cellVec.x;
-//        let stakeOwner = cellVec.y;
-//    }
     
     //setter for player id (hashed display name from session controller)
     setPlayerID(ID: number, playerNum: number){
@@ -196,13 +177,10 @@ export class Networker extends BaseScriptComponent {
         //if claimed:
         //      by self: check if stake loop exists and add to claim
         //      by other: update stake data in cell without updating claim
-        if (this.showLogs) {
-            print("NetworkerTS: TEST - Starting send test");
-        }
         
         if (!this.gridReady) {
             if (this.showLogs) {
-                print("NetworkerTS: TEST - Grid not ready, cannot send");
+                print("NetworkerTS: SEND - Grid not ready, cannot send");
             }
             return;
         }
@@ -211,7 +189,7 @@ export class Networker extends BaseScriptComponent {
         const currentData = this.gridData.currentOrPendingValue;
         if (!currentData) {
             if (this.showLogs) {
-                print("NetworkerTS: TEST - Grid data is null, cannot send");
+                print("NetworkerTS: SEND - Grid data is null, cannot send");
             }
             return;
         }
@@ -220,14 +198,14 @@ export class Networker extends BaseScriptComponent {
         let idx = this.coordsToIndex(xpos, zpos);
         if (idx < 0 || idx >= currentData.length) {
             if (this.showLogs) {
-                print("NetworkerTS: TEST - Invalid index: " + idx);
+                print("NetworkerTS: SEND - Invalid index: " + idx);
             }
             return;
         }
         
         //special/base case of creating home claim on start
         if (this.firstClaim == true){
-            print("NetworkerTS: TEST - creating home claim");
+            print("NetworkerTS: SEND - creating home claim");
             //set first claim to false to not allow multiple home claims
             this.firstClaim = false;
             // Create a copy of the current array
@@ -261,7 +239,7 @@ export class Networker extends BaseScriptComponent {
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
             // test death event (have killed player call handlePlayerDeath and despawn cell visuals)
-            print("attempting to call death event");            
+            //print("attempting to call death event");            
             this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(stakedBy, this.clientID)); //pass who died (x val) and who killed them (y val)
             
         }
@@ -286,7 +264,7 @@ export class Networker extends BaseScriptComponent {
         
         
         if (this.showLogs) {
-            print("NetworkerTS: TEST - Updating position (" + xpos + ", " + zpos + ") to " + cellValue);
+            print("NetworkerTS: SEND - Updating position (" + xpos + ", " + zpos + ") to " + cellValue);
         }
         
         // Create a copy of the current array
@@ -298,21 +276,17 @@ export class Networker extends BaseScriptComponent {
         this.gridData.setPendingValue(newArray);
         
         if (this.showLogs) {
-            print("NetworkerTS: TEST - Successfully sent update");
+            print("NetworkerTS: SEND - Successfully sent update");
         }
     }
     
     
     // function for accessing grid data
     getData(ID: number, xpos: number, zpos: number): vec2 {
-
-        if (this.showLogs) {
-            print("NetworkerTS: TEST RECEIVE - Testing position (" + xpos + ", " + zpos + ")");
-        }
         
         if (!this.gridReady) {
             if (this.showLogs) {
-                print("NetworkerTS: TEST RECEIVE - Grid not ready, cannot test");
+                print("NetworkerTS: GET - Grid not ready, cannot test");
             }
             return;
         }
@@ -324,33 +298,29 @@ export class Networker extends BaseScriptComponent {
         const currentData = this.gridData.currentOrPendingValue;
         
         if (this.showLogs) {
-            print("NetworkerTS: TEST RECEIVE - Calculated index: " + idx);
-            print("NetworkerTS: TEST RECEIVE - Grid data currentOrPendingValue: " + currentData);
-            print("NetworkerTS: TEST RECEIVE - Grid data currentOrPendingValue length: " + (currentData ? currentData.length : "undefined"));
+            //print("NetworkerTS: GET - Calculated index: " + idx);
+            //print("NetworkerTS: GET - Grid data currentOrPendingValue: " + currentData);
+            //print("NetworkerTS: GET - Grid data currentOrPendingValue length: " + (currentData ? currentData.length : "undefined"));
         }
         
         if (!currentData) {
-            print("NetworkerTS: TEST RECEIVE - Grid data is null, cannot test");
+            print("NetworkerTS: GET - Grid data is null, cannot test");
             return;
         }
         
         // Check if index is OOB
         if (idx < 0 || idx >= currentData.length) {
-            print("NetworkerTS: TEST RECEIVE - Invalid grid index: " + idx + " for x=" + xpos + ", y=" + zpos);
+            print("NetworkerTS: GET - Invalid grid index: " + idx + " for x=" + xpos + ", y=" + zpos);
             return;
         }
         
         // get the cell vector from the specified retieve index
         let cellVec = currentData[idx];
         
-        if (this.showLogs) {
-            print("NetworkerTS: TEST RECEIVE - Retrieved cellVec: " + cellVec);
-        }
-        
         if (cellVec === undefined) {
-            print("NetworkerTS: TEST RECEIVE - ERROR - cellVec is undefined at index " + idx);
+            print("NetworkerTS: GET - ERROR - cellVec is undefined at index " + idx);
         } else {
-            print("NetworkerTS: TEST RECEIVE - SUCCESS - cellVec retrieved: " + cellVec);
+            print("NetworkerTS: GET - SUCCESS - cellVec retrieved: " + cellVec);
         }
         //return the vector 2 that the parameters requested
         return cellVec;
@@ -422,6 +392,15 @@ export class Networker extends BaseScriptComponent {
         //once dead player reaches unclaimed cell, create new home claim
     }
     
+    //helper function to print out all claimed or staked cells
+    printGridData(gridData: vec2[]) {
+        gridData.forEach((cell, index) => {
+            if (cell.x !== 0 || cell.y !== 0) {
+                print("Index " + index + ", x = " + cell.x + ", y = " + cell.y);
+            }
+        });
+    }
+    
     
     //function for returning to claimed region and adding staked region to claim
     addStakedRegionToClaim(realWorldCoords: vec3){
@@ -444,18 +423,39 @@ export class Networker extends BaseScriptComponent {
         
         //4: convert all stakes to claims (set x val to clientID and y val with 0)
         for (var i = 0; i < numOfStakes; i++){
-            const currCell = newArray[i];
+            //TODO: fix this to use current index instead of i (get index from stake grid pos)
+            const gridPosOfStake = this.stakeList[i];
+            print("NetworkerTS: TEST RECEIVE - claiming staked cell for x=" + gridPosOfStake.x + ", y=" + gridPosOfStake.y);
+            //get index from grid pos
+            const indexOfStake = this.coordsToIndex(gridPosOfStake.x, gridPosOfStake.y);
+            //get current cell in grid data correlating to staked cell
+            //const currCell = newArray[indexOfStake];
             const newValue = new vec2(this.clientID, 0); //set claim to client ID and set stake to 0 (unstaked)
-            newArray[i] = newValue; //update specified index with new value
+            newArray[indexOfStake] = newValue; //update specified index with new value
+            print("NetworkerTS: new cell at x=" + gridPosOfStake.x + ", y= " + gridPosOfStake.y + " after claim is now: " + newArray[indexOfStake]);
+
         }
+        
+        //this.printGridData(newArray); //print out grid data
+        
         
         //5: Find the enclosed area (now surrounded by claimed cells) for each cell on/within stake loop:
         //5.a: claim it (handled in findAndFill)
         //5.b: insantiate visuals (handled in findAndFill)
-        this.findAndFillEnclosedRegion(this.stakeList, newArray, realWorldCoords);
+        this.findAndFillEnclosedRegion(this.stakeList, newArray, realWorldCoords); //will return early if stake loop has no interior
         
         //6: update gridData with data from newly computed (by findAndFillEnclosedRegion) grid
         this.gridData.setPendingValue(newArray);
+        
+        //print out grid data (pending then current)
+        print("pending, current, current (after force)");
+        this.printGridData(this.gridData.pendingValue); //print out grid data
+        //print("Can I modify store? " + this.gridSyncEntity.canIModifyStore()); //prints true
+        this.printGridData(this.gridData.currentValue); //print out grid data
+        this.gridData.setValueImmediate(this.gridSyncEntity.currentStore, newArray);//force update
+        this.printGridData(this.gridData.currentValue); //print out grid data after force
+        
+        //print("NetworkerTS: updated grid data: " + this.gridData.currentOrPendingValue);
     }
     
     //TODO: finish functionality for updating newGrid data (it's by ref so no need to return array)
@@ -477,16 +477,23 @@ export class Networker extends BaseScriptComponent {
             maxZ = Math.max(maxZ, cell.y);
         }
         
+        // Early return if the bounding box has no interior
+        if (maxX - minX <= 1 || maxZ - minZ <= 1) {
+            print("findAndFillEnclosedRegion: stake bounding box has no interior, returning early.");
+            return;
+        }
+        
         //loop from smallest x & y to largest (encompass rectangle spanning the entire loop)
         for (let x = minX + 1; x < maxX; x++) {
             for (let z = minZ + 1; z < maxZ; z++) {
                 //check if loop doesn't already contains key and that it is within stake loop
                 const gridPos = new vec2(x, z);
-                if (!loopSet.has(gridPos) && this.isInLoop(x, z, edges)) {
+                print("NetworkerTS: TEST RECEIVE - filling stake loop for x=" + gridPos.x + ", y=" + gridPos.y);
+                if (!loop.some(v => this.vec2Equals(v, gridPos)) && this.isInLoop(x, z, edges)) {
                     //claim cell at x, y under clientID
                     let idx = this.coordsToIndex(x, z); //calculate index of given x and z
                     const currCell = newGrid[idx]; //get cell at given grid coords
-                    const newValue = new vec2(this.clientID, currCell.y); //set claim to client ID and keep stake (should be unstaked)
+                    const newValue = new vec2(this.clientID, 0); //set claim to client ID and remove stake (should be unstaked)
                     newGrid[idx] = newValue; //update specified index with new value
                     //create player visual for given cell at center of cell (now claimed)
                     const cellCenterCoords = this.gridPosToWorldCoords(x, z);
@@ -529,7 +536,10 @@ export class Networker extends BaseScriptComponent {
         return count % 2 === 1;
     }
 
-    
+    //helper function returning true if two vec2s are equal
+    vec2Equals(a: vec2, b: vec2): boolean {
+        return a.x === b.x && a.y === b.y;
+    }
     
     
 }

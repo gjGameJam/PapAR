@@ -111,10 +111,11 @@ export class LocationTracker extends BaseScriptComponent {
         const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y); //also pass in height for visuals spawning
         const claimedBy = cellData.x;
         const stakedBy = cellData.y;
-        print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
+        
             
         //update pos or send if not in same cell
         if (!this.PlayerVisuals.isInSameCell(gridPos)){
+            print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
             //update gridclaimer position (handles deaths, claims, and stakes)
             this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
             //send position and this.clientID to networker for processing
