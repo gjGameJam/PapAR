@@ -4,7 +4,7 @@ import {SyncEntity} from "SpectaclesSyncKit/Core/SyncEntity"
 import {SyncKitLogger} from "SpectaclesSyncKit/Utils/SyncKitLogger"
 import { PlayerVisuals } from './PlayerVisuals';
 
-@component
+
 export class Networker extends BaseScriptComponent {
     //to help debug
     showLogs: boolean = true;
@@ -32,6 +32,8 @@ export class Networker extends BaseScriptComponent {
     private gridReady = false; //flag for grid being ready to use
     
     private firstClaim = true; //flag to create home claim on start
+    
+    private isPerformingBulkConversion = false; //flag to prevent multiple bulk conversions
     
     //player visuals script for minimap and world objects
     @input
@@ -78,8 +80,8 @@ export class Networker extends BaseScriptComponent {
             print("NetworkerTS: Storage property added to sync entity")
         }
         
-        // Limit the grid to only send updates out 10 times per second
-        this.gridData.sendsPerSecondLimit = 10
+        // Limit the grid to only send updates out this many times per second
+        this.gridData.sendsPerSecondLimit = 30
         
         // Add change listener for storage property updates
         this.gridData.onAnyChange.add((newVal: vec2[], oldVal: vec2[]) => {
@@ -168,6 +170,7 @@ export class Networker extends BaseScriptComponent {
     sendData(ID: number, xpos: number, zpos: number, realWorldCoords: vec3) {
         //if player is dead, return early (they can't stake, claim, or kill)
         if (!this.isAlive){
+            print("NetworkerTS: SEND - Player is dead, cannot send data to grid");
             return;
         }
         
@@ -244,7 +247,7 @@ export class Networker extends BaseScriptComponent {
             
         }
         //if claim is by self (ID param) claim any staked area
-        else if (claimedBy == ID){
+        if (claimedBy == ID){
             //check for any staked region (continue if no staked region exists)
             //convert stakes to claims  
             //fill potential loop area
@@ -252,10 +255,17 @@ export class Networker extends BaseScriptComponent {
             this.addStakedRegionToClaim(realWorldCoords);
         }
         //if claim is not by self (or unclaimed), stake cell
-        else {
+        else if (claimedBy != ID) {
             //stake any cell not claimed by self (update gridData, stakeList, and visuals)
             cellValue.y = ID; //stake cell information passed to gridData (update y val to ID)
-            this.stakeList.push(new vec2(xpos, zpos)); //add to stakeloop
+            
+            // Only add to stakeList if we're not performing bulk conversion
+            if (!this.isPerformingBulkConversion) {
+                this.stakeList.push(new vec2(xpos, zpos)); //add to stakeloop
+            } else {
+                print("NetworkerTS: Skipping stakeList addition during bulk conversion");
+            }
+            
             //cell is staked by updating gridData with new cellValue y val
             const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
             //create player visual for newly staked cell at center of cell and at current y
@@ -405,6 +415,12 @@ export class Networker extends BaseScriptComponent {
     //function for returning to claimed region and adding staked region to claim
     addStakedRegionToClaim(realWorldCoords: vec3){
         
+        // Prevent multiple bulk conversions from happening simultaneously
+        if (this.isPerformingBulkConversion) {
+            print("NetworkerTS: Bulk conversion already in progress, skipping");
+            return;
+        }
+        
         //1: if stakes.length == 0 (there are no stakes) then return early
         const numOfStakes = this.stakeList.length;
         if (numOfStakes == 0){
@@ -412,29 +428,46 @@ export class Networker extends BaseScriptComponent {
         }
         //(at this point there is a staked loop to claim)
         
+        this.isPerformingBulkConversion = true; // Set flag to prevent re-entry
+        print("NetworkerTS: BULK CONVERSION START - Converting " + numOfStakes + " stakes to claims");
+        
         //2: get all player stakes as a list of integers
         // Use currentOrPendingValue as recommended in documentation
         const currentData = this.gridData.currentOrPendingValue;
         // Create a copy of the current array
         let newArray = [...currentData];
         
+        // CRITICAL: Ensure we have the latest data before bulk conversion
+        if (!currentData || currentData.length === 0) {
+            print("NetworkerTS: ERROR - No current data available for bulk conversion");
+            return;
+        }
+        
         //3: destroy stake visuals
         this.PlayerVisuals.DestroyAllStakes();
         
         //4: convert all stakes to claims (set x val to clientID and y val with 0)
+        print("NetworkerTS: BEFORE conversion - printing current staked cells:");
+        this.printGridData(newArray);
+        
         for (var i = 0; i < numOfStakes; i++){
-            //TODO: fix this to use current index instead of i (get index from stake grid pos)
+            //gets grid coordinates
             const gridPosOfStake = this.stakeList[i];
             print("NetworkerTS: TEST RECEIVE - claiming staked cell for x=" + gridPosOfStake.x + ", y=" + gridPosOfStake.y);
-            //get index from grid pos
+            //get index correlating vec2[] to grid coordinates
             const indexOfStake = this.coordsToIndex(gridPosOfStake.x, gridPosOfStake.y);
             //get current cell in grid data correlating to staked cell
-            //const currCell = newArray[indexOfStake];
+            const currCell = newArray[indexOfStake];
+            print("NetworkerTS: BEFORE conversion - cell at index " + indexOfStake + " is: " + currCell);
             const newValue = new vec2(this.clientID, 0); //set claim to client ID and set stake to 0 (unstaked)
             newArray[indexOfStake] = newValue; //update specified index with new value
+            print("NetworkerTS: AFTER conversion - cell at index " + indexOfStake + " is now: " + newArray[indexOfStake]);
             print("NetworkerTS: new cell at x=" + gridPosOfStake.x + ", y= " + gridPosOfStake.y + " after claim is now: " + newArray[indexOfStake]);
 
         }
+        
+        print("NetworkerTS: AFTER conversion - printing all converted cells:");
+        this.printGridData(newArray);
         
         //this.printGridData(newArray); //print out grid data
         
@@ -444,16 +477,50 @@ export class Networker extends BaseScriptComponent {
         //5.b: insantiate visuals (handled in findAndFill)
         this.findAndFillEnclosedRegion(this.stakeList, newArray, realWorldCoords); //will return early if stake loop has no interior
         
-        //6: update gridData with data from newly computed (by findAndFillEnclosedRegion) grid
-        this.gridData.setPendingValue(newArray);
+        // Clear the stake list since we've converted all stakes to claims (moved to end as requested)
+        this.stakeList = [];
+        print("NetworkerTS: stakeList cleared, length now: " + this.stakeList.length);
         
-        //print out grid data (pending then current)
-        print("pending, current, current (after force)");
-        this.printGridData(this.gridData.pendingValue); //print out grid data
-        //print("Can I modify store? " + this.gridSyncEntity.canIModifyStore()); //prints true
-        this.printGridData(this.gridData.currentValue); //print out grid data
-        this.gridData.setValueImmediate(this.gridSyncEntity.currentStore, newArray);//force update
-        this.printGridData(this.gridData.currentValue); //print out grid data after force
+        //6: update gridData with data from newly computed (by findAndFillEnclosedRegion) grid
+        print("NetworkerTS: About to update gridData with newArray length: " + newArray.length);
+        print("NetworkerTS: FINAL array before setPendingValue:");
+        this.printGridData(newArray);
+        
+        // CRITICAL FIX: Use setValueImmediate for bulk updates to avoid race conditions
+        // This ensures the update happens immediately without waiting for LateUpdate
+        if (this.gridSyncEntity.canIModifyStore()) {
+            print("NetworkerTS: Using setValueImmediate for atomic bulk update");
+            this.gridData.setValueImmediate(this.gridSyncEntity.currentStore, newArray);
+            print("NetworkerTS: setValueImmediate called successfully");
+        } else {
+            print("NetworkerTS: Cannot modify store - falling back to setPendingValue");
+            this.gridData.setPendingValue(newArray);
+        }
+        
+        // Check if the values actually got set
+        print("NetworkerTS: Checking if stakes were actually converted in storage property:");
+        const verifyData = this.gridData.currentOrPendingValue;
+        if (verifyData) {
+            print("NetworkerTS: Verification - counting remaining stakes with player ID " + this.clientID + ":");
+            let remainingStakes = 0;
+            for (let i = 0; i < verifyData.length; i++) {
+                if (verifyData[i].y === this.clientID) {
+                    remainingStakes++;
+                    const coords = this.indexToCoords(i);
+                    print("NetworkerTS: WARNING - Stake still exists at (" + coords.x + ", " + coords.y + ") with value: " + verifyData[i]);
+                }
+            }
+            print("NetworkerTS: Total remaining stakes for player " + this.clientID + ": " + remainingStakes);
+            
+            if (remainingStakes === 0) {
+                print("NetworkerTS: SUCCESS - All stakes converted to claims!");
+            }
+        }
+        
+        print("NetworkerTS: BULK CONVERSION COMPLETE");
+        
+        // Reset the flag to allow future bulk conversions
+        this.isPerformingBulkConversion = false;
         
         //print("NetworkerTS: updated grid data: " + this.gridData.currentOrPendingValue);
     }
@@ -540,6 +607,7 @@ export class Networker extends BaseScriptComponent {
     vec2Equals(a: vec2, b: vec2): boolean {
         return a.x === b.x && a.y === b.y;
     }
+    
     
     
 }
