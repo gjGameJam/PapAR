@@ -117,7 +117,7 @@ export class LocationTracker extends BaseScriptComponent {
         if (!this.PlayerVisuals.isInSameCell(gridPos)){
             print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
             //update gridclaimer position (handles deaths, claims, and stakes)
-            this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
+            //this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
             //send position and this.clientID to networker for processing
             this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
         }
