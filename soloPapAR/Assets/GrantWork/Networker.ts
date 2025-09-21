@@ -520,6 +520,10 @@ export class Networker extends BaseScriptComponent {
             print("  ✅ CONVERSION SUCCESS: Stake (" + stake.x + ", " + stake.y + ") → Claim");
             print("  AFTER: claimed=" + newValue.x + ", staked=" + newValue.y);
             
+            //TODO: Create visual for newly claimed cell (exterior loop cell)
+            const cellCenterCoords = this.gridPosToWorldCoords(stake.x, stake.y);
+            this.PlayerVisuals.createWorldClaimVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
             delayedEvent.bind(() => {
