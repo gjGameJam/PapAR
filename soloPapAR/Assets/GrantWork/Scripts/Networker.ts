@@ -1,4 +1,4 @@
-import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
+import {SessionController} from '../../SpectaclesSyncKit/Core/SessionController';
 import {StorageProperty} from "SpectaclesSyncKit/Core/StorageProperty"
 import {SyncEntity} from "SpectaclesSyncKit/Core/SyncEntity"
 import {SyncKitLogger} from "SpectaclesSyncKit/Utils/SyncKitLogger"

@@ -1,7 +1,7 @@
 import { SparseGrid } from './GridClaimer';
 import { CellState } from './GridClaimer';
 import { LocationTracker } from './LocationTracker';
-import {Instantiator} from '../SpectaclesSyncKit/Components/Instantiator';
+import {Instantiator} from '../../SpectaclesSyncKit/Components/Instantiator';
 
 @component
 export class PlayerVisuals extends BaseScriptComponent {

@@ -1,5 +1,5 @@
 import { PlayerVisuals } from './PlayerVisuals';
-import {SessionController} from '../SpectaclesSyncKit/Core/SessionController';
+import {SessionController} from '../../SpectaclesSyncKit/Core/SessionController';
 
 @component
 export class GridClaimer extends BaseScriptComponent {
