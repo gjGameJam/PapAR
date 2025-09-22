@@ -26,14 +26,27 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     deviceTracker: LocationTracker;
     
+    //player 1 visual objects
     @input
-    claimCellObj: ObjectPrefab;
+    p1claimCellObj: ObjectPrefab;
     
     @input
-    stakeCellObj: ObjectPrefab;
+    p1stakeCellObj: ObjectPrefab;
     
     @input
-    stakePillarObj: ObjectPrefab;
+    p1stakePillarObj: ObjectPrefab;
+    
+    //player 2 visual objects
+    @input
+    p2claimCellObj: ObjectPrefab;
+    
+    @input
+    p2stakeCellObj: ObjectPrefab;
+    
+    @input
+    p2stakePillarObj: ObjectPrefab;
+    
+    //end of player object fields
     
     @input
     networkedInstantiator: Instantiator;
@@ -64,10 +77,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     getStakePillarFromPlayerID(ID: number): ObjectPrefab{
         switch (ID){
             case 1: //player 1
-            return null;
+            return this.p1stakePillarObj;
             
             case 2: //player 2
-            return null;
+            return this.p2stakePillarObj;
             
             case 3: //player 3
             return null;
@@ -88,10 +101,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     getStakeVolumeFromPlayerID(ID: number): ObjectPrefab{
         switch (ID){
             case 1: //player 1
-            return null;
+            return this.p1stakeCellObj;
             
             case 2: //player 2
-            return null;
+            return this.p2stakeCellObj;
             
             case 3: //player 3
             return null;
@@ -112,10 +125,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     getClaimVolumeFromPlayerID(ID: number): ObjectPrefab{
         switch (ID){
             case 1: //player 1
-            return null;
+            return this.p1claimCellObj;
             
             case 2: //player 2
-            return null;
+            return this.p2claimCellObj;
             
             case 3: //player 3
             return null;
@@ -133,7 +146,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
     
     //creates a cell cube visual for claimed cell via instantiator.instantiate
-    createWorldClaimVolume(x: number, y: number, z: number, scale: number){
+    createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number){
         //return early if networked instantiator is not ready
         if (!this.networkedInstantiator.isReady()){
             print('instantiator not ready:(');
@@ -144,7 +157,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         var newPosition = new vec3(x, y - (scale / 6), z);
         
         //spawn the cell via the instantiator
-        this.networkedInstantiator.instantiate(this.claimCellObj, undefined, (networkRoot) => {
+        this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), undefined, (networkRoot) => {
           const cellObject = networkRoot.sceneObject;
           //set appropriate position
           cellObject.getTransform().setLocalPosition(newPosition);
@@ -158,7 +171,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     
     //creates cube visuals for staked cell via instantiator.instantiate
-    createWorldStakeVolume(x: number, y: number, z: number, scale: number){
+    createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number){
         //return early if networked instantiator is not ready
         if (!this.networkedInstantiator.isReady()){
             print('instantiator not ready:(');
@@ -169,7 +182,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         var newPosition = new vec3(x, y - (scale / 6), z);        
         
         //spawn the cell via the instantiator
-        this.networkedInstantiator.instantiate(this.stakeCellObj, undefined, (networkRoot) => {
+        this.networkedInstantiator.instantiate(this.getStakeVolumeFromPlayerID(ID), undefined, (networkRoot) => {
           const cellObject = networkRoot.sceneObject;
           //set appropriate position
           cellObject.getTransform().setLocalPosition(newPosition);
@@ -181,7 +194,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         });
         
         //spawn the pillar via the instantiator
-        this.networkedInstantiator.instantiate(this.stakePillarObj, undefined, (networkRoot) => {
+        this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), undefined, (networkRoot) => {
           const stakeObject = networkRoot.sceneObject;
           //set appropriate position
           stakeObject.getTransform().setLocalPosition(newPosition);

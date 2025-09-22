@@ -121,7 +121,7 @@ export class GridClaimer extends BaseScriptComponent {
     stakeNewCell(x: number, y: number, player: number){
         //create visual for stake by getting appropriate world pos then calling player visuals
         const worldXZ = this.gridPosToWorldCoords(x, y);
-        this.PlayerVisuals.createWorldStakeVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
+        this.PlayerVisuals.createWorldStakeVolume(1, worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
         //update the sparse grid
         this.grid.stakeCell(x, y, player);
     }
@@ -198,7 +198,7 @@ export class GridClaimer extends BaseScriptComponent {
     claimSparseCell(x: number, y: number, player: number){
         //pass in xy of grid pos and world height of y
         const worldXZ = this.gridPosToWorldCoords(x, y);
-        this.PlayerVisuals.createWorldClaimVolume(worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
+        this.PlayerVisuals.createWorldClaimVolume(1, worldXZ.x, this.currY, worldXZ.y, this.unitsPerCell);
         this.grid.claimCell(x, y, player);
     }
     

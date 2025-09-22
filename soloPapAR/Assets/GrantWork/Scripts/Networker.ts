@@ -11,7 +11,7 @@ export class Networker extends BaseScriptComponent {
     //connection id
     clientID: number;
     
-    playerID: number;//equal to numbers of players (after self joined) - 1 (for instantiator prefab list referencing)
+    playerID: number; //equal to numbers of players (after self joined so p1 = 1, p2 = 2...)
     
     gridSyncEntity: SyncEntity;
     
@@ -192,7 +192,7 @@ export class Networker extends BaseScriptComponent {
     //helper function to set ID of player for claiming
     setPlayerID(passedID: number, playerNumber: number){
         this.clientID = passedID;
-        this.playerID = playerNumber - 1; //since index of list starts at 0
+        this.playerID = playerNumber; //player ids start at 1
         print("NetworkerV2: client ID set to: " + this.clientID);
         print("NetworkerV2: player # is: " + this.playerID);
     }
@@ -247,7 +247,7 @@ export class Networker extends BaseScriptComponent {
             
             //calculate the center of current cell for visuals
             const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
-            this.PlayerVisuals.createWorldClaimVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             return;//can return early now that backend and frontend home claim tasks are handled
         }
@@ -280,7 +280,7 @@ export class Networker extends BaseScriptComponent {
             
             //create player visual for newly staked cell at center of cell and at current y
             const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
-            this.PlayerVisuals.createWorldStakeVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            this.PlayerVisuals.createWorldStakeVolume(this.playerID,cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
         }
         
         if (this.showLogs) {
@@ -522,7 +522,7 @@ export class Networker extends BaseScriptComponent {
             
             //TODO: Create visual for newly claimed cell (exterior loop cell)
             const cellCenterCoords = this.gridPosToWorldCoords(stake.x, stake.y);
-            this.PlayerVisuals.createWorldClaimVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
@@ -619,7 +619,7 @@ export class Networker extends BaseScriptComponent {
             
             // Create visual for newly claimed cell
             const cellCenterCoords = this.gridPosToWorldCoords(cell.x, cell.y);
-            this.PlayerVisuals.createWorldClaimVolume(cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
+            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");

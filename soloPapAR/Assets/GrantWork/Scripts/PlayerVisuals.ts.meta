@@ -27,14 +27,17 @@
   MaxVisibility: Editable
   ScriptInputsHidden:
     cellMaterial: false
-    claimCellObj: false
     deviceTracker: false
     miniMapCells: false
     networkedInstantiator: false
+    p1claimCellObj: false
+    p1stakeCellObj: false
+    p1stakePillarObj: false
+    p2claimCellObj: false
+    p2stakeCellObj: false
+    p2stakePillarObj: false
     playerArrow: false
     screenTransform: false
-    stakeCellObj: false
-    stakePillarObj: false
     uiText: false
     whiteCell: false
   ScriptTypesHidden:
@@ -49,10 +52,13 @@
       cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       playerArrow: !<reference.Image> 00000000-0000-0000-0000-000000000000
       deviceTracker: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
-      claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
-      stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
-      stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p1claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p1stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p1stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p2claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p2stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p2stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -63,8 +69,11 @@
     - // @input Asset.Texture whiteCell
     - // @input Component.ScreenTransform playerArrow
     - // @input LocationTracker deviceTracker
-    - // @input Asset.ObjectPrefab claimCellObj
-    - // @input Asset.ObjectPrefab stakeCellObj
-    - // @input Asset.ObjectPrefab stakePillarObj
+    - // @input Asset.ObjectPrefab p1claimCellObj
+    - // @input Asset.ObjectPrefab p1stakeCellObj
+    - // @input Asset.ObjectPrefab p1stakePillarObj
+    - // @input Asset.ObjectPrefab p2claimCellObj
+    - // @input Asset.ObjectPrefab p2stakeCellObj
+    - // @input Asset.ObjectPrefab p2stakePillarObj
     - // @input Instantiator networkedInstantiator
     - "// @input Component.Image[] miniMapCells"
