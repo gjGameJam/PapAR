@@ -1,0 +1,26 @@
+- !<AssetImportMetadata/d214bfdb-abb6-44c4-9a6c-63d639b67f6a>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> 7b6bf067-d25b-4e07-909b-b5f3867d051e
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> 7b6bf067-d25b-4e07-909b-b5f3867d051e
+  PackageType: NotAPackage
+  PackagePolicy: CannotBeUnpacked
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 297a66e3-da16-4150-8991-dee8862a387f
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ObjectPrefabAssetData/297a66e3-da16-4150-8991-dee8862a387f>
+  SourceRemaps:
+    - 7b6bf067-d25b-4e07-909b-b5f3867d051e: 36a2cca5-8362-4843-91be-4e27a2f27614
+  SourceState: !<own> 36a2cca5-8362-4843-91be-4e27a2f27614
+- !<ObjectPrefab/36a2cca5-8362-4843-91be-4e27a2f27614>
+  PackagePath: ""
+  objects:
+    []
+  LazyLoading: false
+  RetainAssets: true
