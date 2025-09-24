@@ -5393,9 +5393,12 @@
       whiteCell: !<reference.Texture> 669abc47-c20c-41cf-bb3f-1df0a45176aa
       playerArrow: !<reference.ScreenTransform> 700d951c-1d98-48a6-a3b6-8afea21aef15
       deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
-      claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
-      stakeCellObj: !<reference.ObjectPrefab> 2197170f-c771-43f9-8d6c-371cea55b242
-      stakePillarObj: !<reference.ObjectPrefab> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
+      p1claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
+      p1stakeCellObj: !<reference.ObjectPrefab> 2197170f-c771-43f9-8d6c-371cea55b242
+      p1stakePillarObj: !<reference.ObjectPrefab> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
+      p2claimCellObj: !<reference.ObjectPrefab> 163d9598-2a82-496a-b481-c554a23c9402
+      p2stakeCellObj: !<reference.ObjectPrefab> 87cb6875-81f9-47ce-9f23-ab91e34d618d
+      p2stakePillarObj: !<reference.ObjectPrefab> ec7cd8ea-919a-471d-a940-e1a8a92ec588
       networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc

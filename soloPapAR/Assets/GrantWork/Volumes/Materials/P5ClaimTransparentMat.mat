@@ -1,8 +1,8 @@
-- !<Material/e517e25e-728a-47b9-bc9a-30a6d56f468a>
+- !<Material/be047ff0-79a1-4760-b766-b6b311c2efed>
   PackagePath: ""
   PassesInfo:
-    - !<own> 57c37e16-eedc-42f4-b312-a610ab51967a
-- !<PassInfo/57c37e16-eedc-42f4-b312-a610ab51967a>
+    - !<own> ee96b23c-6016-4a7d-96e3-ed26d7896fc6
+- !<PassInfo/ee96b23c-6016-4a7d-96e3-ed26d7896fc6>
   CachedProperties:
     - Port_Depth_N004:
         typeIdx: 1
@@ -14,6 +14,9 @@
         typeIdx: 5
         value: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
     - Port_FinalColor3_N004:
+        typeIdx: 5
+        value: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+    - Port_FinalColor_N004:
         typeIdx: 5
         value: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
     - Port_GSplatPointSize_N004:
@@ -48,10 +51,10 @@
     []
   BlendMode: PremultipliedAlphaAuto
   Properties:
-    Port_Value_N008:
+    Port_Value_N000:
       typeIdx: 5
-      value: {x: 1.000000, y: 0.666667, z: 0.000000, w: 0.117647}
+      value: {x: 0.333333, y: 0.266667, z: 0.000000, w: 0.215686}
     PreviewEnabled:
       typeIdx: 0
       value: 0
-  Pass: !<reference> c1fcdaa7-15f3-4235-a42c-39d59ac47a38
+  Pass: !<reference> 4a53c639-d665-4f8e-970f-65caffdc584e
