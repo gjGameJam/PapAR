@@ -36,6 +36,15 @@
     p2claimCellObj: false
     p2stakeCellObj: false
     p2stakePillarObj: false
+    p3claimCellObj: false
+    p3stakeCellObj: false
+    p3stakePillarObj: false
+    p4claimCellObj: false
+    p4stakeCellObj: false
+    p4stakePillarObj: false
+    p5claimCellObj: false
+    p5stakeCellObj: false
+    p5stakePillarObj: false
     playerArrow: false
     screenTransform: false
     uiText: false
@@ -59,6 +68,15 @@
       p2claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p2stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p2stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p3claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p3stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p3stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p4claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p4stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p4stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p5claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p5stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      p5stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -75,5 +93,14 @@
     - // @input Asset.ObjectPrefab p2claimCellObj
     - // @input Asset.ObjectPrefab p2stakeCellObj
     - // @input Asset.ObjectPrefab p2stakePillarObj
+    - // @input Asset.ObjectPrefab p3claimCellObj
+    - // @input Asset.ObjectPrefab p3stakeCellObj
+    - // @input Asset.ObjectPrefab p3stakePillarObj
+    - // @input Asset.ObjectPrefab p4claimCellObj
+    - // @input Asset.ObjectPrefab p4stakeCellObj
+    - // @input Asset.ObjectPrefab p4stakePillarObj
+    - // @input Asset.ObjectPrefab p5claimCellObj
+    - // @input Asset.ObjectPrefab p5stakeCellObj
+    - // @input Asset.ObjectPrefab p5stakePillarObj
     - // @input Instantiator networkedInstantiator
     - "// @input Component.Image[] miniMapCells"

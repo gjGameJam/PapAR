@@ -46,6 +46,36 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     p2stakePillarObj: ObjectPrefab;
     
+    //player 3 visual objects
+    @input
+    p3claimCellObj: ObjectPrefab;
+    
+    @input
+    p3stakeCellObj: ObjectPrefab;
+    
+    @input
+    p3stakePillarObj: ObjectPrefab;
+    
+    //player 4 visual objects
+    @input
+    p4claimCellObj: ObjectPrefab;
+    
+    @input
+    p4stakeCellObj: ObjectPrefab;
+    
+    @input
+    p4stakePillarObj: ObjectPrefab;
+    
+    //player 5 visual objects
+    @input
+    p5claimCellObj: ObjectPrefab;
+    
+    @input
+    p5stakeCellObj: ObjectPrefab;
+    
+    @input
+    p5stakePillarObj: ObjectPrefab;
+    
     //end of player object fields
     
     @input
@@ -83,13 +113,13 @@ export class PlayerVisuals extends BaseScriptComponent {
             return this.p2stakePillarObj;
             
             case 3: //player 3
-            return null;
+            return this.p3stakePillarObj;
             
             case 4: //player 4
-            return null;
+            return this.p4stakePillarObj;
             
             case 5: //player 5
-            return null;
+            return this.p5stakePillarObj;
             
             default: //when no player ids matching up to switch cases is passed, return null
             return null;
@@ -107,13 +137,13 @@ export class PlayerVisuals extends BaseScriptComponent {
             return this.p2stakeCellObj;
             
             case 3: //player 3
-            return null;
+            return this.p3stakeCellObj;
             
             case 4: //player 4
-            return null;
+            return this.p4stakeCellObj;
             
             case 5: //player 5
-            return null;
+            return this.p5stakeCellObj;
             
             default: //when no player ids matching up to switch cases is passed, return null
             return null;
@@ -131,13 +161,13 @@ export class PlayerVisuals extends BaseScriptComponent {
             return this.p2claimCellObj;
             
             case 3: //player 3
-            return null;
+            return this.p3claimCellObj;
             
             case 4: //player 4
-            return null;
+            return this.p4claimCellObj;
             
             case 5: //player 5
-            return null;
+            return this.p5claimCellObj;
             
             default: //when no player ids matching up to switch cases is passed, return null
             return null;

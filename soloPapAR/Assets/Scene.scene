@@ -5399,6 +5399,15 @@
       p2claimCellObj: !<reference.ObjectPrefab> 163d9598-2a82-496a-b481-c554a23c9402
       p2stakeCellObj: !<reference.ObjectPrefab> 87cb6875-81f9-47ce-9f23-ab91e34d618d
       p2stakePillarObj: !<reference.ObjectPrefab> ec7cd8ea-919a-471d-a940-e1a8a92ec588
+      p3claimCellObj: !<reference.ObjectPrefab> db5599e8-7c42-4c7b-a6bd-58d947481dac
+      p3stakeCellObj: !<reference.ObjectPrefab> c847b6b7-f63f-4310-a3f5-ed15527c6b85
+      p3stakePillarObj: !<reference.ObjectPrefab> e060792c-b2db-4b6f-a56c-624b0b791316
+      p4claimCellObj: !<reference.ObjectPrefab> ec26eb7c-7177-44a1-a4bd-028224600ddb
+      p4stakeCellObj: !<reference.ObjectPrefab> 7b6bf067-d25b-4e07-909b-b5f3867d051e
+      p4stakePillarObj: !<reference.ObjectPrefab> 2fae336c-fc95-40af-b399-5074203de3e8
+      p5claimCellObj: !<reference.ObjectPrefab> 019dd634-4db3-406d-afb2-3b4c6cdb8c15
+      p5stakeCellObj: !<reference.ObjectPrefab> 3261f9e5-32bb-426e-b688-7b5d56236970
+      p5stakePillarObj: !<reference.ObjectPrefab> ae7a9abf-ce61-400e-839f-d6daa6635b3b
       networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
@@ -15248,6 +15257,19 @@
       prefabs: !<reference.ObjectPrefab[]>
         - !<reference> 99267dff-1b24-4308-a022-dc67892f14e8
         - !<reference> 2197170f-c771-43f9-8d6c-371cea55b242
+        - !<reference> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
+        - !<reference> 163d9598-2a82-496a-b481-c554a23c9402
+        - !<reference> 87cb6875-81f9-47ce-9f23-ab91e34d618d
+        - !<reference> ec7cd8ea-919a-471d-a940-e1a8a92ec588
+        - !<reference> db5599e8-7c42-4c7b-a6bd-58d947481dac
+        - !<reference> c847b6b7-f63f-4310-a3f5-ed15527c6b85
+        - !<reference> e060792c-b2db-4b6f-a56c-624b0b791316
+        - !<reference> ec26eb7c-7177-44a1-a4bd-028224600ddb
+        - !<reference> 7b6bf067-d25b-4e07-909b-b5f3867d051e
+        - !<reference> 2fae336c-fc95-40af-b399-5074203de3e8
+        - !<reference> 019dd634-4db3-406d-afb2-3b4c6cdb8c15
+        - !<reference> 3261f9e5-32bb-426e-b688-7b5d56236970
+        - !<reference> ae7a9abf-ce61-400e-839f-d6daa6635b3b
       spawnerOwnsObject: false
       spawnAsChildren: false
       spawnUnderParent: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
