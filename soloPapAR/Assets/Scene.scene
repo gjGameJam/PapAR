@@ -5395,7 +5395,7 @@
       deviceTracker: !<MappingBased.LocationTracker> 00fa52bf-1de7-4d5d-b96f-c422794a6101
       p1claimCellObj: !<reference.ObjectPrefab> 99267dff-1b24-4308-a022-dc67892f14e8
       p1stakeCellObj: !<reference.ObjectPrefab> 2197170f-c771-43f9-8d6c-371cea55b242
-      p1stakePillarObj: !<reference.ObjectPrefab> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
+      p1stakePillarObj: !<reference.ObjectPrefab> ae58c9e6-315a-42d4-af48-0b87b7af1688
       p2claimCellObj: !<reference.ObjectPrefab> 163d9598-2a82-496a-b481-c554a23c9402
       p2stakeCellObj: !<reference.ObjectPrefab> 87cb6875-81f9-47ce-9f23-ab91e34d618d
       p2stakePillarObj: !<reference.ObjectPrefab> ec7cd8ea-919a-471d-a940-e1a8a92ec588
@@ -15257,7 +15257,7 @@
       prefabs: !<reference.ObjectPrefab[]>
         - !<reference> 99267dff-1b24-4308-a022-dc67892f14e8
         - !<reference> 2197170f-c771-43f9-8d6c-371cea55b242
-        - !<reference> f7e739ee-51fc-4e80-a507-ffeb8a9c0fb3
+        - !<reference> ae58c9e6-315a-42d4-af48-0b87b7af1688
         - !<reference> 163d9598-2a82-496a-b481-c554a23c9402
         - !<reference> 87cb6875-81f9-47ce-9f23-ab91e34d618d
         - !<reference> ec7cd8ea-919a-471d-a940-e1a8a92ec588

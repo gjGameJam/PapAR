@@ -229,8 +229,7 @@ export class PlayerVisuals extends BaseScriptComponent {
           //set appropriate position
           stakeObject.getTransform().setLocalPosition(newPosition);
           //set scale
-          //TODO: figure out why I have to divide by 10 to get scaled correctly
-          var pillarScale = new vec3(.1, scale / 10, .1);
+          var pillarScale = new vec3(1, scale, 1);
           stakeObject.getTransform().setLocalScale(pillarScale);
           //push prefab (might need to network differently)
           this.spawnedStakes.push(stakeObject);
