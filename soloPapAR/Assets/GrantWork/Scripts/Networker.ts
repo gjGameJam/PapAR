@@ -192,9 +192,15 @@ export class Networker extends BaseScriptComponent {
     //helper function to set ID of player for claiming
     setPlayerID(passedID: number, playerNumber: number){
         this.clientID = passedID;
-        this.playerID = playerNumber; //player ids start at 1
+        this.playerID = this.recyclePlayerNumsForVisuals(playerNumber); //player ids start at 1 (how many players are in game)
         print("NetworkerV2: client ID set to: " + this.clientID);
         print("NetworkerV2: player # is: " + this.playerID);
+    }
+    
+    //helper function to allow multiple players to have the same color sets (in order to not cap max player amount by number of unique color sets)
+    recyclePlayerNumsForVisuals(playerNumber: number): number{
+        //always returns 1-5 (if mod is 0 then it's false and the true value of 5 is returned)
+        return (playerNumber % 5) || 5;
     }
     
     //this function is called whenever self moves into a cell
@@ -247,8 +253,9 @@ export class Networker extends BaseScriptComponent {
             
             //calculate the center of current cell for visuals
             const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
+            //create visual for claim
             this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
-            
+            //print("after first claim by id: " + this.playerID);
             return;//can return early now that backend and frontend home claim tasks are handled
         }
         
@@ -520,8 +527,9 @@ export class Networker extends BaseScriptComponent {
             print("  ✅ CONVERSION SUCCESS: Stake (" + stake.x + ", " + stake.y + ") → Claim");
             print("  AFTER: claimed=" + newValue.x + ", staked=" + newValue.y);
             
-            //TODO: Create visual for newly claimed cell (exterior loop cell)
+            //Create visual for newly claimed cell (exterior loop cell)
             const cellCenterCoords = this.gridPosToWorldCoords(stake.x, stake.y);
+            //print("test first claim by id: " + this.playerID);
             this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
@@ -530,7 +538,7 @@ export class Networker extends BaseScriptComponent {
                 // Continue to next stake after delay
                 this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
             });
-            delayedEvent.reset(0.05); // 50ms delay per conversion
+            delayedEvent.reset(0.04); // 40ms delay per conversion
         } else {
             print("  ❌ CONVERSION FAILED: Could not convert stake (" + stake.x + ", " + stake.y + ")");
             // Continue to next stake even on failure
@@ -619,6 +627,7 @@ export class Networker extends BaseScriptComponent {
             
             // Create visual for newly claimed cell
             const cellCenterCoords = this.gridPosToWorldCoords(cell.x, cell.y);
+            //print("test first claim by id: " + this.playerID);
             this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud

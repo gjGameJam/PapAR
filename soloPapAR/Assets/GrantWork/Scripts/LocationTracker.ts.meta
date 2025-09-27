@@ -26,7 +26,6 @@
   CurrentVisibility: Editable
   MaxVisibility: Editable
   ScriptInputsHidden:
-    GridClaimer: false
     Networker: false
     PlayerVisuals: false
     networkedInstantiator: false
@@ -35,8 +34,7 @@
     {}
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
-    - GridClaimer: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
-      playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
+    - playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
       Networker: !<MappingBased.Networker> 00000000-0000-0000-0000-000000000000
       networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
       PlayerVisuals: !<MappingBased.PlayerVisuals> 00000000-0000-0000-0000-000000000000
@@ -45,7 +43,6 @@
       {}
   InputLines:
     - // @input Component.DeviceTracking playerTracker
-    - // @input GridClaimer GridClaimer
     - // @input Networker Networker
     - // @input Instantiator networkedInstantiator
     - // @input PlayerVisuals PlayerVisuals

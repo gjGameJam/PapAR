@@ -21,9 +21,6 @@ export class LocationTracker extends BaseScriptComponent {
   playerTracker: DeviceTracking;
     
   @input
-  GridClaimer: GridClaimer;
-    
-  @input
   Networker: Networker;
     
   @input
@@ -46,7 +43,7 @@ export class LocationTracker extends BaseScriptComponent {
   onAwake() {
       //session controller singleton instance
       this.seshController = SessionController.getInstance();
-      //TODO: use sessioncontroller's colocated world space as world origin
+      //use sessioncontroller's colocated world space as world origin
       //only send location (relative to colocated world space) if seshController is ready
       this.seshController.notifyOnReady(() => { //session controller (colocated space) is ready
         // SessionController is ready to use
@@ -57,8 +54,8 @@ export class LocationTracker extends BaseScriptComponent {
         this.clientID = this.getDeterministicPlayerId(displayName);
         //Networker has to know which player it is attached to
         this.Networker.setPlayerID(this.clientID, this.seshController.getUsers().length);
-        
       });
+        
       //wait for networked instantiator to be ready for the device tracker to start
       //sending info because of boundary spawning
       this.networkedInstantiator.notifyOnReady(() => {
@@ -101,8 +98,6 @@ export class LocationTracker extends BaseScriptComponent {
         var worldPosition = this.playerTracker.getTransform().getWorldPosition();
         //calculate grid position from world pos
         const gridPos = this.worldCoordsToGridPos(new vec2(worldPosition.x, worldPosition.z));
-        //keep track of last world position of player
-        this.GridClaimer.setCurrAndPrev(worldPosition.x, worldPosition.y, worldPosition.z);
         //update the hud with location data
         this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldPosition.x, worldPosition.z, 0, 0);
         

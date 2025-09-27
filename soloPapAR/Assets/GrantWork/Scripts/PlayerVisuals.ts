@@ -186,6 +186,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
         var newPosition = new vec3(x, y - (scale / 6), z);
         
+        //print("player visuals spawning claim by ID: " + ID);
+        
         //spawn the cell via the instantiator
         this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), undefined, (networkRoot) => {
           const cellObject = networkRoot.sceneObject;

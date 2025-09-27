@@ -7,7 +7,6 @@
     - !<own> eab3a1bf-4868-40ad-9cbd-01db91909767
     - !<own> b3b278d3-aa2b-4bb8-87f7-530c4d77bb67
     - !<own> eda8583b-66ae-425c-a85d-80482dc0e091
-    - !<own> f4188b2f-24c1-41cd-baed-7ca85729f147
     - !<own> 4effdfde-d91e-4309-ad72-6c157619b8f6
     - !<own> 6c1c197c-0043-49a5-ad83-2c8338f32e73
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
@@ -247,7 +246,6 @@
   ScriptInputs:
     "":
       playerTracker: !<reference.DeviceTracking> e5553c8a-0b7e-4ef4-92d9-3e1318fb82c1
-      GridClaimer: !<MappingBased.GridClaimer> 5e8b2860-accc-47a5-83e6-f9d6f87e4dde
       Networker: !<MappingBased.Networker> 4c5dfdbe-adcb-41f1-859f-12facad6a924
       networkedInstantiator: !<MappingBased.Instantiator> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
       PlayerVisuals: !<MappingBased.PlayerVisuals> 4777e408-6610-41a7-b07c-ac300141d63c
@@ -6748,22 +6746,6 @@
     - !<own> 48b786b7-271b-452d-ba67-a0734e5f7352
   Components:
     []
-- !<ScriptComponent/5e8b2860-accc-47a5-83e6-f9d6f87e4dde>
-  PrefabRemaps:
-    []
-  Name: GridClaimer
-  Enabled: true
-  ScriptAsset: !<reference> 1d6a9a13-9bd9-483c-baec-867eaf5c6ba8
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      PlayerVisuals: !<MappingBased.PlayerVisuals> 4777e408-6610-41a7-b07c-ac300141d63c
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/5e9fe359-ea61-400f-ae9a-4fa650205a30>
   PrefabRemaps:
     []
@@ -17322,21 +17304,6 @@
   Components:
     - !<own> 39bcdcea-5ab9-4203-8e74-00d4cf86aaf3
     - !<own> cc100e9f-dc8a-4697-927f-006d04627156
-- !<SceneObject/f4188b2f-24c1-41cd-baed-7ca85729f147>
-  PrefabRemaps:
-    []
-  Name: GridClaimer
-  Enabled: true
-  Layers: 1
-  LocalTransform:
-    position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    hasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 5e8b2860-accc-47a5-83e6-f9d6f87e4dde
 - !<Text/f49b2adc-6bd2-4cd7-b499-5851d0e0edd7>
   PrefabRemaps:
     []
