@@ -16,8 +16,9 @@
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
 - !<TypeScriptAssetData/24c339e1-5094-4e00-bec9-e7cba4727c87>
   SvgIcon: ""
+  SetupScript:
+    code: ""
   Description: ""
-  InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
@@ -51,17 +52,15 @@
     whiteCell: false
   ScriptTypesHidden:
     {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
     - uiText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
-      miniMapCells: !<reference.Image[]>
-        []
-      whiteCell: !<reference.Texture> 00000000-0000-0000-0000-000000000000
       cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
-      playerArrow: !<reference.Image> 00000000-0000-0000-0000-000000000000
-      deviceTracker: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
-      networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
+      whiteCell: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      playerArrow: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
+      deviceTracker: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
       p1claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p1stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p1stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -77,6 +76,9 @@
       p5claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p5stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p5stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      networkedInstantiator: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      miniMapCells: !<reference.Image[]>
+        []
   ScriptTypes:
     -
       {}
@@ -86,7 +88,7 @@
     - // @input Asset.Material cellMaterial
     - // @input Asset.Texture whiteCell
     - // @input Component.ScreenTransform playerArrow
-    - // @input LocationTracker deviceTracker
+    - // @input AssignableType deviceTracker
     - // @input Asset.ObjectPrefab p1claimCellObj
     - // @input Asset.ObjectPrefab p1stakeCellObj
     - // @input Asset.ObjectPrefab p1stakePillarObj
@@ -102,5 +104,5 @@
     - // @input Asset.ObjectPrefab p5claimCellObj
     - // @input Asset.ObjectPrefab p5stakeCellObj
     - // @input Asset.ObjectPrefab p5stakePillarObj
-    - // @input Instantiator networkedInstantiator
+    - // @input AssignableType_1 networkedInstantiator
     - "// @input Component.Image[] miniMapCells"

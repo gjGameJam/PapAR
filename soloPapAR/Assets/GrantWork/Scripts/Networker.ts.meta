@@ -16,8 +16,9 @@
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
 - !<TypeScriptAssetData/4e12d985-ed4c-40ff-8b81-f16c269cbd55>
   SvgIcon: ""
+  SetupScript:
+    code: ""
   Description: ""
-  InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
@@ -29,11 +30,12 @@
     PlayerVisuals: false
   ScriptTypesHidden:
     {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
-    - PlayerVisuals: !<MappingBased.PlayerVisuals> 00000000-0000-0000-0000-000000000000
+    - PlayerVisuals: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
-    - // @input PlayerVisuals PlayerVisuals
+    - // @input AssignableType PlayerVisuals

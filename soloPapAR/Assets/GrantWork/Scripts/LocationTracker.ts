@@ -1,7 +1,7 @@
-import { GridClaimer } from './GridClaimer';
+//import { GridClaimer } from './GridClaimer';
 import { Networker } from './Networker';
-import {SessionController} from '../../SpectaclesSyncKit/Core/SessionController';
-import {Instantiator} from '../../SpectaclesSyncKit/Components/Instantiator';
+import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
+import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';
 import { PlayerVisuals } from './PlayerVisuals';
 
 @component

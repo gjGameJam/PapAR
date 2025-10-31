@@ -16,8 +16,9 @@
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
 - !<TypeScriptAssetData/1d18a491-8fc3-45f0-8ad5-13c8408be2c5>
   SvgIcon: ""
+  SetupScript:
+    code: ""
   Description: ""
-  InternalVersion: 0
   VersionMajor: 0
   VersionMinor: 0
   VersionPatch: 0
@@ -32,17 +33,18 @@
     playerTracker: false
   ScriptTypesHidden:
     {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
     - playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
-      Networker: !<MappingBased.Networker> 00000000-0000-0000-0000-000000000000
-      networkedInstantiator: !<MappingBased.Instantiator> 00000000-0000-0000-0000-000000000000
-      PlayerVisuals: !<MappingBased.PlayerVisuals> 00000000-0000-0000-0000-000000000000
+      Networker: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
+      networkedInstantiator: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      PlayerVisuals: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input Component.DeviceTracking playerTracker
-    - // @input Networker Networker
-    - // @input Instantiator networkedInstantiator
-    - // @input PlayerVisuals PlayerVisuals
+    - // @input AssignableType Networker
+    - // @input AssignableType_1 networkedInstantiator
+    - // @input AssignableType_2 PlayerVisuals

@@ -1,7 +1,8 @@
-import {SessionController} from '../../SpectaclesSyncKit/Core/SessionController';
-import {StorageProperty} from "SpectaclesSyncKit/Core/StorageProperty"
-import {SyncEntity} from "SpectaclesSyncKit/Core/SyncEntity"
-import {SyncKitLogger} from "SpectaclesSyncKit/Utils/SyncKitLogger"
+//import {SessionController} from '../../SpectaclesSyncKit/Core/SessionController';
+import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
+import {StorageProperty} from "SpectaclesSyncKit.lspkg/Core/StorageProperty"
+import {SyncEntity} from "SpectaclesSyncKit.lspkg/Core/SyncEntity"
+import {SyncKitLogger} from "SpectaclesSyncKit.lspkg/Utils/SyncKitLogger"
 import { PlayerVisuals } from './PlayerVisuals';
 
 @component

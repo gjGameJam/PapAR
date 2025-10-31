@@ -1,7 +1,7 @@
 - !<AssetImportMetadata/daa737f5-0a04-4bc5-9010-ce8d60c15834>
   ImportedAssetIds:
-    Location: !<reference> 0f26cd31-89fd-4ec7-ad99-d8d3a1b746eb
-  ImporterName: LocationImporter
+    LocationAsset: !<reference> 0f26cd31-89fd-4ec7-ad99-d8d3a1b746eb
+  ImporterName: LocationAssetImporter
   PrimaryAsset: !<reference> 0f26cd31-89fd-4ec7-ad99-d8d3a1b746eb
   PackageType: NotAPackage
   PackagePolicy: CannotBeUnpacked
