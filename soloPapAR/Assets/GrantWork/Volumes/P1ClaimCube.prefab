@@ -17,7 +17,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> d630718d-320d-48c7-a837-b605cb6f3c6c
+    - !<reference> f16c896d-679b-45b9-bd99-ce5181f4d536
   Mesh: !<reference> e542623c-1432-4bfa-881d-a28905bd9e57
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -60,9 +60,9 @@
     "":
       networkIdTypeString: objectId
       customNetworkId: enter_unique_id
-      positionSyncString: World
-      rotationSyncString: World
-      scaleSyncString: World
+      positionSyncString: Location
+      rotationSyncString: Location
+      scaleSyncString: Location
       persistenceString: Session
       sendsPerSecondLimit: 10
       useSmoothing: true
@@ -79,7 +79,6 @@
   ScriptInputsDefault:
     networkIdTypeString: true
     customNetworkId: true
-    propertyNames: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -87,9 +86,9 @@
       networkIdTypeString: objectId
       customNetworkId: enter_unique_id
       autoClone: false
-      mainMaterial: !<reference.Material> d630718d-320d-48c7-a837-b605cb6f3c6c
+      mainMaterial: !<reference.Material> f16c896d-679b-45b9-bd99-ce5181f4d536
       propertyNames: !<string[]>
-        []
+        - baseColor
   ScriptTypes:
     "":
       {}
