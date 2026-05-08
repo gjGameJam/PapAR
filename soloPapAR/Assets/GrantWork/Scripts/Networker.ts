@@ -261,7 +261,11 @@ export class Networker extends BaseScriptComponent {
                     if (cached) {
                         result.push(cached);
                     } else if (prop) {
-                        const val = prop.currentOrPendingValue;
+                        // Use currentValue: set by silentSetCurrentValue on addStorageProperty (initial
+                        // store read) and by applyRemoteValue on all subsequent remote updates.
+                        // currentOrPendingValue is NOT set by silentSetCurrentValue, so it stays
+                        // vec2.zero() from the constructor and would always show unclaimed.
+                        const val = prop.currentValue;
                         result.push((val && !isNaN(val.x)) ? val : vec2.zero());
                     } else {
                         result.push(vec2.zero());

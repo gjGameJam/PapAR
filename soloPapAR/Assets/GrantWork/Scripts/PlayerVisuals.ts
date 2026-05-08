@@ -244,10 +244,23 @@ export class PlayerVisuals extends BaseScriptComponent {
    
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
-        // change scale of player direction arrow if needed
-        //let arrowTransform = this.playerArrow.getTransform();
-        //const scale = arrowTransform.getLocalScale();
-        //arrowTransform.setLocalScale(new vec3(scale.x, scale.y, scale.z));
+        this.diagnoseMiniMapLayout();
+    }
+
+    private diagnoseMiniMapLayout(): void {
+        if (this.miniMapCells.length < 25) {
+            print(`miniMapCells only has ${this.miniMapCells.length} entries, expected 25`);
+            return;
+        }
+        const indices = [0, 1, 4, 5, 12, 20, 24];
+        for (const i of indices) {
+            const img = this.miniMapCells[i];
+            if (!img) { print(`tile[${i}] is null`); continue; }
+            const st = img.getSceneObject().getComponent("Component.ScreenTransform") as ScreenTransform;
+            if (!st) { print(`tile[${i}] has no ScreenTransform`); continue; }
+            print(`tile[${i}] anchors L=${st.anchors.left.toFixed(4)} R=${st.anchors.right.toFixed(4)} T=${st.anchors.top.toFixed(4)} B=${st.anchors.bottom.toFixed(4)}`);
+            print(`tile[${i}] offsets L=${st.offsets.left.toFixed(2)} R=${st.offsets.right.toFixed(2)} T=${st.offsets.top.toFixed(2)} B=${st.offsets.bottom.toFixed(2)}`);
+        }
     }
     
     onUpdate() {
