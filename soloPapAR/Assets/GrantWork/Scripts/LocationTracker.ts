@@ -100,7 +100,14 @@ export class LocationTracker extends BaseScriptComponent {
         const gridPos = this.worldCoordsToGridPos(new vec2(worldPosition.x, worldPosition.z));
         //update the hud with location data
         this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldPosition.x, worldPosition.z, 0, 0);
-        
+
+        // Update minimap from networked cell state every tick
+        const miniMapCells = this.Networker.getMiniMapCells(gridPos.x, gridPos.y);
+        this.PlayerVisuals.updateMiniMapNetworked(
+            miniMapCells,
+            (id: number) => this.Networker.getPlayerVisualID(id)
+        );
+
         //retrieve the state of the cell that this player is in 
         //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
         const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y); //also pass in height for visuals spawning

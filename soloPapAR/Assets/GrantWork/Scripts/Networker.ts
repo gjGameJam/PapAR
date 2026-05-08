@@ -46,7 +46,10 @@ export class Networker extends BaseScriptComponent {
     stakeList: vec2[] = []; //keep track of stake cells (in order)
     
     isAlive = true; //keep track of alive status of self
-    
+
+    private playerColorSlots: StorageProperty<vec2>[] = [];
+    private pendingColorWrite: boolean = false;
+
     deathEventString = 'playerDeathEvent';
     
     //script to manager the grid claim modification permissions
@@ -93,6 +96,17 @@ export class Networker extends BaseScriptComponent {
         // This avoids creating 1600 storage properties at once
         if (this.showLogs) {
             print("NetworkerV2: Grid cells will be initialized on-demand");
+        }
+
+        for (let i = 1; i <= 5; i++) {
+            const slot = StorageProperty.manualVec2(`playerColorSlot_${i}`, vec2.zero());
+            this.playerColorSlots.push(slot);
+            this.gridSyncEntity.addStorageProperty(slot);
+        }
+
+        if (this.pendingColorWrite) {
+            this.pendingColorWrite = false;
+            this.writePlayerColorMapping();
         }
     }
     
@@ -196,8 +210,58 @@ export class Networker extends BaseScriptComponent {
         this.playerID = this.recyclePlayerNumsForVisuals(playerNumber); //player ids start at 1 (how many players are in game)
         print("NetworkerV2: client ID set to: " + this.clientID);
         print("NetworkerV2: player # is: " + this.playerID);
+        if (this.gridReady) {
+            this.writePlayerColorMapping();
+        } else {
+            this.pendingColorWrite = true;
+        }
     }
     
+    private writePlayerColorMapping(): void {
+        const slot = this.playerColorSlots[this.playerID - 1];
+        if (slot) {
+            slot.setPendingValue(new vec2(this.clientID, this.playerID));
+            print("NetworkerV2: Wrote player color mapping: clientID=" + this.clientID + " → playerID=" + this.playerID);
+        }
+    }
+
+    getPlayerVisualID(clientID: number): number {
+        for (let i = 0; i < this.playerColorSlots.length; i++) {
+            const val = this.playerColorSlots[i].currentOrPendingValue;
+            if (val && val.x === clientID) return val.y;
+        }
+        return (clientID % 5) || 5;
+    }
+
+    getCellDataReadOnly(x: number, y: number): vec2 {
+        const key = `cell_${x}_${y}`;
+        const cached = this.localCellState.get(key);
+        if (cached) return cached;
+        const prop = this.gridCells.get(key);
+        if (prop) {
+            const val = prop.currentOrPendingValue;
+            return (val && !isNaN(val.x)) ? val : vec2.zero();
+        }
+        return vec2.zero();
+    }
+
+    getMiniMapCells(centerX: number, centerY: number): (vec2 | null)[] {
+        const result: (vec2 | null)[] = [];
+        const radius = 2;
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                const gx = centerX + dx;
+                const gy = centerY + dy;
+                if (gx >= 0 && gx < this.height && gy >= 0 && gy < this.height) {
+                    result.push(this.getCellDataReadOnly(gx, gy));
+                } else {
+                    result.push(null);
+                }
+            }
+        }
+        return result;
+    }
+
     //helper function to allow multiple players to have the same color sets (in order to not cap max player amount by number of unique color sets)
     recyclePlayerNumsForVisuals(playerNumber: number): number{
         //always returns 1-5 (if mod is 0 then it's false and the true value of 5 is returned)

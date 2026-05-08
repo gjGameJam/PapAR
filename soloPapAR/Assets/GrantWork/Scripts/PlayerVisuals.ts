@@ -401,6 +401,54 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
 
     
+    //renders the 5x5 minimap from networked cloud data; called every 0.3s tick by LocationTracker
+    updateMiniMapNetworked(cells: (vec2 | null)[], getPlayerVisualID: (id: number) => number): void {
+        for (let i = 0; i < 25; i++) {
+            const miniMapX = i % 5;
+            const miniMapY = Math.floor(i / 5);
+            const color = this.getCellColorFromData(cells[i], getPlayerVisualID);
+            const img = this.miniMapCells[miniMapY * 5 + miniMapX] as any;
+            if (img && img.mainPass) {
+                if (!img.__hasUniqueMaterial) {
+                    img.mainMaterial = img.mainMaterial.clone();
+                    img.__hasUniqueMaterial = true;
+                }
+                img.mainPass.baseColor = color;
+            }
+        }
+    }
+
+    private getCellColorFromData(cellData: vec2 | null, getPlayerVisualID: (id: number) => number): vec4 {
+        if (cellData === null) return new vec4(0.75, 0.75, 0.75, 1); // out of bounds = light gray
+        const stakedBy = cellData.y;
+        const claimedBy = cellData.x;
+        if (stakedBy !== 0) return this.getPlayerStakeColor(getPlayerVisualID(stakedBy));
+        if (claimedBy !== 0) return this.getPlayerClaimColor(getPlayerVisualID(claimedBy));
+        return new vec4(1, 1, 1, 1); // unclaimed = white
+    }
+
+    private getPlayerClaimColor(visualID: number): vec4 {
+        switch (visualID) {
+            case 1: return new vec4(0, 1, 0, 0.85);           // green (P1ClaimTransparentMat)
+            case 2: return new vec4(0, 0.333, 1, 0.85);       // blue (P2ClaimTransparentMat)
+            case 3: return new vec4(0.666, 0, 0, 0.85);       // dark red (P3ClaimTransparentMat)
+            case 4: return new vec4(0.666, 0, 1, 0.85);       // purple (P4ClaimTransparentMat)
+            case 5: return new vec4(0.333, 0.266, 0, 0.85);   // olive (P5ClaimTransparentMat)
+            default: return new vec4(0.5, 0.5, 0.5, 0.85);
+        }
+    }
+
+    private getPlayerStakeColor(visualID: number): vec4 {
+        switch (visualID) {
+            case 1: return new vec4(1, 1, 0.498, 0.85);       // yellow (P1StakeTransparentMat)
+            case 2: return new vec4(1, 0.666, 0, 0.85);       // orange (P2StakeTransparentMat)
+            case 3: return new vec4(1, 1, 1, 0.85);           // white (P3StakeTransparentMat — update mat to make visible)
+            case 4: return new vec4(1, 1, 1, 0.85);           // white (P4StakeTransparentMat — update mat to make visible)
+            case 5: return new vec4(0.666, 0.666, 0, 0.85);   // olive (P5StakeTransparentMat)
+            default: return new vec4(0.5, 0.5, 0.5, 0.85);
+        }
+    }
+
     //function to display info as text on screen
     //this is called by grid claimer in update pos
     updateHUDText(lat: number, long: number, gridx: number, gridy: number, latOff: number, longOff: number): void {
