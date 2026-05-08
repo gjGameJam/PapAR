@@ -116,11 +116,11 @@ export class Networker extends BaseScriptComponent {
         
         // Check if property already exists
         if (this.gridCells.has(key)) {
-            print("NetworkerV2: CELL REUSE - Using existing property for cell (" + x + ", " + y + ")");
+            if (this.showLogs) print("NetworkerV2: CELL REUSE - Using existing property for cell (" + x + ", " + y + ")");
             return this.gridCells.get(key);
         }
-        
-        print("NetworkerV2: CELL CREATE - Creating new property for cell (" + x + ", " + y + ")");
+
+        if (this.showLogs) print("NetworkerV2: CELL CREATE - Creating new property for cell (" + x + ", " + y + ")");
         
         // Create new storage property for this cell
         const cellProp = StorageProperty.manualVec2(key, vec2.zero());
@@ -165,7 +165,7 @@ export class Networker extends BaseScriptComponent {
             }
         });
         
-        print("NetworkerV2: Total cells in map: " + this.gridCells.size);
+        if (this.showLogs) print("NetworkerV2: Total cells in map: " + this.gridCells.size);
         
         return cellProp;
     }
@@ -253,7 +253,19 @@ export class Networker extends BaseScriptComponent {
                 const gx = centerX + dx;
                 const gy = centerY + dy;
                 if (gx >= 0 && gx < this.height && gy >= 0 && gy < this.height) {
-                    result.push(this.getCellDataReadOnly(gx, gy));
+                    // getCellProperty registers a StorageProperty with the SyncEntity,
+                    // which is required for remote updates to this cell to arrive.
+                    const prop = this.getCellProperty(gx, gy);
+                    const key = this.getCellKey(gx, gy);
+                    const cached = this.localCellState.get(key);
+                    if (cached) {
+                        result.push(cached);
+                    } else if (prop) {
+                        const val = prop.currentOrPendingValue;
+                        result.push((val && !isNaN(val.x)) ? val : vec2.zero());
+                    } else {
+                        result.push(vec2.zero());
+                    }
                 } else {
                     result.push(null);
                 }

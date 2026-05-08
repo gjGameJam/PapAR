@@ -424,28 +424,28 @@ export class PlayerVisuals extends BaseScriptComponent {
         const claimedBy = cellData.x;
         if (stakedBy !== 0) return this.getPlayerStakeColor(getPlayerVisualID(stakedBy));
         if (claimedBy !== 0) return this.getPlayerClaimColor(getPlayerVisualID(claimedBy));
-        return new vec4(1, 1, 1, 1); // unclaimed = white
+        return new vec4(1, 1, 1, 0.2); // unclaimed = white, 80% transparent
     }
 
     private getPlayerClaimColor(visualID: number): vec4 {
         switch (visualID) {
-            case 1: return new vec4(0, 1, 0, 0.85);           // green (P1ClaimTransparentMat)
-            case 2: return new vec4(0, 0.333, 1, 0.85);       // blue (P2ClaimTransparentMat)
-            case 3: return new vec4(0.666, 0, 0, 0.85);       // dark red (P3ClaimTransparentMat)
-            case 4: return new vec4(0.666, 0, 1, 0.85);       // purple (P4ClaimTransparentMat)
-            case 5: return new vec4(0.333, 0.266, 0, 0.85);   // olive (P5ClaimTransparentMat)
-            default: return new vec4(0.5, 0.5, 0.5, 0.85);
+            case 1: return new vec4(0, 1, 0, 0.425);           // green (P1ClaimTransparentMat)
+            case 2: return new vec4(0, 0.333, 1, 0.425);       // blue (P2ClaimTransparentMat)
+            case 3: return new vec4(0.666, 0, 0, 0.425);       // dark red (P3ClaimTransparentMat)
+            case 4: return new vec4(0.666, 0, 1, 0.425);       // purple (P4ClaimTransparentMat)
+            case 5: return new vec4(0.333, 0.266, 0, 0.425);   // olive (P5ClaimTransparentMat)
+            default: return new vec4(0.5, 0.5, 0.5, 0.425);
         }
     }
 
     private getPlayerStakeColor(visualID: number): vec4 {
         switch (visualID) {
-            case 1: return new vec4(1, 1, 0.498, 0.85);       // yellow (P1StakeTransparentMat)
-            case 2: return new vec4(1, 0.666, 0, 0.85);       // orange (P2StakeTransparentMat)
-            case 3: return new vec4(1, 1, 1, 0.85);           // white (P3StakeTransparentMat — update mat to make visible)
-            case 4: return new vec4(1, 1, 1, 0.85);           // white (P4StakeTransparentMat — update mat to make visible)
-            case 5: return new vec4(0.666, 0.666, 0, 0.85);   // olive (P5StakeTransparentMat)
-            default: return new vec4(0.5, 0.5, 0.5, 0.85);
+            case 1: return new vec4(1, 1, 0.498, 0.425);       // yellow (P1StakeTransparentMat)
+            case 2: return new vec4(1, 0.666, 0, 0.425);       // orange (P2StakeTransparentMat)
+            case 3: return new vec4(1, 1, 1, 0.425);           // white (P3StakeTransparentMat — update mat to make visible)
+            case 4: return new vec4(1, 1, 1, 0.425);           // white (P4StakeTransparentMat — update mat to make visible)
+            case 5: return new vec4(0.666, 0.666, 0, 0.425);   // olive (P5StakeTransparentMat)
+            default: return new vec4(0.5, 0.5, 0.5, 0.425);
         }
     }
 
