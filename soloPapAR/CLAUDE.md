@@ -42,13 +42,20 @@ Four active `BaseScriptComponent` classes. Each is attached to a scene object in
 
 ### `LocationTracker.ts` — Entry point / position polling
 
-**Lifecycle**: `onAwake()` → waits for both `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` before starting the position loop. Both callbacks must fire before any game logic runs.
+**Lifecycle**: `onAwake()` registers two independent callbacks:
+- `SessionController.notifyOnReady()` → sets `clientID` (from FNV-1a hash of display name) and calls `Networker.setPlayerID(clientID, users.length)`.
+- `networkedInstantiator.notifyOnReady()` → starts the position loop by calling `getDeviceTrackerPosition()`.
+
+The two callbacks are independent — the position loop can start before `clientID` is set if the instantiator becomes ready before the session controller. In that case, `clientID` would be `undefined` for the first few `sendData()` calls, which is a latent race condition.
 
 **Position loop**: A `DelayedCallbackEvent` that self-resets every **0.3 seconds**, continuously calling itself via `getNewPosition.reset(0.30)`. On each tick it:
 1. Reads `playerTracker.getTransform().getWorldPosition()` (AR world space, cm)
 2. Converts to grid coords via `worldCoordsToGridPos()`
 3. Calls `PlayerVisuals.updateHUDText()` every tick
-4. Only calls `Networker.sendData()` if the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`)
+4. Calls `Networker.getData(clientID, gridPos.x, gridPos.y)` every tick — result is used only for debug logging (`print("cell: " + gridPos + " is claimed by: " + claimedBy + ...)`), not for game logic
+5. Only calls `Networker.sendData()` if the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`)
+
+Note: `sendData()` performs its own independent read of the cell state — it does **not** use the return value from the `getData()` call above.
 
 **Player ID assignment**: On `SessionController.notifyOnReady()`, the local Snapchat display name is hashed via `getDeterministicPlayerId()` (FNV-1a) to produce `clientID`. `Networker.setPlayerID(clientID, sessionController.getUsers().length)` is called at this point — `playerNumber` is the count of users currently in the session.
 
@@ -145,7 +152,7 @@ Note: after death, `isAlive = false` prevents `sendData()` from doing anything. 
 1. Uses `setValueImmediate()` if description contains `"CONVERSION"` or `"INTERIOR"` and `canIModifyStore()` is true; otherwise uses `setPendingValue()`
 2. Always writes to `localCellState` map with current timestamp
 
-**`getData(ID, x, y)`**: read path. Checks `localCellState` first (uses if cache age < **5000ms**); falls back to `cellProp.currentOrPendingValue`; returns `vec2.zero()` on any error.
+**`getData(ID, x, y)`**: read path. The `ID` parameter is accepted but **never used** inside the function body — it exists in the signature as a legacy artifact. Checks `localCellState` first (uses if cache age < **5000ms**); falls back to `cellProp.currentOrPendingValue`; returns `vec2.zero()` on any error. Note: `sendData()` does NOT call `getData()` — it reads cell state directly from `localCellState`/`currentOrPendingValue` internally.
 
 **`onAnyChange` listener**: When cloud confirms a write, if the cached local value matches the new cloud value, the local cache entry is deleted (cloud is now authoritative).
 
@@ -173,6 +180,8 @@ Returns a `vec2(x, z)`. Used when spawning visuals (y is passed through from rea
 
 **All spawning** goes through `networkedInstantiator.instantiate()` from SpectaclesSyncKit's `Instantiator`, so every spawned object appears on all connected clients automatically.
 
+> **Known Bug — Visual objects do not appear for remote players.** See the [Frontend Networking Bug](#frontend-networking-bug) section for full diagnosis and the required fixes before reading the spawning details below.
+
 #### World visual spawning
 
 **Claim cubes** (`createWorldClaimVolume(ID, x, y, z, scale)`):
@@ -191,7 +200,7 @@ Returns a `vec2(x, z)`. Used when spawning visuals (y is passed through from rea
 
 #### 5×5 minimap
 
-`updateMiniMap(gridPos, grid)` is called from `GridClaimer.updatePos()` (legacy path). It renders a `±2` cell window around the player onto a pre-wired `Image[]` array (`miniMapCells`). The array is column-major: index = `gridY * 5 + gridX`.
+`updateMiniMap(gridPos, grid)` is called from `GridClaimer.updatePos()` (legacy path). It renders a `±2` cell window around the player onto a pre-wired `Image[]` array (`miniMapCells`). The array is row-major: index = `gridY * 5 + gridX`.
 
 Colors:
 - `UNCLAIMED` → `vec4(0, 0, 255, 0.5)` blue
@@ -367,30 +376,36 @@ The local cache write always accompanies the cloud write, ensuring `getData()` r
 ## Data Flow Diagram
 
 ```
-Device position (AR world, cm)
+Device position (AR world, cm)   [every 0.3s tick]
         │
         ▼ worldCoordsToGridPos()
 Grid coordinates (0–39 int)
         │
-        ▼ Networker.getData()
-Current cell state (vec2 from cloud / local cache)
+        ├─▶ PlayerVisuals.updateHUDText()         [every tick]
         │
-        ▼ sendData() decision tree
-   ┌────┴─────────────────────────────┐
-   │                                  │
-stake cell                     return to own claim
-   │                                  │
-   ▼                                  ▼
-updateCellValue(claimed, self)   addStakedRegionToClaim()
-stakeList.push(gridPos)              │
-createWorldStakeVolume()             ├─ convertStakesSequentially()
-                                     │      updateCellValue() × N (40ms each)
-                                     │      createWorldClaimVolume() × N
-                                     │
-                                     └─ findAndFillEnclosedRegion()
-                                            claimInteriorCellsSequentially()
-                                            updateCellValue() × M (50ms each)
-                                            createWorldClaimVolume() × M
+        ├─▶ Networker.getData()                   [every tick, debug logging only]
+        │         (result not used for game logic)
+        │
+        └─▶ if new cell: Networker.sendData()     [on cell change only]
+                    │
+                    │ (internal read of localCellState / currentOrPendingValue)
+                    │
+                    ▼ sendData() decision tree
+               ┌────┴─────────────────────────────┐
+               │                                  │
+          stake cell                     return to own claim
+               │                                  │
+               ▼                                  ▼
+    updateCellValue(claimed, self)   addStakedRegionToClaim()
+    stakeList.push(gridPos)              │
+    createWorldStakeVolume()             ├─ convertStakesSequentially()
+                                         │      updateCellValue() × N (40ms each)
+                                         │      createWorldClaimVolume() × N
+                                         │
+                                         └─ findAndFillEnclosedRegion()
+                                                claimInteriorCellsSequentially()
+                                                updateCellValue() × M (50ms each)
+                                                createWorldClaimVolume() × M
 ```
 
 ---
@@ -411,10 +426,181 @@ createWorldStakeVolume()             ├─ convertStakesSequentially()
 
 ---
 
+## Frontend Networking Bug
+
+**Status: Unresolved as of the last commit on this branch.**
+
+The backend grid state (StorageProperty, death RPCs) syncs correctly across clients. Visual objects — claim cubes, stake cubes, stake pillars — appear correctly for the local (spawning) player but are invisible to all other players. Three bugs are in play.
+
+---
+
+### Bug 1 — Transform is never encoded in the spawn store (affects all 15 prefabs)
+
+`createWorldClaimVolume` and `createWorldStakeVolume` in `PlayerVisuals.ts` call:
+
+```typescript
+this.networkedInstantiator.instantiate(prefab, undefined, (networkRoot) => {
+    networkRoot.sceneObject.getTransform().setLocalPosition(newPosition);
+    networkRoot.sceneObject.getTransform().setLocalScale(scaleVec);
+    this.spawnedClaims.push(networkRoot.sceneObject);
+});
+```
+
+The `onSuccess` callback **only fires on the spawning client.** Inside the Instantiator source (`Instantiator.ts`), the spawning path calls `session.createRealtimeStore(...)`, and the callback is invoked inside that store-creation closure — on the local machine only. Remote clients reconstruct objects through `instantiatePrefabFromStore()`, a completely separate code path with no callback:
+
+```typescript
+// Instantiator.ts — remote client reconstruction path
+if (store.has("_init_pos"))   rootObj.getTransform().setLocalPosition(store.getVec3("_init_pos"))
+if (store.has("_init_scale")) rootObj.getTransform().setLocalScale(store.getVec3("_init_scale"))
+```
+
+The store only contains `_init_pos` / `_init_scale` when `localPosition` / `localScale` (or their world equivalents) are passed in `InstantiationOptions`. Because `undefined` is passed as options, those keys are never written. Remote clients spawn every object at world origin `(0, 0, 0)` with scale `(1, 1, 1)` — a 1 cm cube, effectively invisible in AR.
+
+**The fix** is to move transform data into `InstantiationOptions` and only use the callback for bookkeeping:
+
+```typescript
+// createWorldClaimVolume — corrected
+createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number) {
+    if (!this.networkedInstantiator.isReady()) return;
+    const newPosition = new vec3(x, y - (scale / 6), z);
+    this.networkedInstantiator.instantiate(
+        this.getClaimVolumeFromPlayerID(ID),
+        { localPosition: newPosition, localScale: new vec3(scale, scale, scale) },
+        (networkRoot) => {
+            this.spawnedClaims.push(networkRoot.sceneObject);
+        }
+    );
+}
+
+// createWorldStakeVolume — corrected
+createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number) {
+    if (!this.networkedInstantiator.isReady()) return;
+    const newPosition = new vec3(x, y - (scale / 6), z);
+    this.networkedInstantiator.instantiate(
+        this.getStakeVolumeFromPlayerID(ID),
+        { localPosition: newPosition, localScale: new vec3(scale, scale, scale) },
+        (networkRoot) => { this.spawnedStakes.push(networkRoot.sceneObject); }
+    );
+    this.networkedInstantiator.instantiate(
+        this.getStakePillarFromPlayerID(ID),
+        { localPosition: newPosition, localScale: new vec3(1, scale, 1) },
+        (networkRoot) => { this.spawnedStakes.push(networkRoot.sceneObject); }
+    );
+}
+```
+
+When `localPosition` / `localScale` are provided, the Instantiator writes them into the `GeneralDataStore` before broadcasting the spawn to other clients. Every client — including latecomers who join after the object was placed — reads those keys from the store and applies the correct transform at instantiation time.
+
+---
+
+### Bug 2 — Instantiator not placing spawned objects under `ColocatedWorld` (scene configuration)
+
+The `networkedInstantiator` component (`d6452a32`) that `PlayerVisuals.ts` uses has two misconfigured fields in the Lens Studio scene:
+
+```yaml
+spawnAsChildren: false          # should be true
+spawnUnderParent: 00000000...   # null — should reference ColocatedWorld [CONFIGURE_ME]
+```
+
+Because `spawnAsChildren` is false and `spawnUnderParent` is null, every instantiated object spawns at **scene root** with no parent. This matters because:
+
+1. `ColocatedWorld [CONFIGURE_ME]` has a `LocatedAtComponent` directly on it. If spawned objects were children of that node, SyncTransform "Location" mode would work correctly — `findLocatedAtComponent()` would find it by walking up the hierarchy.
+2. At scene root, there is no `LocatedAtComponent` ancestor. Any SyncTransform in "Location" mode on a spawned prefab therefore throws an error and silently fails.
+
+**The fix** is in the Lens Studio Inspector on the `networkedInstantiator` component:
+- Set `spawnAsChildren` → `true`
+- Set `spawnUnderParent` → drag `ColocatedWorld [CONFIGURE_ME]` into the field
+
+---
+
+### Bug 3 — `SyncTransform` with `"Location"` mode fails on `P1ClaimCube.prefab`
+
+`P1ClaimCube.prefab` (confirmed from the prefab file) has a `SyncTransform` component with all three axes set to `"Location"` mode. The other 14 prefabs currently do **not** have SyncTransform.
+
+`"Location"` mode resolves transforms relative to a `LocatedAtComponent` ancestor in the scene hierarchy via `findLocatedAtComponent()` in `StorageProperty.ts`:
+
+```typescript
+function findLocatedAtComponent(object: SceneObject): LocatedAtComponent {
+    for (const component of object.getComponents("Component.LocatedAtComponent")) {
+        return component
+    }
+    return findLocatedAtComponent(object.getParent())  // walks up
+}
+```
+
+Because of Bug 2, the spawned P1ClaimCube goes to scene root — no `LocatedAtComponent` ancestor exists. `getLocationTransform()` throws an error during SyncTransform initialization, silently preventing any transform sync.
+
+**Fix options (choose one):**
+- **Preferred:** Fix Bug 2 (set `spawnUnderParent → ColocatedWorld`). Location mode will then work correctly since `ColocatedWorld` has the `LocatedAtComponent`.
+- **Alternative:** Change SyncTransform mode on `P1ClaimCube.prefab` from `"Location"` to `"Local"` or `"World"`. Neither mode requires a `LocatedAtComponent`.
+- Regardless of which fix is chosen, Bug 1 (`InstantiationOptions`) must also be fixed — otherwise remote clients still spawn at the wrong position since SyncTransform only corrects ongoing changes, not the initial spawn state.
+
+> **Scope note:** If the intent is to add SyncTransform to all 15 prefabs (currently only on P1ClaimCube), fix Bug 2 first so Location mode works, then add SyncTransform to the remaining 14 prefabs.
+
+---
+
+### Bug 4 — `SyncMaterials` on `P1ClaimCube.prefab` (confirmed, behavior unclear)
+
+`P1ClaimCube.prefab` also has a `SyncMaterials` component (the same prefab that has SyncTransform). It is configured to sync the `baseColor` property of the claim material, with `autoClone: false`:
+
+```yaml
+Name: SyncMaterials
+mainMaterial: f16c896d...   # P1ClaimTransparentMat
+propertyNames: [baseColor]
+autoClone: false
+```
+
+`autoClone: false` means the material is NOT cloned per instance — all spawned P1 claim cubes share the same material object. Any network-driven change to `baseColor` would affect all of them simultaneously. Since the claim color is already baked into the P1 shader and doesn't change at runtime, this component is likely not doing useful work. Its behavior on dynamically instantiated objects (vs. static scene objects it was designed for) is unverified.
+
+If SyncMaterials experiences the same `LocatedAtComponent` requirement as SyncTransform in Location mode, it will fail for the same reason as Bug 3. Verify in the Lens Studio inspector whether SyncMaterials uses a location-based sync mode.
+
+---
+
+### Why the backend works but the frontend does not
+
+The cloud grid state (`StorageProperty<vec2>` per cell in `Networker.ts`) is entirely separate from the visual objects. It uses `gridSyncEntity`, which is created on a persistent scene object that exists from session start and has no dependency on `LocatedAtComponent` or Instantiator hierarchy. The Instantiator's `_init_pos` / `_init_scale` mechanism and `SyncTransform` are specific to dynamically spawned objects. The two systems are completely independent, which is why grid data syncs correctly while visuals do not.
+
+---
+
+### What other players actually see
+
+Because Bug 1 leaves `_init_pos` / `_init_scale` out of the store, and Bug 3 prevents SyncTransform from correcting the P1ClaimCube transform (with all other prefabs having no SyncTransform at all), remote clients receive every spawned object at `vec3(0, 0, 0)` with scale `vec3(1, 1, 1)`. A 1 cm cube at the AR world origin is invisible in practice — especially since the world origin is only ever at that exact point during colocated session setup and players are almost never standing there. The backend print statements confirming grid updates are accurate; the visual layer is entirely broken for everyone except the spawning player.
+
+---
+
+### Scene configuration reference
+
+Key settings confirmed from `Scene.scene` for the components involved:
+
+**`networkedInstantiator` (`d6452a32`, on `PlayerVisuals` scene object)**:
+- `prefabs[]`: all 15 game prefabs registered ✓
+- `spawnerOwnsObject: false` ✓
+- `spawnAsChildren: false` ← **Bug 2 — should be true**
+- `spawnUnderParent: 00000000...` ← **Bug 2 — should be ColocatedWorld [CONFIGURE_ME]**
+- `autoInstantiate: false` ✓
+- `persistenceString: Session` ✓
+
+**`SessionController [CONFIGURE_ME]` scene object** (named with `[CONFIGURE_ME]` but fully configured):
+- `connectedLensModule` ✓
+- `locationCloudStorageModule` ✓
+- `isColocated: true` ✓
+- `locatedAtComponent` → `ColocatedWorld [CONFIGURE_ME]`'s LocatedAtComponent ✓
+- `skipUiInStudio: false` — the multiplayer joining UI shows even in Studio (default was `true`; change to `true` for faster Studio iteration)
+
+**`ColocatedWorld [CONFIGURE_ME]` scene object**:
+- Has `LocatedAtComponent` (`c975066f`) directly on it ✓
+- Is the correct `spawnUnderParent` target for the Instantiator fix
+
+The scene also contains several leftover example objects from the SpectaclesSyncKit template that are not used by game logic: `SessionControllerExampleTypescript`, two `SessionControllerExampleJavascript` objects, `InstantiatorExampleAuto`, a `SyncTransform` demo scene object, and a `SyncMaterial` demo scene object (disabled). These can be deleted to reduce scene clutter.
+
+---
+
 ## Known Incomplete Areas
 
 - **Respawn**: After `handlePlayerDeath()`, `isAlive = false` and nothing sets it back to `true`. Players cannot move after dying without restarting the lens.
-- **Multiplayer kill by territory**: The `sendData()` logic only kills the owner of a stake trail. Entering an enemy's claimed cell does not kill the entering player (no logic for that case in the current else-branch — it just stakes the cell).
+- **Multiplayer kill by territory**: The `sendData()` logic only kills the owner of a stake trail. Entering an enemy's claimed cell does not kill the entering player (no logic for that case in the current else-branch — it just stakes the cell over the enemy claim).
+- **ClientID race condition**: `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` are independent callbacks in `LocationTracker.onAwake()`. If the instantiator fires first, the position loop starts with `clientID = undefined`, and the first few `sendData()` calls pass `undefined` as the player ID.
+- **`getData()` unused ID parameter**: `getData(ID, xpos, zpos)` accepts an `ID` parameter that is never referenced inside the function body. Calls to `getData()` in `LocationTracker` pass `clientID` but it has no effect.
 - **`GridClaimer` minimap**: `updateMiniMap()` reads from a local `SparseGrid` (not the cloud). When using `Networker` for game logic, the minimap data will be stale/empty unless someone also maintains the local grid.
 - **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach it implements would have been more correct for detecting loop closure mid-trail (before the player returns to home territory), but was replaced by the simpler ray-cast fill which only runs after the return.
 - **Player count cap**: `recyclePlayerNumsForVisuals` cycles colors across players 6+. No hard cap on player count exists in code, but the SessionController and SpectaclesSyncKit may impose their own limits.

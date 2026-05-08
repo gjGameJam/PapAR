@@ -177,66 +177,43 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //creates a cell cube visual for claimed cell via instantiator.instantiate
     createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number){
-        //return early if networked instantiator is not ready
         if (!this.networkedInstantiator.isReady()){
             print('instantiator not ready:(');
             return;
         }
-        //use y passed in but convert x and z (grid pos) to world pos
-        //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
-        var newPosition = new vec3(x, y - (scale / 6), z);
-        
-        //print("player visuals spawning claim by ID: " + ID);
-        
-        //spawn the cell via the instantiator
-        this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), undefined, (networkRoot) => {
-          const cellObject = networkRoot.sceneObject;
-          //set appropriate position
-          cellObject.getTransform().setLocalPosition(newPosition);
-          //set scale
-          var cellScale = new vec3(scale, scale, scale);
-          cellObject.getTransform().setLocalScale(cellScale);
-          //push volume (might need to network differently)
-          this.spawnedClaims.push(cellObject);
+        const newPosition = new vec3(x, y - (scale / 6), z);
+        const cellScale = new vec3(scale, scale, scale);
+        this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), {
+            localPosition: newPosition,
+            localScale: cellScale,
+            onSuccess: (networkRoot) => {
+                this.spawnedClaims.push(networkRoot.sceneObject);
+            }
         });
     }
-    
-    
+
+
     //creates cube visuals for staked cell via instantiator.instantiate
     createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number){
-        //return early if networked instantiator is not ready
         if (!this.networkedInstantiator.isReady()){
             print('instantiator not ready:(');
             return;
         }
-        //use y passed in but convert x and z (grid pos) to world pos
-        //move down a little bit in y to account for the fact that device is at head level (want to spawn cubes at body)
-        var newPosition = new vec3(x, y - (scale / 6), z);        
-        
-        //spawn the cell via the instantiator
-        this.networkedInstantiator.instantiate(this.getStakeVolumeFromPlayerID(ID), undefined, (networkRoot) => {
-          const cellObject = networkRoot.sceneObject;
-          //set appropriate position
-          cellObject.getTransform().setLocalPosition(newPosition);
-          //set scale
-          var cellScale = new vec3(scale, scale, scale);
-          cellObject.getTransform().setLocalScale(cellScale);
-          //push volume (might need to network differently)
-          this.spawnedStakes.push(cellObject);
+        const newPosition = new vec3(x, y - (scale / 6), z);
+        this.networkedInstantiator.instantiate(this.getStakeVolumeFromPlayerID(ID), {
+            localPosition: newPosition,
+            localScale: new vec3(scale, scale, scale),
+            onSuccess: (networkRoot) => {
+                this.spawnedStakes.push(networkRoot.sceneObject);
+            }
         });
-        
-        //spawn the pillar via the instantiator
-        this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), undefined, (networkRoot) => {
-          const stakeObject = networkRoot.sceneObject;
-          //set appropriate position
-          stakeObject.getTransform().setLocalPosition(newPosition);
-          //set scale
-          var pillarScale = new vec3(1, scale, 1);
-          stakeObject.getTransform().setLocalScale(pillarScale);
-          //push prefab (might need to network differently)
-          this.spawnedStakes.push(stakeObject);
+        this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), {
+            localPosition: newPosition,
+            localScale: new vec3(1, scale, 1),
+            onSuccess: (networkRoot) => {
+                this.spawnedStakes.push(networkRoot.sceneObject);
+            }
         });
-        
     }
     
     //destroy all visible color volumes representing home claims
