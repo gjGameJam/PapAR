@@ -16561,8 +16561,6 @@
   ScriptAsset: !<reference> 0f0500cb-c58a-434d-a171-94167130d106
   ScriptInputsDefault:
     spawnerOwnsObject: true
-    spawnAsChildren: true
-    spawnUnderParent: true
     autoInstantiate: true
     autoInstantiatePrefabs: true
     persistenceString: true
@@ -16588,8 +16586,8 @@
         - !<reference> 3261f9e5-32bb-426e-b688-7b5d56236970
         - !<reference> ae7a9abf-ce61-400e-839f-d6daa6635b3b
       spawnerOwnsObject: false
-      spawnAsChildren: false
-      spawnUnderParent: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      spawnAsChildren: true
+      spawnUnderParent: !<reference.SceneObject> ebbb0cbd-5a77-4cf8-a37c-976492f4c098
       autoInstantiate: false
       autoInstantiatePrefabs: !<reference.ObjectPrefab[]>
         []

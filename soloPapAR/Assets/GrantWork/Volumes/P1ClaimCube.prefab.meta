@@ -35,8 +35,6 @@
     []
   Components:
     - !<own> c3fd30ec-9c92-489d-949e-bb58186bccc5
-    - !<own> ecda9165-eb39-494c-8159-d3d37faaa4bd
-    - !<own> d197ab72-c07a-4408-8212-5f08a6905128
 - !<RenderMeshVisual/c3fd30ec-9c92-489d-949e-bb58186bccc5>
   PrefabRemaps:
     []
@@ -61,58 +59,5 @@
   SourceRemaps:
     - 03449a56-7250-4c44-a870-32e5c414c7f5: c3fd30ec-9c92-489d-949e-bb58186bccc5
     - 45255640-aab9-42a3-aa3e-4872f23c6278: 6e1d352e-6c76-46b2-83e1-70ed65c898f0
-    - 7f0be275-4789-44a4-92e2-35263c899546: ecda9165-eb39-494c-8159-d3d37faaa4bd
     - 99267dff-1b24-4308-a022-dc67892f14e8: 1f96459c-edf6-4352-b8ef-80e1e4276b98
-    - d842d653-0a3c-44b8-9f9c-53332f606db6: d197ab72-c07a-4408-8212-5f08a6905128
   SourceState: !<own> 1f96459c-edf6-4352-b8ef-80e1e4276b98
-- !<ScriptComponent/d197ab72-c07a-4408-8212-5f08a6905128>
-  PrefabRemaps:
-    []
-  Name: SyncMaterials
-  Enabled: true
-  ScriptAsset: !<reference> 2188acca-211b-474d-ae70-543ccec6cf65
-  ScriptInputsDefault:
-    networkIdTypeString: true
-    customNetworkId: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      networkIdTypeString: objectId
-      customNetworkId: enter_unique_id
-      autoClone: false
-      mainMaterial: !<reference.Material> f16c896d-679b-45b9-bd99-ce5181f4d536
-      propertyNames: !<string[]>
-        - baseColor
-  ScriptTypes:
-    "":
-      {}
-- !<ScriptComponent/ecda9165-eb39-494c-8159-d3d37faaa4bd>
-  PrefabRemaps:
-    []
-  Name: SyncTransform
-  Enabled: true
-  ScriptAsset: !<reference> f3c20594-375f-43d8-a93f-a8e75bd6a61d
-  ScriptInputsDefault:
-    networkIdTypeString: true
-    customNetworkId: true
-    persistenceString: true
-    sendsPerSecondLimit: true
-    useSmoothing: true
-    interpolationTarget: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      networkIdTypeString: objectId
-      customNetworkId: enter_unique_id
-      positionSyncString: Location
-      rotationSyncString: Location
-      scaleSyncString: Location
-      persistenceString: Session
-      sendsPerSecondLimit: 10
-      useSmoothing: true
-      interpolationTarget: -0.250000
-  ScriptTypes:
-    "":
-      {}

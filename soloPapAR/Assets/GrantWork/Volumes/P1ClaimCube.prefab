@@ -17,7 +17,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> f16c896d-679b-45b9-bd99-ce5181f4d536
+    - !<reference> d630718d-320d-48c7-a837-b605cb6f3c6c
   Mesh: !<reference> e542623c-1432-4bfa-881d-a28905bd9e57
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -39,56 +39,3 @@
     []
   Components:
     - !<own> 03449a56-7250-4c44-a870-32e5c414c7f5
-    - !<own> 7f0be275-4789-44a4-92e2-35263c899546
-    - !<own> d842d653-0a3c-44b8-9f9c-53332f606db6
-- !<ScriptComponent/7f0be275-4789-44a4-92e2-35263c899546>
-  PrefabRemaps:
-    []
-  Name: SyncTransform
-  Enabled: true
-  ScriptAsset: !<reference> f3c20594-375f-43d8-a93f-a8e75bd6a61d
-  ScriptInputsDefault:
-    networkIdTypeString: true
-    customNetworkId: true
-    persistenceString: true
-    sendsPerSecondLimit: true
-    useSmoothing: true
-    interpolationTarget: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      networkIdTypeString: objectId
-      customNetworkId: enter_unique_id
-      positionSyncString: Location
-      rotationSyncString: Location
-      scaleSyncString: Location
-      persistenceString: Session
-      sendsPerSecondLimit: 10
-      useSmoothing: true
-      interpolationTarget: -0.250000
-  ScriptTypes:
-    "":
-      {}
-- !<ScriptComponent/d842d653-0a3c-44b8-9f9c-53332f606db6>
-  PrefabRemaps:
-    []
-  Name: SyncMaterials
-  Enabled: true
-  ScriptAsset: !<reference> 2188acca-211b-474d-ae70-543ccec6cf65
-  ScriptInputsDefault:
-    networkIdTypeString: true
-    customNetworkId: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      networkIdTypeString: objectId
-      customNetworkId: enter_unique_id
-      autoClone: false
-      mainMaterial: !<reference.Material> f16c896d-679b-45b9-bd99-ce5181f4d536
-      propertyNames: !<string[]>
-        - baseColor
-  ScriptTypes:
-    "":
-      {}
