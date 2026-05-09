@@ -83,7 +83,7 @@ This is the authoritative game logic script. It owns the entire cloud grid, mana
 
 Five `StorageProperty<vec2>` slots (`playerColorSlot_1` through `playerColorSlot_5`) are registered at grid-ready time. Each stores `vec2(clientID, playerID)`. Slot index = `playerID - 1`, so each player writes to a deterministic, non-colliding slot (no coordination needed). Written by `writePlayerColorMapping()` when both `gridReady` is true and `setPlayerID()` has been called — whichever happens last sets `pendingColorWrite` to flush the mapping.
 
-`getPlayerVisualID(clientID)` scans the five slots for a matching `clientID` and returns its `playerID` (1–5). Falls back to `(clientID % 5) || 5` if no slot has been written yet for that player — this handles the race window before remote players have written their mapping.
+`getPlayerVisualID(clientID)` scans the five slots for a matching `clientID` and returns its `playerID` (1–5). Falls back to `(clientID % 5) || 5` if no slot has been written yet for that player — this handles the race window before remote players have written their mapping. **Must use `currentValue`** (not `currentOrPendingValue`) when reading slots — `silentSetCurrentValue` only sets `currentValue`, so slots written by remote players before this client subscribed would read as `vec2.zero()` via `currentOrPendingValue`, causing incorrect color assignment.
 
 #### Cell data format
 
@@ -221,13 +221,17 @@ The minimap shows a ±2 cell window around the player on a pre-wired `Image[]` a
 
 Player colors by visual ID (1–5):
 
-| visualID | Claim color | Stake color |
-|---|---|---|
-| 1 | green `(0, 1, 0, 0.425)` | yellow `(1, 1, 0.498, 0.425)` |
-| 2 | blue `(0, 0.333, 1, 0.425)` | orange `(1, 0.666, 0, 0.425)` |
-| 3 | dark red `(0.666, 0, 0, 0.425)` | white `(1, 1, 1, 0.425)` — **update P3StakeTransparentMat in Lens Studio** |
-| 4 | purple `(0.666, 0, 1, 0.425)` | white `(1, 1, 1, 0.425)` — **update P4StakeTransparentMat in Lens Studio** |
-| 5 | olive `(0.333, 0.266, 0, 0.425)` | olive `(0.666, 0.666, 0, 0.425)` |
+| visualID | Claim color | Stake color | Stake RGB (0–255) |
+|---|---|---|---|
+| 1 | green `(0, 1, 0, 0.425)` | yellow `(1, 1, 0.498, 0.425)` | `255, 255, 127` |
+| 2 | blue `(0, 0.333, 1, 0.425)` | orange `(1, 0.666, 0, 0.425)` | `255, 170, 0` |
+| 3 | dark red `(0.667, 0, 0, 0.425)` | magenta `(1, 0.333, 1, 0.425)` | `255, 85, 255` |
+| 4 | purple `(0.667, 0, 1, 0.425)` | lavender `(0.667, 0.667, 1, 0.425)` | `170, 170, 255` |
+| 5 | olive `(0.333, 0.266, 0, 0.425)` | olive `(0.666, 0.666, 0, 0.425)` | `170, 170, 0` |
+
+Claim RGB values (0–255): P1 `0,255,0` · P2 `0,85,255` · P3 `170,0,0` · P4 `170,0,255` · P5 `85,68,0`
+
+Stake cube and pillar materials share the same RGB. Pillars are fully opaque (alpha `1.0`); stake cubes are semi-transparent (alpha `0.117647` ≈ 30/255). The minimap uses a fixed alpha of `0.425` for all stake and claim colors regardless of the material alpha.
 
 Material cloning: each `Image` in `miniMapCells` gets its material cloned on the first write (guarded by `img.__hasUniqueMaterial`) to prevent shared-material color bleed across all cells. This runs once per cell, on the first call.
 
@@ -341,6 +345,19 @@ Located in `Assets/GrantWork/Volumes/`:
 **Pillar shaders** (`P{n}pillar.ss_graph`): Identical structure to stake shaders — flat `Custom Color` → `FinalColor`. Minimal node graph.
 
 All shaders use `SystemID = dev.snap.shaders`, Lens Studio's built-in shader graph system. The `.ss_graph` files are binary (not human-readable text) and must be edited in Lens Studio's Shader Graph editor.
+
+### Editing material colors directly
+
+`.mat` files are human-readable YAML. The active color for stake and pillar materials lives in the `Properties` section under `Port_Value_N000` (or `Port_Value_N008` for P1 stake/pillar which use a different shader variant). Format:
+
+```yaml
+Properties:
+  Port_Value_N000:
+    typeIdx: 5
+    value: {x: R, y: G, z: B, w: A}
+```
+
+`CachedProperties` entries in the same file are stale shader compiler outputs and are not the live color — always edit `Properties`, not `CachedProperties`. When changing a material color, update the corresponding minimap color in `PlayerVisuals.getPlayerStakeColor()` or `getPlayerClaimColor()` to keep them in sync.
 
 ---
 
@@ -488,6 +505,20 @@ The `networkedInstantiator` component had `spawnAsChildren: false` and `spawnUnd
 
 `P1ClaimCube.prefab` had a `SyncTransform` component in `"Location"` mode, which threw during initialization when parented at scene root (no `LocatedAtComponent` ancestor). The component was removed from the prefab.
 
+### Bug 6 — `sendData()` and `handlePlayerDeath()` using `currentOrPendingValue` for cell reads (FIXED in code)
+
+`sendData()` fell back to `cellProp.currentOrPendingValue` when a cell had no local cache entry. On a player's first visit to a cell already claimed/staked in the cloud, `currentOrPendingValue` is `vec2.zero()` (not set by `silentSetCurrentValue`), so the cell appeared unclaimed — causing the player to incorrectly stake it.
+
+`handlePlayerDeath()` iterated `gridCells` using `currentOrPendingValue`. Cells that were in the cloud before this client subscribed had `currentOrPendingValue = vec2.zero()`, so the death handler could miss clearing those cells for the dead player, leaving ghost claims/stakes in the cloud.
+
+**Fix**: both changed to `currentValue`, consistent with the rule applied throughout the rest of the codebase.
+
+### Bug 5 — `getPlayerVisualID` using `currentOrPendingValue` for color slots (FIXED in code)
+
+`getPlayerVisualID` read player color slots via `currentOrPendingValue`. When a remote player joins before the local client, their slot is already in the cloud. On `addStorageProperty`, SpectaclesSyncKit calls `silentSetCurrentValue` which sets `currentValue` but **not** `currentOrPendingValue`. So any slot written before the local subscription read as `vec2.zero()`, the lookup fell through to the fallback `(clientID % 5) || 5`, and remote players were shown in the wrong color.
+
+**Fix**: changed to `currentValue` in `getPlayerVisualID`, consistent with the same rule applied in `getMiniMapCells`.
+
 ### Bug 4 — `SyncMaterials` on `P1ClaimCube.prefab` (REMOVED)
 
 `P1ClaimCube.prefab` had a `SyncMaterials` component syncing `baseColor` with `autoClone: false` (all instances sharing one material). The component served no purpose — claim color is baked into the shader — and was removed.
@@ -524,7 +555,9 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 - **Multiplayer kill by territory**: The `sendData()` logic only kills the owner of a stake trail. Entering an enemy's claimed cell does not kill the entering player (no logic for that case in the current else-branch — it just stakes the cell over the enemy claim).
 - **ClientID race condition**: `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` are independent callbacks in `LocationTracker.onAwake()`. If the instantiator fires first, the position loop starts with `clientID = undefined`, and the first few `sendData()` calls pass `undefined` as the player ID.
 - **`getData()` unused ID parameter**: `getData(ID, xpos, zpos)` accepts an `ID` parameter that is never referenced inside the function body. Calls to `getData()` in `LocationTracker` pass `clientID` but it has no effect.
-- **P3 and P4 stake colors**: `getPlayerStakeColor` cases 3 and 4 return white `(1,1,1,0.425)` because the `Custom Color` in `P3StakeTransparentMat` and `P4StakeTransparentMat` was never set. Update those materials in Lens Studio's Shader Graph editor, then update cases 3 and 4 in `PlayerVisuals.getPlayerStakeColor()` to match.
 - **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach it implements would have been more correct for detecting loop closure mid-trail (before the player returns to home territory), but was replaced by the simpler ray-cast fill which only runs after the return.
 - **Player count cap**: `recyclePlayerNumsForVisuals` cycles colors across players 6+. No hard cap on player count exists in code, but the SessionController and SpectaclesSyncKit may impose their own limits.
 - **Interior fill correctness**: The ray-casting algorithm works correctly for simple convex and concave polygons, but diagonal stake trails can produce ambiguous edge cases since cells are discrete units while the algorithm treats them as point coordinates.
+- **Self minimap color briefly wrong after joining**: `writePlayerColorMapping()` calls `setPendingValue()`, which does not set `currentValue`. Until the cloud round-trips the write (firing `applyRemoteValue` → sets `currentValue`), `getPlayerVisualID(localClientID)` falls through to the `(clientID % 5) || 5` hash fallback, which may differ from the actual `playerID`. The local player's own staked/claimed cells appear in the wrong color on the minimap for the first sync cycle (~100–300ms). Resolves automatically.
+- **Conversion continues after death**: `convertStakesSequentially` and `claimInteriorCellsSequentially` are `DelayedCallbackEvent` chains that do not check `isAlive`. If a death RPC arrives mid-conversion, `handlePlayerDeath` runs (clearing state and destroying visuals), but the delayed callbacks continue executing — spawning additional claim visuals and writing cells for a dead player until the chain completes.
+- **clientID 0 collides with "unclaimed"**: `getDeterministicPlayerId` returns `0` if `displayName` is null. In the cell data format, `.x = 0` means unclaimed. A player with clientID 0 would have their claims invisible to `sendData()`'s decision tree (`claimedBy === 0` is the unclaimed branch, not the "claimed by self" branch), causing them to perpetually re-stake their own cells instead of triggering loop closure.

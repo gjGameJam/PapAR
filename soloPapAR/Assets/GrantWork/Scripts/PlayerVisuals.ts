@@ -444,8 +444,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         switch (visualID) {
             case 1: return new vec4(0, 1, 0, 0.425);           // green (P1ClaimTransparentMat)
             case 2: return new vec4(0, 0.333, 1, 0.425);       // blue (P2ClaimTransparentMat)
-            case 3: return new vec4(0.666, 0, 0, 0.425);       // dark red (P3ClaimTransparentMat)
-            case 4: return new vec4(0.666, 0, 1, 0.425);       // purple (P4ClaimTransparentMat)
+            case 3: return new vec4(0.667, 0, 0, 0.425);       // dark red (P3ClaimTransparentMat)
+            case 4: return new vec4(0.667, 0, 1, 0.425);       // purple (P4ClaimTransparentMat)
             case 5: return new vec4(0.333, 0.266, 0, 0.425);   // olive (P5ClaimTransparentMat)
             default: return new vec4(0.5, 0.5, 0.5, 0.425);
         }
@@ -455,8 +455,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         switch (visualID) {
             case 1: return new vec4(1, 1, 0.498, 0.425);       // yellow (P1StakeTransparentMat)
             case 2: return new vec4(1, 0.666, 0, 0.425);       // orange (P2StakeTransparentMat)
-            case 3: return new vec4(1, 1, 1, 0.425);           // white (P3StakeTransparentMat — update mat to make visible)
-            case 4: return new vec4(1, 1, 1, 0.425);           // white (P4StakeTransparentMat — update mat to make visible)
+            case 3: return new vec4(1, 0.333, 1, 0.425);        // magenta (P3StakeTransparentMat)
+            case 4: return new vec4(0.667, 0.667, 1, 0.425);   // lavender (P4StakeTransparentMat)
             case 5: return new vec4(0.666, 0.666, 0, 0.425);   // olive (P5StakeTransparentMat)
             default: return new vec4(0.5, 0.5, 0.5, 0.425);
         }

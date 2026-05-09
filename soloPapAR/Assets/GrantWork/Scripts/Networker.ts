@@ -77,7 +77,7 @@ export class Networker extends BaseScriptComponent {
             const deadPlayerID = deathData.x;
             const killerID = deathData.y;
             
-            print("NetworkerV2: player " + deadPlayerID + " killed player " + killerID + " self is " + this.clientID);
+            print("NetworkerV2: player " + killerID + " killed player " + deadPlayerID + " self is " + this.clientID);
             
             // Only handle death if we're the one who died
             if (deadPlayerID === this.clientID) {
@@ -227,7 +227,11 @@ export class Networker extends BaseScriptComponent {
 
     getPlayerVisualID(clientID: number): number {
         for (let i = 0; i < this.playerColorSlots.length; i++) {
-            const val = this.playerColorSlots[i].currentOrPendingValue;
+            // Use currentValue: set by silentSetCurrentValue on addStorageProperty (initial
+            // store load) AND by applyRemoteValue on subsequent updates. currentOrPendingValue
+            // is NOT set by silentSetCurrentValue, so it stays vec2.zero() for any slot that
+            // existed in the cloud before this client subscribed.
+            const val = this.playerColorSlots[i].currentValue;
             if (val && val.x === clientID) return val.y;
         }
         return (clientID % 5) || 5;
@@ -316,9 +320,9 @@ export class Networker extends BaseScriptComponent {
         
         // Get current value of this specific cell (check local state first for immediate consistency)
         const cellKey = this.getCellKey(xpos, zpos);
-        const currentCellValue = this.localCellState.has(cellKey) 
-            ? this.localCellState.get(cellKey) 
-            : (cellProp.currentOrPendingValue || vec2.zero());
+        const currentCellValue = this.localCellState.has(cellKey)
+            ? this.localCellState.get(cellKey)
+            : (cellProp.currentValue || vec2.zero());
         
         //special/base case of creating home claim on start
         if (this.firstClaim == true){
@@ -348,8 +352,39 @@ export class Networker extends BaseScriptComponent {
         
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
-            // test death event (have killed player call handlePlayerDeath and despawn cell visuals)
+            // Kill the stake owner
             this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(stakedBy, this.clientID));
+
+            // If we killed someone else's stake (not our own trail crossing), stake the cell ourselves
+            if (stakedBy !== this.clientID) {
+                const newCellValue = new vec2(claimedBy, ID);
+                const cellKey = this.getCellKey(xpos, zpos);
+                const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
+
+                this.stakeList.push(new vec2(xpos, zpos));
+
+                // Write to local state immediately so the minimap reflects the stake without
+                // waiting for cloud confirmation. We do NOT call updateCellValue here because
+                // that would queue a setPendingValue that the dead player's handlePlayerDeath
+                // cloud-clear write could overwrite (dead player's clear arrives at the cloud
+                // server after ours due to network RTT, so their write wins without this delay).
+                this.localCellState.set(cellKey, newCellValue);
+                this.localCacheTimestamps.set(cellKey, Date.now());
+
+                // Spawn visual immediately.
+                this.PlayerVisuals.createWorldStakeVolume(
+                    this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell
+                );
+
+                // Delay the cloud write so it arrives at the server AFTER the dead player's
+                // death-clear has been flushed. This ensures our stake value is the last write
+                // and wins. updateCellValue also re-asserts localCellState, which is safe.
+                const delayedWrite = this.createEvent("DelayedCallbackEvent");
+                delayedWrite.bind(() => {
+                    this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
+                });
+                delayedWrite.reset(0.5); // 500ms — enough for death-clear to propagate
+            }
         }
         //if claim is by self (ID param) claim any staked area
         else if (claimedBy == ID){
@@ -484,7 +519,7 @@ export class Networker extends BaseScriptComponent {
         // Clear all claims and stakes for the dead player
         // We need to iterate through all initialized cells
         for (const [key, cellProp] of this.gridCells) {
-            const currentValue = cellProp.currentOrPendingValue || vec2.zero();
+            const currentValue = cellProp.currentValue || vec2.zero();
             let needsUpdate = false;
             let newValue = new vec2(currentValue.x, currentValue.y);
             
