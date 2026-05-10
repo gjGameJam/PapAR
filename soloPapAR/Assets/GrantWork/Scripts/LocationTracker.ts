@@ -65,7 +65,6 @@ export class LocationTracker extends BaseScriptComponent {
         this.getDeviceTrackerPosition();
       });
       
-      
   }
     
 
