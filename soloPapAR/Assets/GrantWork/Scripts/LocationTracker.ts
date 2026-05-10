@@ -53,7 +53,7 @@ export class LocationTracker extends BaseScriptComponent {
         //create a unique player id via hashing instead of using string
         this.clientID = this.getDeterministicPlayerId(displayName);
         //Networker has to know which player it is attached to
-        this.Networker.setPlayerID(this.clientID, this.seshController.getUsers().length);
+        this.Networker.setPlayerID(this.clientID);
       });
         
       //wait for networked instantiator to be ready for the device tracker to start
@@ -114,12 +114,13 @@ export class LocationTracker extends BaseScriptComponent {
         const stakedBy = cellData.y;
         
             
-        //update pos or send if not in same cell
-        if (!this.PlayerVisuals.isInSameCell(gridPos)){
+        // Only track cell movement and send data once the grid is ready.
+        // isInSameCell has a side effect: it updates prevGridPos on every false return.
+        // If called before gridReady, sendData returns early but prevGridPos is already
+        // updated — the player never appears to "enter" their starting cell once the
+        // grid becomes ready, so the first home claim is never placed unless they move.
+        if (this.Networker.gridReady && !this.PlayerVisuals.isInSameCell(gridPos)){
             print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
-            //update gridclaimer position (handles deaths, claims, and stakes)
-            //this.GridClaimer.updatePos(worldPosition.x, worldPosition.y, worldPosition.z, gridPos);
-            //send position and this.clientID to networker for processing
             this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
         }
         

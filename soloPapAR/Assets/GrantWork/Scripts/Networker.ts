@@ -33,7 +33,7 @@ export class Networker extends BaseScriptComponent {
     
     private lastIdx = this.height * this.height; //last index in the grid (square of that is height tall and height wide)
     
-    private gridReady = false; //flag for grid being ready to use
+    gridReady = false; //flag for grid being ready to use
     
     private firstClaim = true; //flag to create home claim on start
     
@@ -106,7 +106,7 @@ export class Networker extends BaseScriptComponent {
 
         if (this.pendingColorWrite) {
             this.pendingColorWrite = false;
-            this.writePlayerColorMapping();
+            this.assignAndWritePlayerID();
         }
     }
     
@@ -204,30 +204,49 @@ export class Networker extends BaseScriptComponent {
         return true;
     }
     
-    //helper function to set ID of player for claiming
-    setPlayerID(passedID: number, playerNumber: number){
+    setPlayerID(passedID: number): void {
         this.clientID = passedID;
-        this.playerID = this.recyclePlayerNumsForVisuals(playerNumber); //player ids start at 1 (how many players are in game)
         print("NetworkerV2: client ID set to: " + this.clientID);
-        print("NetworkerV2: player # is: " + this.playerID);
         if (this.gridReady) {
-            this.writePlayerColorMapping();
+            this.assignAndWritePlayerID();
         } else {
             this.pendingColorWrite = true;
         }
     }
-    
-    private writePlayerColorMapping(): void {
-        const slot = this.playerColorSlots[this.playerID - 1];
-        if (slot) {
-            slot.setPendingValue(new vec2(this.clientID, this.playerID));
-            print("NetworkerV2: Wrote player color mapping: clientID=" + this.clientID + " → playerID=" + this.playerID);
+
+    // Scans color slots to assign a stable playerID (1-5).
+    // Rejoining players find their own slot and reuse it without writing.
+    // New players claim the first empty slot, seeded by clientID to reduce simultaneous-join collisions.
+    private assignAndWritePlayerID(): void {
+        for (let i = 0; i < this.playerColorSlots.length; i++) {
+            const val = this.playerColorSlots[i].currentValue;
+            if (val && val.x === this.clientID) {
+                this.playerID = val.y;
+                print("NetworkerV2: Rejoining — reusing playerID=" + this.playerID + " from slot " + i);
+                return;
+            }
         }
+        const startIdx = this.clientID % this.playerColorSlots.length;
+        for (let offset = 0; offset < this.playerColorSlots.length; offset++) {
+            const i = (startIdx + offset) % this.playerColorSlots.length;
+            const val = this.playerColorSlots[i].currentValue;
+            if (!val || val.x === 0) {
+                this.playerID = i + 1;
+                this.playerColorSlots[i].setPendingValue(new vec2(this.clientID, this.playerID));
+                print("NetworkerV2: New player — claiming slot " + i + ", playerID=" + this.playerID);
+                return;
+            }
+        }
+        // All 5 slots occupied (6+ players): hash fallback
+        this.playerID = (this.clientID % 5) || 5;
+        this.playerColorSlots[this.playerID - 1].setPendingValue(new vec2(this.clientID, this.playerID));
+        print("NetworkerV2: All slots full — hash fallback playerID=" + this.playerID);
     }
 
     getPlayerVisualID(clientID: number): number {
+        if (clientID === this.clientID && this.playerID) return this.playerID;
         for (let i = 0; i < this.playerColorSlots.length; i++) {
-            const val = this.playerColorSlots[i].currentOrPendingValue;
+            const val = this.playerColorSlots[i].currentValue;
             if (val && val.x === clientID) return val.y;
         }
         return (clientID % 5) || 5;
@@ -239,13 +258,18 @@ export class Networker extends BaseScriptComponent {
         if (cached) return cached;
         const prop = this.gridCells.get(key);
         if (prop) {
-            const val = prop.currentOrPendingValue;
+            const val = prop.currentValue;
             return (val && !isNaN(val.x)) ? val : vec2.zero();
         }
         return vec2.zero();
     }
 
     getMiniMapCells(centerX: number, centerY: number): (vec2 | null)[] {
+        // Guard: only subscribe to cells once the SyncEntity is ready.
+        // addStorageProperty must be called on a ready entity for silentSetCurrentValue
+        // to load existing cloud values into currentValue. Properties subscribed before
+        // ready stay at vec2.zero() permanently (not retroactively initialized).
+        if (!this.gridReady) return new Array(25).fill(vec2.zero());
         const result: (vec2 | null)[] = [];
         const radius = 2;
         for (let dy = -radius; dy <= radius; dy++) {
@@ -278,11 +302,6 @@ export class Networker extends BaseScriptComponent {
         return result;
     }
 
-    //helper function to allow multiple players to have the same color sets (in order to not cap max player amount by number of unique color sets)
-    recyclePlayerNumsForVisuals(playerNumber: number): number{
-        //always returns 1-5 (if mod is 0 then it's false and the true value of 5 is returned)
-        return (playerNumber % 5) || 5;
-    }
     
     //this function is called whenever self moves into a cell
     //function to update grid data (grid cell is vec2 representing claim and stake owner(s))
@@ -445,15 +464,13 @@ export class Networker extends BaseScriptComponent {
                 }
             }
             
-            // STANDARD: Use SpectaclesSyncKit's recommended currentOrPendingValue
             const cellProp = this.getCellProperty(xpos, zpos);
             if (!cellProp) {
                 print("NetworkerV2: ERROR - Could not get cell property, returning zero vec2");
                 return fallbackVec;
             }
-            
-            // Use currentOrPendingValue as recommended by docs for most recent value
-            let cellVec = cellProp.currentOrPendingValue;
+
+            let cellVec = cellProp.currentValue;
             if (!cellVec) {
                 print("NetworkerV2: WARNING - Cell has no value, returning zero vec2");
                 cellVec = fallbackVec;
@@ -518,7 +535,7 @@ export class Networker extends BaseScriptComponent {
         // Clear all claims and stakes for the dead player
         // We need to iterate through all initialized cells
         for (const [key, cellProp] of this.gridCells) {
-            const currentValue = cellProp.currentOrPendingValue || vec2.zero();
+            const currentValue = this.localCellState.get(key) || cellProp.currentValue || vec2.zero();
             let needsUpdate = false;
             let newValue = new vec2(currentValue.x, currentValue.y);
             
@@ -624,7 +641,8 @@ export class Networker extends BaseScriptComponent {
             return;
         }
         
-        const currentValue = cellProp.currentOrPendingValue || vec2.zero();
+        const cellKey = this.getCellKey(stake.x, stake.y);
+        const currentValue = this.localCellState.get(cellKey) || cellProp.currentValue || vec2.zero();
         print("  BEFORE: claimed=" + currentValue.x + ", staked=" + currentValue.y);
         
         // Verify this cell is actually staked by us

@@ -54,7 +54,7 @@ The two callbacks are independent — the position loop can start before `client
 3. Calls `PlayerVisuals.updateHUDText()` every tick
 4. Calls `Networker.getMiniMapCells(gridPos.x, gridPos.y)` and passes the result to `PlayerVisuals.updateMiniMapNetworked()` every tick — this drives the live networked minimap
 5. Calls `Networker.getData(clientID, gridPos.x, gridPos.y)` every tick — result is used only for debug logging (`print("cell: " + gridPos + " is claimed by: " + claimedBy + ...)`), not for game logic
-6. Only calls `Networker.sendData()` if the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`)
+6. Only calls `Networker.sendData()` if `Networker.gridReady` is true AND the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`). The `gridReady` guard must wrap the `isInSameCell` call — `isInSameCell` has the side effect of updating `prevGridPos` on every false return, so calling it before `gridReady` would permanently consume the player's starting cell entry without placing a home claim.
 
 Note: `sendData()` performs its own independent read of the cell state — it does **not** use the return value from the `getData()` call above.
 
@@ -77,13 +77,18 @@ This is the authoritative game logic script. It owns the entire cloud grid, mana
 #### Player ID fields
 
 - `clientID: number` — the FNV-1a hash of the Snapchat username (unique per player, persists across sessions)
-- `playerID: number` — visual color set index `1–5` (recycled from `clientID % 5 || 5`); used only for prefab selection
+- `playerID: number` — visual color set index `1–5`; assigned by `assignAndWritePlayerID()` and stable for the lifetime of the cloud session
 
 #### Player color mapping
 
-Five `StorageProperty<vec2>` slots (`playerColorSlot_1` through `playerColorSlot_5`) are registered at grid-ready time. Each stores `vec2(clientID, playerID)`. Slot index = `playerID - 1`, so each player writes to a deterministic, non-colliding slot (no coordination needed). Written by `writePlayerColorMapping()` when both `gridReady` is true and `setPlayerID()` has been called — whichever happens last sets `pendingColorWrite` to flush the mapping.
+Five `StorageProperty<vec2>` slots (`playerColorSlot_1` through `playerColorSlot_5`) are registered at grid-ready time. Each stores `vec2(clientID, playerID)`. `playerID` determines which slot is used (slot index = `playerID - 1`).
 
-`getPlayerVisualID(clientID)` scans the five slots for a matching `clientID` and returns its `playerID` (1–5). Falls back to `(clientID % 5) || 5` if no slot has been written yet for that player — this handles the race window before remote players have written their mapping. **Must use `currentValue`** (not `currentOrPendingValue`) when reading slots — `silentSetCurrentValue` only sets `currentValue`, so slots written by remote players before this client subscribed would read as `vec2.zero()` via `currentOrPendingValue`, causing incorrect color assignment.
+Assignment is handled by `assignAndWritePlayerID()`, called once `gridReady` is true and `clientID` is known (whichever happens last):
+1. **Rejoin detection**: scan all 5 slots for a matching `clientID`. If found, reuse the stored `playerID` — no cloud write needed. This guarantees a returning player always gets their original color.
+2. **New player**: scan for the first empty slot (`currentValue.x === 0`), starting from `clientID % 5` to reduce simultaneous-join collisions. Claim it with `setPendingValue(vec2(clientID, slotIdx+1))`.
+3. **All slots full** (6+ players): hash fallback `(clientID % 5) || 5`, overwrites that slot.
+
+`getPlayerVisualID(clientID)` scans the five slots for a matching `clientID` and returns its `playerID` (1–5). Falls back to `(clientID % 5) || 5` if no slot has been written yet for that player. **Must use `currentValue`** (not `currentOrPendingValue`) when reading slots — `silentSetCurrentValue` only sets `currentValue`, so slots written by remote players before this client subscribed would read as `vec2.zero()` via `currentOrPendingValue`, causing incorrect color assignment. The local player's own `playerID` is returned directly from `this.playerID` via a fast-path check, bypassing the slot lookup entirely.
 
 #### Cell data format
 
@@ -161,11 +166,11 @@ Note: after death, `isAlive = false` prevents `sendData()` from doing anything. 
 
 **`getData(ID, x, y)`**: read path. The `ID` parameter is accepted but **never used** inside the function body — it exists in the signature as a legacy artifact. Checks `localCellState` first (uses if cache age < **5000ms**); falls back to `cellProp.currentOrPendingValue`; returns `vec2.zero()` on any error. Note: `sendData()` does NOT call `getData()` — it reads cell state directly from `localCellState`/`currentOrPendingValue` internally.
 
-**`getMiniMapCells(centerX, centerY)`**: public minimap data provider. Iterates the 5×5 window centred on `(centerX, centerY)`, returns `(vec2 | null)[]` in row-major order (index = `dy+2)*5 + (dx+2)`). For each in-bounds cell: calls `getCellProperty` (creating a subscription if new), checks `localCellState` first, then reads `prop.currentValue`. Out-of-bounds cells are `null`.
+**`getMiniMapCells(centerX, centerY)`**: public minimap data provider. Returns early with 25 `vec2.zero()` values if `!gridReady` — this prevents `getCellProperty` (and thus `addStorageProperty`) from being called before the SyncEntity is ready, which would leave `currentValue` permanently at `vec2.zero()` since SpectaclesSyncKit only calls `silentSetCurrentValue` when the entity is ready at the time of `addStorageProperty`. Once ready, iterates the 5×5 window centred on `(centerX, centerY)`, returns `(vec2 | null)[]` in row-major order (index = `(dy+2)*5 + (dx+2)`). For each in-bounds cell: calls `getCellProperty` (creating a subscription if new), checks `localCellState` first, then reads `prop.currentValue`. Out-of-bounds cells are `null`.
 
 > **Critical**: always use `prop.currentValue`, not `prop.currentOrPendingValue`, when reading lazily-subscribed properties. `SyncEntity.addStorageProperty` reads an existing store key via `silentSetCurrentValue`, which sets `currentValue` and `pendingValue` but deliberately skips `currentOrPendingValue`. So `currentOrPendingValue` stays at the constructor default (`vec2.zero()`) for any cell that existed in the cloud before the local client subscribed. `currentValue` is set correctly by both `silentSetCurrentValue` (initial load) and `applyRemoteValue` (all ongoing remote updates).
 
-**`getCellDataReadOnly(x, y)`**: read helper that does NOT call `getCellProperty` — it only reads from `localCellState` and the existing `gridCells` Map. Useful when you need a value without side-effecting the subscription set. Not used by `getMiniMapCells`.
+**`getCellDataReadOnly(x, y)`**: read helper that does NOT call `getCellProperty` — it only reads from `localCellState` and the existing `gridCells` Map via `prop.currentValue`. Useful when you need a value without side-effecting the subscription set. Not used by `getMiniMapCells`.
 
 **`onAnyChange` listener**: When cloud confirms a write, if the cached local value matches the new cloud value, the local cache entry is deleted (cloud is now authoritative).
 
@@ -375,11 +380,7 @@ return (hash >>> 0) % 0xFFFFFF  // clamp to 16,777,215
 
 ### Visual color set (playerID)
 
-`recyclePlayerNumsForVisuals(playerNumber)`:
-```typescript
-return (playerNumber % 5) || 5  // returns 1–5, never 0
-```
-`playerNumber` is `sessionController.getUsers().length` at the moment the player joins. This means the nth player to join gets color set n (mod 5). Color sets are reused after 5 players, so player 6 shares visuals with player 1. `playerID` is only used for prefab selection — it is never stored in the cloud grid.
+`playerID` (1–5) is assigned by `Networker.assignAndWritePlayerID()` after the SyncEntity is ready and `clientID` is known. The assignment is stable for the cloud session: a returning player finds their own `clientID` in the slot registry and reuses the same `playerID` without writing. A new player claims the first empty slot. Up to 5 unique colors are supported; a 6th player falls back to `(clientID % 5) || 5` and overwrites that slot. `playerID` drives both prefab selection for 3D volumes and minimap color lookup — the two are always consistent.
 
 ---
 
@@ -517,7 +518,7 @@ The `networkedInstantiator` component had `spawnAsChildren: false` and `spawnUnd
 
 `getPlayerVisualID` read player color slots via `currentOrPendingValue`. When a remote player joins before the local client, their slot is already in the cloud. On `addStorageProperty`, SpectaclesSyncKit calls `silentSetCurrentValue` which sets `currentValue` but **not** `currentOrPendingValue`. So any slot written before the local subscription read as `vec2.zero()`, the lookup fell through to the fallback `(clientID % 5) || 5`, and remote players were shown in the wrong color.
 
-**Fix**: changed to `currentValue` in `getPlayerVisualID`, consistent with the same rule applied in `getMiniMapCells`.
+**Fix**: changed to `currentValue` in `getPlayerVisualID`, consistent with the same rule applied in `getMiniMapCells`. A local player fast-path (`if (clientID === this.clientID && this.playerID) return this.playerID`) was also added to avoid the 100–300ms wrong-color window for the local player's own cells that would otherwise occur because `setPendingValue` does not set `currentValue`.
 
 ### Bug 4 — `SyncMaterials` on `P1ClaimCube.prefab` (REMOVED)
 
@@ -556,8 +557,8 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 - **ClientID race condition**: `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` are independent callbacks in `LocationTracker.onAwake()`. If the instantiator fires first, the position loop starts with `clientID = undefined`, and the first few `sendData()` calls pass `undefined` as the player ID.
 - **`getData()` unused ID parameter**: `getData(ID, xpos, zpos)` accepts an `ID` parameter that is never referenced inside the function body. Calls to `getData()` in `LocationTracker` pass `clientID` but it has no effect.
 - **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach it implements would have been more correct for detecting loop closure mid-trail (before the player returns to home territory), but was replaced by the simpler ray-cast fill which only runs after the return.
-- **Player count cap**: `recyclePlayerNumsForVisuals` cycles colors across players 6+. No hard cap on player count exists in code, but the SessionController and SpectaclesSyncKit may impose their own limits.
+- **Player count cap**: `assignAndWritePlayerID` supports up to 5 unique colors; a 6th player falls back to a hash-derived slot, potentially overwriting another player's color entry. No hard cap on player count exists in code, but the SessionController and SpectaclesSyncKit may impose their own limits.
 - **Interior fill correctness**: The ray-casting algorithm works correctly for simple convex and concave polygons, but diagonal stake trails can produce ambiguous edge cases since cells are discrete units while the algorithm treats them as point coordinates.
-- **Self minimap color briefly wrong after joining**: `writePlayerColorMapping()` calls `setPendingValue()`, which does not set `currentValue`. Until the cloud round-trips the write (firing `applyRemoteValue` → sets `currentValue`), `getPlayerVisualID(localClientID)` falls through to the `(clientID % 5) || 5` hash fallback, which may differ from the actual `playerID`. The local player's own staked/claimed cells appear in the wrong color on the minimap for the first sync cycle (~100–300ms). Resolves automatically.
 - **Conversion continues after death**: `convertStakesSequentially` and `claimInteriorCellsSequentially` are `DelayedCallbackEvent` chains that do not check `isAlive`. If a death RPC arrives mid-conversion, `handlePlayerDeath` runs (clearing state and destroying visuals), but the delayed callbacks continue executing — spawning additional claim visuals and writing cells for a dead player until the chain completes.
 - **clientID 0 collides with "unclaimed"**: `getDeterministicPlayerId` returns `0` if `displayName` is null. In the cell data format, `.x = 0` means unclaimed. A player with clientID 0 would have their claims invisible to `sendData()`'s decision tree (`claimedBy === 0` is the unclaimed branch, not the "claimed by self" branch), causing them to perpetually re-stake their own cells instead of triggering loop closure.
+- **Sub-cell position indicator on minimap** *(stretch feature)*: The minimap jumps when the player crosses a cell boundary rather than moving smoothly. A fractional position indicator (a small dot or crosshair within the center cell) would require computing `fracX = ((worldX % unitsPerCell) + unitsPerCell) % unitsPerCell / unitsPerCell` and `fracZ` similarly, then translating a `ScreenTransform` UI element within the bounds of the center minimap cell. Needs a new `Image` scene object wired into `PlayerVisuals` and updated every 0.3s tick alongside the existing minimap call.
