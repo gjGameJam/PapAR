@@ -144,19 +144,16 @@ export class Networker extends BaseScriptComponent {
             print("  OLD VALUE: claimed=" + oldClaimed + ", staked=" + oldStaked + " (was " + (oldVal ? "valid" : "null") + ")");
             print("  NEW VALUE: claimed=" + newClaimed + ", staked=" + newStaked + " (is " + (newVal ? "valid" : "null") + ")");
             
-            // Clean up local cache when cloud storage updates (cloud is now authoritative)
+            // Cloud is now authoritative — always clear local cache on any cloud update.
+            // Previously this only cleared when cloud value matched local cache (to detect
+            // our own write confirmation). But if another player overwrites our pending write,
+            // onAnyChange fires with THEIR value, which doesn't match ours, so the stale
+            // local entry persisted and the minimap never updated for the overwritten player.
             const cellKey = this.getCellKey(x, y);
             if (this.localCellState.has(cellKey)) {
-                const localValue = this.localCellState.get(cellKey);
-                // Only clear cache if cloud value matches our local cache (cloud confirmed)
-                // AND it's not a conversion scenario where cloud might be lagging
-                if (localValue.x === newClaimed && localValue.y === newStaked) {
-                    this.localCellState.delete(cellKey);
-                    this.localCacheTimestamps.delete(cellKey);
-                    print("  🧹 LOCAL CACHE CLEARED - Cloud storage confirmed update");
-                } else {
-                    print("  ⏳ LOCAL CACHE KEPT - Cloud (" + newClaimed + "," + newStaked + ") != Local (" + localValue.x + "," + localValue.y + ")");
-                }
+                this.localCellState.delete(cellKey);
+                this.localCacheTimestamps.delete(cellKey);
+                print("  🧹 LOCAL CACHE CLEARED - Cloud update received (cloud authoritative)");
             }
             
             // Special logging for stake-to-claim conversions (with null safety)
@@ -282,7 +279,8 @@ export class Networker extends BaseScriptComponent {
                     const prop = this.getCellProperty(gx, gy);
                     const key = this.getCellKey(gx, gy);
                     const cached = this.localCellState.get(key);
-                    if (cached) {
+                    const cacheAge = cached ? (Date.now() - (this.localCacheTimestamps.get(key) || 0)) : Infinity;
+                    if (cached && cacheAge < 5000) {
                         result.push(cached);
                     } else if (prop) {
                         // Use currentValue: set by silentSetCurrentValue on addStorageProperty (initial
