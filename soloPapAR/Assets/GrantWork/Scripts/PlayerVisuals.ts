@@ -216,6 +216,34 @@ export class PlayerVisuals extends BaseScriptComponent {
         });
     }
     
+    // Destroy all visual objects (claims + stakes + pillars) spawned by a specific player.
+    // Works on every device: iterates the Instantiator's internal spawnedInstances map,
+    // which holds all objects created during the session (both local and remote spawns).
+    // Prefab names are in the form "P{visualID}ClaimCube", "P{visualID}StakeCube", etc.,
+    // so matching the "P{N}" prefix is sufficient to find all objects for that player.
+    destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number): void {
+        const visualID = getPlayerVisualID(clientID);
+        const prefix = "P" + visualID;
+        const instances = (this.networkedInstantiator as any).spawnedInstances;
+        if (!instances) {
+            print("PlayerVisuals: spawnedInstances not accessible, cannot destroy remote player visuals");
+            return;
+        }
+        const toDestroy: SceneObject[] = [];
+        for (const networkId in instances) {
+            const networkRoot = instances[networkId];
+            if (!networkRoot || !networkRoot.dataStore) continue;
+            const prefabName = networkRoot.dataStore.getString("_prefab_name");
+            if (prefabName && prefabName.startsWith(prefix)) {
+                toDestroy.push(networkRoot.sceneObject);
+            }
+        }
+        for (const obj of toDestroy) {
+            if (obj) obj.destroy();
+        }
+        print("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
+    }
+
     //destroy all visible color volumes representing home claims
     DestroyAllClaims(){
         //destroyall claims

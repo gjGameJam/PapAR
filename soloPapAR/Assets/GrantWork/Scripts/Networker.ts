@@ -56,33 +56,43 @@ export class Networker extends BaseScriptComponent {
     onAwake() {
         // Create new sync entity for this script
         this.gridSyncEntity = new SyncEntity(this);
-        
+
         if (this.showLogs) {
             print("NetworkerV2: Sync entity created")
         }
-        
+
         // Set up the sync entity notify on ready callback
         this.gridSyncEntity.notifyOnReady(() => {
             print("NetworkerV2: SyncEntity ready")
             this.gridReady = true;
-            
+
             // Initialize all grid cells as individual storage properties
             this.initializeGridCells();
         });
-        
-        
-        // register for death events
+
+        // All clients handle death cleanup, not just the dying player's device
         this.gridSyncEntity.onEventReceived.add(this.deathEventString, (messageInfo) => {
             const deathData = messageInfo.data as vec2;
             const deadPlayerID = deathData.x;
             const killerID = deathData.y;
-            
-            print("NetworkerV2: player " + deadPlayerID + " killed player " + killerID + " self is " + this.clientID);
-            
-            // Only handle death if we're the one who died
-            if (deadPlayerID === this.clientID) {
-                this.handlePlayerDeath(deadPlayerID);
+
+            print("NetworkerV2: Death event — player " + deadPlayerID + " killed by " + killerID + " (self=" + this.clientID + ")");
+            this.handlePlayerDeath(deadPlayerID);
+        });
+
+        // When a player leaves, treat it as death-by-self on all remaining clients
+        SessionController.getInstance().onUserLeftSession.add((_session, userInfo) => {
+            if (!userInfo.displayName) {
+                print("NetworkerV2: Player left with null display name, skipping cleanup");
+                return;
             }
+            const leftClientID = this.computeClientID(userInfo.displayName);
+            if (leftClientID === 0) {
+                print("NetworkerV2: Leaving player hashes to clientID 0 (null-name collision), skipping cleanup");
+                return;
+            }
+            print("NetworkerV2: Player left: " + userInfo.displayName + " (clientID=" + leftClientID + ")");
+            this.handlePlayerDeath(leftClientID);
         });
     }
     
@@ -519,64 +529,54 @@ export class Networker extends BaseScriptComponent {
         return new vec2(x, z);
     }
     
-    //function for handling player death
+    //function for handling player death — runs on ALL clients for both normal kills and player-leave events
     handlePlayerDeath(ID: number){
-        print("NetworkerV2: Player " + ID + " has died");
-        
-        // Mark player as dead
+        print("NetworkerV2: Handling death of player " + ID);
+
         if (ID === this.clientID) {
+            // Local-only: mark this device as dead and tear down its own tracking state
             this.isAlive = false;
-            this.firstClaim = true; // Allow new home claim on respawn
-            this.stakeList = []; // Clear stake list
+            this.firstClaim = true;
+            this.stakeList = [];
+            this.localCellState.clear();
+            this.localCacheTimestamps.clear();
+            // spawnedClaims/spawnedStakes track only locally-spawned objects, so these are the right teardown paths
+            this.PlayerVisuals.DestroyAllStakes();
+            this.PlayerVisuals.DestroyAllClaims();
+        } else {
+            // Remote player died: destroy their visual objects on this device via Instantiator lookup
+            if (this.gridReady) {
+                this.PlayerVisuals.destroyPlayerVisuals(ID, this.getPlayerVisualID.bind(this));
+            }
         }
-        
-        // Clear all claims and stakes for the dead player
-        // We need to iterate through all initialized cells
-        for (const [key, cellProp] of this.gridCells) {
-            const currentValue = this.localCellState.get(key) || cellProp.currentValue || vec2.zero();
-            let needsUpdate = false;
-            let newValue = new vec2(currentValue.x, currentValue.y);
-            
-            // Clear claim if owned by dead player
-            if (currentValue.x === ID) {
-                newValue.x = 0;
-                needsUpdate = true;
-            }
-            
-            // Clear stake if owned by dead player
-            if (currentValue.y === ID) {
-                newValue.y = 0;
-                needsUpdate = true;
-            }
-            
-            // Update cell if needed
-            if (needsUpdate) {
-                // Parse coordinates from key (format: "cell_x_y")
-                const keyParts = key.split('_');
-                if (keyParts.length === 3) {
-                    const cellX = parseInt(keyParts[1]);
-                    const cellY = parseInt(keyParts[2]);
-                    this.updateCellValue(cellX, cellY, newValue, "DEATH CLEAR");
-                } else {
-                    // Fallback to direct property update if key parsing fails
-                    if (this.gridSyncEntity.canIModifyStore()) {
-                        cellProp.setValueImmediate(this.gridSyncEntity.currentStore, newValue);
-                    } else {
-                        cellProp.setPendingValue(newValue);
+
+        // All clients: zero dead player's cells in every subscribed cell property
+        // (best-effort — only covers cells that have been getCellProperty'd on this device)
+        if (this.gridReady) {
+            for (const [key, cellProp] of this.gridCells) {
+                const currentValue = cellProp.currentValue || vec2.zero();
+                const claimClear = currentValue.x === ID;
+                const stakeClear = currentValue.y === ID;
+                if (claimClear || stakeClear) {
+                    const newValue = new vec2(claimClear ? 0 : currentValue.x, stakeClear ? 0 : currentValue.y);
+                    const keyParts = key.split('_');
+                    if (keyParts.length === 3) {
+                        const cellX = parseInt(keyParts[1]);
+                        const cellY = parseInt(keyParts[2]);
+                        this.updateCellValue(cellX, cellY, newValue, "DEATH CLEAR");
                     }
                 }
             }
         }
-        
-        //despawn all cell visuals (claims and stakes) associated with self
-        if (ID === this.clientID) {
-            // Clear local state for dead player
-            this.localCellState.clear();
-            this.localCacheTimestamps.clear();
-            print("NetworkerV2: Local state cleared for dead player " + ID);
-            
-            this.PlayerVisuals.DestroyAllStakes();
-            this.PlayerVisuals.DestroyAllClaims();
+
+        // All clients: free the dead player's color slot so a new player can claim it
+        for (let i = 0; i < this.playerColorSlots.length; i++) {
+            const val = this.playerColorSlots[i].currentValue;
+            if (val && val.x === ID) {
+                this.playerColorSlots[i].setPendingValue(vec2.zero());
+                print("NetworkerV2: Freed color slot " + i + " for player " + ID);
+                break;
+            }
         }
     }
     
@@ -804,5 +804,17 @@ export class Networker extends BaseScriptComponent {
     // Helper function to compare vec2
     vec2Equals(v1: vec2, v2: vec2): boolean {
         return v1.x === v2.x && v1.y === v2.y;
+    }
+
+    // FNV-1a hash matching LocationTracker.getDeterministicPlayerId —
+    // used to recover the clientID of a leaving player from their display name
+    private computeClientID(displayName: string): number {
+        if (!displayName) return 0;
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < displayName.length; i++) {
+            hash ^= displayName.charCodeAt(i);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return (hash >>> 0) % 0xFFFFFF;
     }
 }
