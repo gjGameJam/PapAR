@@ -244,22 +244,69 @@ export class PlayerVisuals extends BaseScriptComponent {
    
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
-        this.diagnoseMiniMapLayout();
+        this.alignMiniMapCells();
     }
 
-    private diagnoseMiniMapLayout(): void {
+    private alignMiniMapCells(): void {
         if (this.miniMapCells.length < 25) {
             print(`miniMapCells only has ${this.miniMapCells.length} entries, expected 25`);
             return;
         }
-        const indices = [0, 1, 4, 5, 12, 20, 24];
-        for (const i of indices) {
-            const img = this.miniMapCells[i];
-            if (!img) { print(`tile[${i}] is null`); continue; }
-            const st = img.getSceneObject().getComponent("Component.ScreenTransform") as ScreenTransform;
-            if (!st) { print(`tile[${i}] has no ScreenTransform`); continue; }
-            print(`tile[${i}] anchors L=${st.anchors.left.toFixed(4)} R=${st.anchors.right.toFixed(4)} T=${st.anchors.top.toFixed(4)} B=${st.anchors.bottom.toFixed(4)}`);
-            print(`tile[${i}] offsets L=${st.offsets.left.toFixed(2)} R=${st.offsets.right.toFixed(2)} T=${st.offsets.top.toFixed(2)} B=${st.offsets.bottom.toFixed(2)}`);
+
+        const getST = (idx: number): ScreenTransform | null => {
+            const img = this.miniMapCells[idx];
+            if (!img) return null;
+            return img.getSceneObject().getComponent("Component.ScreenTransform") as ScreenTransform || null;
+        };
+
+        // Parent ST is needed to convert world coords back to anchor space
+        const firstImg = this.miniMapCells[0];
+        if (!firstImg) return;
+        const parentObj = firstImg.getSceneObject().getParent();
+        if (!parentObj) return;
+        const parentST = parentObj.getComponent("Component.ScreenTransform") as ScreenTransform;
+        if (!parentST) return;
+
+        // Read center cell (player position, idx 12) in world space to determine actual pixel size
+        const stCenter = getST(12);
+        if (!stCenter) return;
+        const wCenter   = stCenter.localPointToWorldPoint(new vec2(0, 0));
+        const wTopRight = stCenter.localPointToWorldPoint(new vec2(1, 1));
+        const cellPixW  = Math.abs(wTopRight.x - wCenter.x) * 2;
+        const cellPixH  = Math.abs(wTopRight.y - wCenter.y) * 2;
+
+        // Force square cells using the smaller pixel dimension
+        const cellPix = Math.min(cellPixW, cellPixH);
+
+        // Grid origin (top-left) in world space, centered on the player cell
+        const gridLeft = wCenter.x - 2.5 * cellPix;
+        const gridTop  = wCenter.y + 2.5 * cellPix;
+
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const idx = row * 5 + col;
+                const st = getST(idx);
+                if (!st) { print(`tile[${idx}] is null or missing ScreenTransform`); continue; }
+
+                // Cell corners in world space
+                const wL = gridLeft + col * cellPix;
+                const wR = gridLeft + (col + 1) * cellPix;
+                const wT = gridTop  - row * cellPix;
+                const wB = gridTop  - (row + 1) * cellPix;
+
+                // Convert world corners to parent's local normalized anchor space
+                const tl = parentST.worldPointToLocalPoint(new vec3(wL, wT, 0));
+                const br = parentST.worldPointToLocalPoint(new vec3(wR, wB, 0));
+
+                st.anchors.left   = tl.x;
+                st.anchors.right  = br.x;
+                st.anchors.top    = tl.y;
+                st.anchors.bottom = br.y;
+                st.offsets.left   = 0;
+                st.offsets.right  = 0;
+                st.offsets.top    = 0;
+                st.offsets.bottom = 0;
+            }
         }
     }
     
@@ -280,7 +327,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         //print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
-        const adjustedRads = -yawRads + (Math.PI / 2);
+        const adjustedRads = yawRads;
         let rotationQuat = quat.fromEulerAngles(0, 0, adjustedRads);
         
         // Set the rotation of the transform component
