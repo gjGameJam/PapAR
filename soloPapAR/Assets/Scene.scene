@@ -4931,6 +4931,7 @@
   ScriptInputs:
     "":
       uiText: !<reference.Text> cc100e9f-dc8a-4697-927f-006d04627156
+      showHUDText: false
       screenTransform: !<reference.ScreenTransform> 7faf00d8-2fff-4b1c-bda2-7cf4d6be244d
       cellMaterial: !<reference.Material> dad3d640-66f7-49b4-8346-7fc3c97bc69d
       whiteCell: !<reference.Texture> 669abc47-c20c-41cf-bb3f-1df0a45176aa

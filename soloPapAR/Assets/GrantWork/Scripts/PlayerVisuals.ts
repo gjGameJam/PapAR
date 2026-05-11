@@ -8,8 +8,11 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     @input
     uiText: Text; // Reference to the Text UI component
-    
-    @input 
+
+    @input
+    showHUDText: boolean = true; // Toggle to show/hide the location HUD text
+
+    @input
     screenTransform: ScreenTransform; //reference to screen to render minimap on
     
     prevGridPos: vec2 = new vec2(0, 0); //previous grid (only update minimap if new != previous)
@@ -540,6 +543,11 @@ export class PlayerVisuals extends BaseScriptComponent {
     //function to display info as text on screen
     //this is called by grid claimer in update pos
     updateHUDText(lat: number, long: number, gridx: number, gridy: number, latOff: number, longOff: number): void {
+        if (!this.showHUDText) {
+            this.uiText.text = "";
+            return;
+        }
+
         // Clamp latitude and longitude to 5 decimal places
         const clampedLat = lat.toFixed(5);
         const clampedLong = long.toFixed(5);
@@ -547,12 +555,11 @@ export class PlayerVisuals extends BaseScriptComponent {
         const clampedgridy = gridy.toFixed(5);
         const clampedlatOff = latOff.toFixed(5);
         const clampedlongOff = longOff.toFixed(5);
-    
-        
+
         // Display the clamped coordinates and grid position
-        this.uiText.text = 
-            `Grid: (${clampedLat}, ${clampedLong})\n` + 
-            `WorldPos: (${clampedgridx}, ${clampedgridy})\n` + 
+        this.uiText.text =
+            `Grid: (${clampedLat}, ${clampedLong})\n` +
+            `WorldPos: (${clampedgridx}, ${clampedgridy})\n` +
             `N/A: (${clampedlatOff}, ${clampedlongOff})`;
     }
 }

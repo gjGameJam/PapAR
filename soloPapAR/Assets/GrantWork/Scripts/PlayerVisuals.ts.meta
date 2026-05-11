@@ -48,6 +48,7 @@
     p5stakePillarObj: false
     playerArrow: false
     screenTransform: false
+    showHUDText: false
     uiText: false
     whiteCell: false
   ScriptTypesHidden:
@@ -56,6 +57,7 @@
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
     - uiText: !<reference.Text> 00000000-0000-0000-0000-000000000000
+      showHUDText: true
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
       cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       whiteCell: !<reference.Texture> 00000000-0000-0000-0000-000000000000
@@ -84,6 +86,7 @@
       {}
   InputLines:
     - // @input Component.Text uiText
+    - // @input bool showHUDText = true
     - // @input Component.ScreenTransform screenTransform
     - // @input Asset.Material cellMaterial
     - // @input Asset.Texture whiteCell
