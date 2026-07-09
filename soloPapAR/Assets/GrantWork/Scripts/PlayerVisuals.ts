@@ -10,6 +10,9 @@ export class PlayerVisuals extends BaseScriptComponent {
     uiText: Text; // Reference to the Text UI component
 
     @input
+    respawnCountdownText: Text; // dedicated centered screen-space countdown ("Respawning 3")
+
+    @input
     showHUDText: boolean = true; // Toggle to show/hide the location HUD text
 
     @input
@@ -276,6 +279,22 @@ export class PlayerVisuals extends BaseScriptComponent {
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
         this.alignMiniMapCells();
+        this.hideRespawnCountdown();
+    }
+
+    // seconds = whole seconds remaining; blocked = standing in claimed/staked territory (timer frozen)
+    showRespawnCountdown(seconds: number, blocked: boolean): void {
+        if (!this.respawnCountdownText) return;
+        this.respawnCountdownText.getSceneObject().enabled = true;
+        this.respawnCountdownText.text = blocked
+            ? "You died!\nMove to open ground"
+            : "You died!\nRespawning in " + seconds;
+    }
+
+    hideRespawnCountdown(): void {
+        if (!this.respawnCountdownText) return;
+        this.respawnCountdownText.text = "";
+        this.respawnCountdownText.getSceneObject().enabled = false;
     }
 
     private alignMiniMapCells(): void {

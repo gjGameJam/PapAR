@@ -38,6 +38,11 @@ export class LocationTracker extends BaseScriptComponent {
   //id number of client to use for material color and unique claim ability
   private clientID: number;
 
+  //respawn countdown state
+  private respawnCountdown: number = -1;      // seconds remaining; -1 = inactive
+  private readonly respawnDuration: number = 3.0;
+  private readonly respawnTick: number = 0.30; // must match getNewPosition.reset() interval
+
 
   //on awake, start tracking once session controller starts up
   onAwake() {
@@ -107,23 +112,27 @@ export class LocationTracker extends BaseScriptComponent {
             (id: number) => this.Networker.getPlayerVisualID(id)
         );
 
-        //retrieve the state of the cell that this player is in 
-        //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
-        const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y); //also pass in height for visuals spawning
-        const claimedBy = cellData.x;
-        const stakedBy = cellData.y;
-        
-            
-        // Only track cell movement and send data once the grid is ready.
-        // isInSameCell has a side effect: it updates prevGridPos on every false return.
-        // If called before gridReady, sendData returns early but prevGridPos is already
-        // updated — the player never appears to "enter" their starting cell once the
-        // grid becomes ready, so the first home claim is never placed unless they move.
-        if (this.Networker.gridReady && !this.PlayerVisuals.isInSameCell(gridPos)){
-            print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
-            this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
+        // While dead, run the respawn countdown instead of the normal stake/claim flow.
+        if (this.Networker.gridReady && !this.Networker.isAlive){
+            this.handleRespawnCountdown(gridPos, worldPosition);
+        } else {
+            //retrieve the state of the cell that this player is in
+            //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
+            const cellData = this.Networker.getData(this.clientID, gridPos.x, gridPos.y); //also pass in height for visuals spawning
+            const claimedBy = cellData.x;
+            const stakedBy = cellData.y;
+
+            // Only track cell movement and send data once the grid is ready.
+            // isInSameCell has a side effect: it updates prevGridPos on every false return.
+            // If called before gridReady, sendData returns early but prevGridPos is already
+            // updated — the player never appears to "enter" their starting cell once the
+            // grid becomes ready, so the first home claim is never placed unless they move.
+            if (this.Networker.gridReady && !this.PlayerVisuals.isInSameCell(gridPos)){
+                print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
+                this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
+            }
         }
-        
+
         // delay in seconds before repeat call
         this.getNewPosition.reset(.30);
     });
@@ -131,7 +140,33 @@ export class LocationTracker extends BaseScriptComponent {
     // Kick it off immediately
     this.getNewPosition.reset(0.0);
   }
-    
+
+    // Drives the respawn countdown while the local player is dead. Resets to full
+    // duration whenever the player stands on a claimed or staked cell (so they can't
+    // respawn in an OP position), and respawns them once the timer runs out on open ground.
+    private handleRespawnCountdown(gridPos: vec2, worldPosition: vec3): void {
+        // Pure, side-effect-free read: .x = claimedBy, .y = stakedBy (0 = none)
+        const cell = this.Networker.getCellDataReadOnly(gridPos.x, gridPos.y);
+        const inTerritory = cell.x !== 0 || cell.y !== 0;
+
+        if (this.respawnCountdown < 0 || inTerritory) {
+            this.respawnCountdown = this.respawnDuration;   // start / reset to full 3s
+        } else {
+            this.respawnCountdown -= this.respawnTick;
+        }
+
+        if (this.respawnCountdown <= 0) {
+            // Respawn now (current cell is guaranteed open — countdown only reaches 0 on open ground)
+            this.respawnCountdown = -1;
+            this.PlayerVisuals.hideRespawnCountdown();
+            this.Networker.respawn();
+            this.PlayerVisuals.isInSameCell(gridPos);        // sync prevGridPos so we don't double-fire
+            this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition); // firstClaim==true -> home claim here
+        } else {
+            this.PlayerVisuals.showRespawnCountdown(Math.ceil(this.respawnCountdown), inTerritory);
+        }
+    }
+
     // Converts world coordinates to grid position (centered at 0,0 = center of center cell)
     worldCoordsToGridPos(wPos: vec2): vec2 {
         //world offset units divided by unit per cell = cell offset

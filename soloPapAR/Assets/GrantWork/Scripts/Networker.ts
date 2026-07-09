@@ -579,7 +579,22 @@ export class Networker extends BaseScriptComponent {
             }
         }
     }
-    
+
+    // Re-enable a dead local player. Called by LocationTracker when the respawn
+    // countdown completes. handlePlayerDeath already reset firstClaim/stakeList/caches
+    // and destroyed our visuals, so we only need to flip alive back on, clear the
+    // bulk-conversion mutex (in case we died mid-conversion), and re-establish our
+    // cloud color slot (handlePlayerDeath freed it on all clients).
+    respawn(): void {
+        if (!this.gridReady) return;
+        this.isAlive = true;
+        this.firstClaim = true;              // re-arm home-claim creation
+        this.stakeList = [];
+        this.isPerformingBulkConversion = false;
+        this.assignAndWritePlayerID();       // re-claim a color slot + set this.playerID
+        print("NetworkerV2: Player " + this.clientID + " respawned");
+    }
+
     //function for returning to claimed region and adding staked region to claim
     addStakedRegionToClaim(realWorldCoords: vec3){
         // Prevent multiple bulk conversions from happening simultaneously
