@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**soloPapAR** is a Paper.io-inspired AR game for **Snap Spectacles** (AR glasses), built in **Snap Lens Studio 5.12.1** using **TypeScript**. Players physically walk in the real world to stake trails, loop back to their own territory, and convert the enclosed area into permanent claims. The AR grid and all player objects are overlaid on the physical world at 1:1 scale (2 meters per cell).
+**soloPapAR** is a Paper.io-inspired AR game for **Snap Spectacles** (AR glasses), built in **Snap Lens Studio 5.12.1** using **TypeScript**. Players physically walk in the real world to stake trails, loop back to their own territory, and convert the enclosed area into permanent claims. The AR grid and all player objects are overlaid on the physical world at 1:1 scale (2 meters per cell). Stepping on another player's stake trail kills its owner; a killed player (or one who leaves) is cleaned up on every client, then — after a 3-second respawn countdown — rejoins with a fresh home claim.
 
 There are no CLI build commands. Development happens by opening `soloPapAR.esproj` in Lens Studio and previewing on a Spectacles device or the built-in emulator. All non-TypeScript assets (prefabs, materials, shaders, `.meta` files) are managed entirely within the Lens Studio IDE; most are binary or Lens Studio YAML and should not be hand-edited.
 
@@ -53,10 +53,21 @@ The two callbacks are independent — the position loop can start before `client
 2. Converts to grid coords via `worldCoordsToGridPos()`
 3. Calls `PlayerVisuals.updateHUDText()` every tick
 4. Calls `Networker.getMiniMapCells(gridPos.x, gridPos.y)` and passes the result to `PlayerVisuals.updateMiniMapNetworked()` every tick — this drives the live networked minimap
-5. Calls `Networker.getData(clientID, gridPos.x, gridPos.y)` every tick — result is used only for debug logging (`print("cell: " + gridPos + " is claimed by: " + claimedBy + ...)`), not for game logic
-6. Only calls `Networker.sendData()` if `Networker.gridReady` is true AND the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`). The `gridReady` guard must wrap the `isInSameCell` call — `isInSameCell` has the side effect of updating `prevGridPos` on every false return, so calling it before `gridReady` would permanently consume the player's starting cell entry without placing a home claim.
+5. **Branches on alive/dead state** (this branch only runs once `Networker.gridReady` is true):
+   - **Dead** (`!Networker.isAlive`): calls `handleRespawnCountdown(gridPos, worldPosition)` — the respawn path (see below). The normal `getData`/`sendData` flow is skipped entirely while dead.
+   - **Alive**: calls `Networker.getData(clientID, gridPos.x, gridPos.y)` — result is used only for debug logging (`print("cell: " + gridPos + " is claimed by: " + claimedBy + ...)`), not for game logic — then only calls `Networker.sendData()` if the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`).
+
+Steps 3–4 (HUD + minimap) run **every** tick regardless of alive/dead, so a dead player still sees the live map. The `gridReady` guard must wrap the `isInSameCell` call — `isInSameCell` has the side effect of updating `prevGridPos` on every false return, so calling it before `gridReady` would permanently consume the player's starting cell entry without placing a home claim.
 
 Note: `sendData()` performs its own independent read of the cell state — it does **not** use the return value from the `getData()` call above.
+
+**Respawn countdown** (`handleRespawnCountdown(gridPos, worldPosition)`): Runs once per 0.3s tick while the local player is dead. State lives in three private fields on `LocationTracker`: `respawnCountdown` (seconds remaining; `-1` = inactive), `respawnDuration = 3.0`, and `respawnTick = 0.30` (must match the loop interval). Each tick:
+1. Reads the current cell via `Networker.getCellDataReadOnly(gridPos.x, gridPos.y)` — a side-effect-free read that registers no subscription. `cell.x != 0` = claimed, `cell.y != 0` = staked.
+2. If the countdown is inactive (`< 0`) **or** the player is standing on a claimed/staked cell (`inTerritory`), resets `respawnCountdown` to the full `respawnDuration` — this is what prevents respawning in an OP position (inside enemy territory or on a live stake). Otherwise decrements by `respawnTick`.
+3. When `respawnCountdown <= 0`: resets it to `-1`, calls `PlayerVisuals.hideRespawnCountdown()`, calls `Networker.respawn()`, then syncs `prevGridPos` via `PlayerVisuals.isInSameCell(gridPos)` and calls `Networker.sendData()` directly. Because `respawn()` re-armed `firstClaim`, this immediate `sendData()` places a fresh home claim at the current (guaranteed-open) cell — exactly the same code path as the initial spawn. Syncing `prevGridPos` first means the next normal tick won't re-fire `sendData()` unless the player actually moves.
+4. Otherwise calls `PlayerVisuals.showRespawnCountdown(Math.ceil(respawnCountdown), inTerritory)` to update the on-screen timer.
+
+Because the tick is 0.3s, the display holds "3" for ~1.2s, "2" for ~0.9s, "1" for ~0.9s (~3s total). The `inTerritory` flag switches the display to the "Move to open ground" message while the timer is frozen.
 
 **Player ID assignment**: On `SessionController.notifyOnReady()`, the local Snapchat display name is hashed via `getDeterministicPlayerId()` (FNV-1a) to produce `clientID`. `Networker.setPlayerID(clientID, sessionController.getUsers().length)` is called at this point — `playerNumber` is the count of users currently in the session.
 
@@ -92,7 +103,7 @@ Assignment is handled by `assignAndWritePlayerID()`, called once `gridReady` is 
 2. **New player**: scan for the first empty slot (`currentValue.x === 0`), starting from `clientID % 5` to reduce simultaneous-join collisions. Claim it with `setPendingValue(vec2(clientID, slotIdx+1))`.
 3. **All slots full** (6+ players): hash fallback `(clientID % 5) || 5`, overwrites that slot.
 
-**Slot freeing on death/leave**: `handlePlayerDeath` scans slots and writes `vec2.zero()` to the slot whose `currentValue.x` matches the dead player's clientID. This runs on all remaining clients simultaneously (idempotent). A rejoining player will no longer find their old slot and will be assigned a new one — intentional, since leaving is treated as permanent death.
+**Slot freeing on death/leave**: `handlePlayerDeath` scans slots and writes `vec2.zero()` to the slot whose `currentValue.x` matches the dead player's clientID. This runs on all remaining clients simultaneously (idempotent). A player who fully **leaves** and rejoins later will no longer find their old slot and will be assigned a new one — intentional, since leaving is treated as permanent death. A **respawn** is different: `respawn()` immediately re-runs `assignAndWritePlayerID()`, which — because its empty-slot search is seeded from `clientID % 5` — usually re-claims the same slot (and therefore the same color) that death just freed. The color only changes if another player grabbed that slot during the dead window.
 
 `getPlayerVisualID(clientID)` scans the five slots for a matching `clientID` and returns its `playerID` (1–5). Falls back to `(clientID % 5) || 5` if no slot has been written yet for that player. **Must use `currentValue`** (not `currentOrPendingValue`) when reading slots — `silentSetCurrentValue` only sets `currentValue`, so slots written by remote players before this client subscribed would read as `vec2.zero()` via `currentOrPendingValue`, causing incorrect color assignment. The local player's own `playerID` is returned directly from `this.playerID` via a fast-path check, bypassing the slot lookup entirely.
 
@@ -172,7 +183,18 @@ Steps:
 
 `computeClientID(displayName: string): number` — private method on `Networker`, identical FNV-1a algorithm as `LocationTracker.getDeterministicPlayerId`. Used only in the `onUserLeftSession` handler to recover a clientID from a display name. Guards against null input (returns 0) — if the result is 0, cleanup is skipped since clientID 0 collides with the "unclaimed" sentinel.
 
-Note: after death, `isAlive = false` prevents `sendData()` from doing anything. There is currently no respawn mechanic — the player is permanently dead until the lens is restarted.
+Note: after death, `isAlive = false` prevents `sendData()` from doing anything until the player respawns (see below).
+
+#### Respawn
+
+`respawn()` (public, called by `LocationTracker.handleRespawnCountdown` once the countdown completes) re-enables a dead **local** player. `handlePlayerDeath`'s local-only phase already reset `firstClaim = true`, cleared `stakeList`, cleared the local caches, and destroyed the player's own visuals — so `respawn()` only needs to:
+1. Return early if `!gridReady`.
+2. Set `isAlive = true`.
+3. Re-assert `firstClaim = true` and `stakeList = []` (defensive; already set on death).
+4. Clear `isPerformingBulkConversion = false` — in case the player died mid-conversion, this stops a stale mutex from wedging future stakes.
+5. Call `assignAndWritePlayerID()` to re-claim a color slot and reset `this.playerID`. This is required because `handlePlayerDeath` (Phase 3) freed the dead player's color slot on **all** clients; without re-claiming, remote clients would color the respawned player's new cells via the `(clientID % 5) || 5` fallback. The empty-slot search is seeded from `clientID % 5`, so the player almost always reclaims the same slot/color.
+
+Respawn is entirely local — there is no cloud-side respawn state or RPC. The player's fresh home claim is **not** placed by `respawn()`; it is placed by the immediate `sendData()` call in `handleRespawnCountdown` (which hits the `firstClaim` branch now that `respawn()` re-armed it).
 
 #### Cloud storage & local cache
 
@@ -232,7 +254,7 @@ Returns a `vec2(x, z)`. Used when spawning visuals (y is passed through from rea
 
 **Destruction — self**: `DestroyAllClaims()` and `DestroyAllStakes()` iterate their arrays, call `obj.destroy()` on each, then reset array length to 0. These arrays only contain objects spawned by this local device (populated via `onSuccess`, which fires only on the spawner), so they are the correct path for self-death teardown only.
 
-**Destruction — remote player** (`destroyPlayerVisuals(clientID, getPlayerVisualID)`): Used when a remote player dies or leaves. Resolves the dead player's visual ID, then iterates the Instantiator's `spawnedInstances` (via `(networkedInstantiator as any).spawnedInstances`) — this map is populated on every client for both local and remote spawns, so it covers all objects regardless of who created them. Finds all entries whose `dataStore.getString("_prefab_name")` starts with `"P" + visualID` (e.g., `"P2ClaimCube"`, `"P2StakeCube"`, `"P2StakePillar"`) and destroys them. Called by `Networker.handlePlayerDeath` in the remote-player path. Note: after `DestroyAllClaims/Stakes` destroys the local player's objects, those now-invalid `SceneObject` references remain in `spawnedInstances` — this is harmless since the player is permanently dead, but would need cleanup if respawn were added.
+**Destruction — remote player** (`destroyPlayerVisuals(clientID, getPlayerVisualID)`): Used when a remote player dies or leaves. Resolves the dead player's visual ID, then iterates the Instantiator's `spawnedInstances` (via `(networkedInstantiator as any).spawnedInstances`) — this map is populated on every client for both local and remote spawns, so it covers all objects regardless of who created them. Finds all entries whose `dataStore.getString("_prefab_name")` starts with `"P" + visualID` (e.g., `"P2ClaimCube"`, `"P2StakeCube"`, `"P2StakePillar"`) and destroys them. Called by `Networker.handlePlayerDeath` in the remote-player path. Note: after `DestroyAllClaims/Stakes` destroys the local player's objects, those now-invalid `SceneObject` references remain in `spawnedInstances`. This is harmless in practice — the self-death path uses `DestroyAllClaims/Stakes` (not `destroyPlayerVisuals`), so the stale entries are never dereferenced, and on respawn the player spawns fresh objects tracked anew in `spawnedClaims`/`spawnedStakes` while the pre-death entries just linger unused in `spawnedInstances`.
 
 #### 5×5 minimap
 
@@ -270,9 +292,17 @@ Material cloning: each `Image` in `miniMapCells` gets its material cloned on the
 
 `updateHUDText(lat, long, gridx, gridy, latOff, longOff)` — despite the parameter names, the caller passes `(gridPos.x, gridPos.y, worldPosition.x, worldPosition.z, 0, 0)`. Displayed as grid coordinates and world position in AR overlay. The parameter naming is a legacy artifact from when GPS coordinates were used.
 
+#### Respawn countdown display
+
+A dedicated screen-space `Text` (`respawnCountdownText` `@input`, kept separate from `uiText` so the debug HUD and the timer don't fight over one component). Hidden on `onAwake()` via `hideRespawnCountdown()`; shown only during the respawn countdown, driven by `LocationTracker.handleRespawnCountdown()`.
+- `showRespawnCountdown(seconds, blocked)`: enables the Text's `SceneObject` and sets its text — `"You died!\nMove to open ground"` when `blocked` (player on claimed/staked territory, timer frozen), otherwise `"You died!\nRespawning in <seconds>"`.
+- `hideRespawnCountdown()`: clears the text and disables the `SceneObject`.
+
+Both methods no-op safely if the input is unassigned. Requires a centered screen-space `Text` object wired into `respawnCountdownText` in the Lens Studio scene.
+
 #### `@input` fields (all assigned in Lens Studio scene)
 
-`uiText`, `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`.
+`uiText`, `respawnCountdownText`, `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`.
 
 ---
 
@@ -400,7 +430,7 @@ return (hash >>> 0) % 0xFFFFFF  // clamp to 16,777,215
 
 ### Visual color set (playerID)
 
-`playerID` (1–5) is assigned by `Networker.assignAndWritePlayerID()` after the SyncEntity is ready and `clientID` is known. The assignment is stable for the cloud session **unless the player dies or leaves**: `handlePlayerDeath` zeroes the dead player's color slot on all remaining clients, so a rejoining player cannot reclaim their old color — they will be assigned a fresh slot. A new player claims the first empty slot. Up to 5 unique colors are supported; a 6th player falls back to `(clientID % 5) || 5` and overwrites that slot. `playerID` drives both prefab selection for 3D volumes and minimap color lookup — the two are always consistent.
+`playerID` (1–5) is assigned by `Networker.assignAndWritePlayerID()` after the SyncEntity is ready and `clientID` is known. The assignment is stable for the cloud session **unless the player dies or leaves**: `handlePlayerDeath` zeroes the dead player's color slot on all remaining clients. On **respawn**, `respawn()` calls `assignAndWritePlayerID()` again, which — because the empty-slot search is seeded from `clientID % 5` — usually re-claims the same slot and keeps the player's color (it only changes if another player took the slot during the dead window). A player who fully **leaves** and rejoins later is treated as new and gets a fresh slot. A new player claims the first empty slot. Up to 5 unique colors are supported; a 6th player falls back to `(clientID % 5) || 5` and overwrites that slot. `playerID` drives both prefab selection for 3D volumes and minimap color lookup — the two are always consistent.
 
 ---
 
@@ -463,10 +493,15 @@ Grid coordinates (0–39 int)
         │               reads prop.currentValue for all 25 cells in 5×5 window
         │               colors by player visual ID via Networker.getPlayerVisualID()
         │
-        ├─▶ Networker.getData()                              [every tick, debug logging only]
-        │         (result not used for game logic)
+        ├─▶ if DEAD: LocationTracker.handleRespawnCountdown()  [every tick while dead]
+        │       reads Networker.getCellDataReadOnly() — on claimed/staked cell, reset to 3.0s
+        │       on 0: Networker.respawn() + sendData()  (fresh home claim at current cell)
+        │       else: PlayerVisuals.showRespawnCountdown()
         │
-        └─▶ if new cell: Networker.sendData()     [on cell change only]
+        └─▶ if ALIVE:
+                ├─▶ Networker.getData()                     [every tick, debug logging only]
+                │         (result not used for game logic)
+                └─▶ if new cell: Networker.sendData()        [on cell change only]
                     │
                     │ (internal read of localCellState / currentOrPendingValue)
                     │
@@ -501,6 +536,8 @@ Grid coordinates (0–39 int)
 | Conversion delay | `40ms` | `convertStakesSequentially()` | Delay between stake→claim writes |
 | Interior delay | `50ms` | `claimInteriorCellsSequentially()` | Delay between interior cell claims |
 | Position poll rate | `0.30s` | `LocationTracker` | How often player position is checked |
+| Respawn countdown | `3.0s` | `LocationTracker` (`respawnDuration`) | Countdown before a dead player respawns |
+| Respawn tick | `0.30s` | `LocationTracker` (`respawnTick`) | Countdown decrement per position tick (matches poll rate) |
 | `MAX_SAFE_FLOAT32_INT` | `0xFFFFFF` | `LocationTracker` | Max clientID to avoid float32 precision loss |
 | Death event name | `'playerDeathEvent'` | `Networker` | RPC event name for broadcast kills |
 
@@ -571,6 +608,11 @@ The `playerDeathEvent` RPC listener previously had `if (deadPlayerID === this.cl
 - `autoInstantiate: false` ✓
 - `persistenceString: Session` ✓
 
+**`RespawnCountdownText` (screen-space `Text`, wired into `PlayerVisuals.respawnCountdownText`)**:
+- Centered in the AR view, large readable font ✓
+- Starts hidden — toggled at runtime by `PlayerVisuals.show/hideRespawnCountdown()` ✓
+- Separate object from the `uiText` debug HUD ✓
+
 **`SessionController [CONFIGURE_ME]` scene object**:
 - `connectedLensModule` ✓
 - `locationCloudStorageModule` ✓
@@ -589,9 +631,9 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ### Game mechanics
 
-- **Respawn**: After `handlePlayerDeath()`, `isAlive = false` and nothing sets it back to `true`. Players cannot move after dying without restarting the lens. If respawn is added: (1) set `isAlive = true` and `firstClaim = true`; (2) teleport or wait for the player to reach a new starting cell; (3) note that `spawnedInstances` on the dying player's device will still have stale references to the destroyed objects — `DestroyAllClaims/Stakes` clears the local tracking arrays but not `spawnedInstances`.
+- **Respawn edge cases**: Respawn is implemented (`Networker.respawn()` + `LocationTracker.handleRespawnCountdown()` — a 3-second countdown that resets whenever the player stands on any claimed/staked cell, then places a fresh home claim). A few edges remain: (1) if an enemy claims the respawn cell in the 0.3s between the last countdown check and respawn, the forced home claim silently overwrites it; (2) the respawning player's color can change if another player claimed their freed slot during the dead window; (3) stale `spawnedInstances` references from the pre-death visuals persist on the local device (harmless — see Code quality).
 - **Multiplayer kill by territory**: `sendData()` only kills the owner of a **stake trail**. Entering an enemy's **claimed** cell does not kill the entering player (the `else`-branch just stakes over the enemy claim). To implement: in the `else`-branch, check `if (claimedBy !== 0 && claimedBy !== ID)` and fire a `playerDeathEvent` for the entering player.
-- **Conversion continues after death**: `convertStakesSequentially` and `claimInteriorCellsSequentially` are `DelayedCallbackEvent` chains that do not check `isAlive`. If a death RPC arrives mid-conversion, `handlePlayerDeath` runs (clearing state and destroying visuals), but the delayed callbacks continue executing — spawning additional claim visuals and writing cells for a dead player until the chain completes.
+- **Conversion continues after death**: `convertStakesSequentially` and `claimInteriorCellsSequentially` are `DelayedCallbackEvent` chains that do not check `isAlive`. If a death RPC arrives mid-conversion, `handlePlayerDeath` runs (clearing state and destroying visuals), but the delayed callbacks continue executing — spawning additional claim visuals and writing cells for a dead player until the chain completes. `respawn()` sets `isPerformingBulkConversion = false`, so a stale chain's completion callback (which also clears the flag) cannot wedge post-respawn stakes; but a chain still in flight when the player respawns can briefly interleave its writes with the new life's home claim.
 - **Interior fill correctness**: The ray-casting algorithm works correctly for simple convex and concave loops, but diagonal stake trails can produce ambiguous edge cases since cells are discrete units while the algorithm treats them as point coordinates.
 
 ### Networking
@@ -607,7 +649,7 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 - **`getData()` unused ID parameter**: `getData(ID, xpos, zpos)` accepts an `ID` parameter that is never referenced inside the function body. The parameter exists as a legacy artifact and should be removed.
 - **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach was abandoned in favor of the ray-cast fill in `Networker.findAndFillEnclosedRegion()`.
 - **`computeClientID` duplicated**: The FNV-1a hash exists in both `LocationTracker.getDeterministicPlayerId` and `Networker.computeClientID`. If the hash algorithm ever changes, both must be updated. Could be extracted to a shared utility module.
-- **Stale `spawnedInstances` references after self-death**: When the local player dies, `DestroyAllClaims/Stakes` destroys their objects and clears the local tracking arrays, but the now-invalid `SceneObject` references remain in the Instantiator's `spawnedInstances` map. Harmless with no respawn, but `destroyPlayerVisuals` would hit those stale entries if ever called for self after `DestroyAllClaims/Stakes` already ran.
+- **Stale `spawnedInstances` references after self-death**: When the local player dies, `DestroyAllClaims/Stakes` destroys their objects and clears the local tracking arrays, but the now-invalid `SceneObject` references remain in the Instantiator's `spawnedInstances` map. Harmless in practice — the self-death and respawn paths use `DestroyAllClaims/Stakes` (never `destroyPlayerVisuals` for self), so those stale entries are never dereferenced; they would only bite if `destroyPlayerVisuals` were ever called for self after `DestroyAllClaims/Stakes` already ran.
 
 ### Stretch features
 
@@ -622,6 +664,6 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 A submission to Snap's Lens Explorer was rejected with the generic "Invalid Lens Submitted / violates our Guidelines" boilerplate. The likely causes, in priority order, against the [Spectacles publishing requirements](https://developers.snap.com/spectacles/get-started/start-building/publishing-lens) and [Lens Submission Guidelines](https://developers.snap.com/lens-studio/publishing/submitting/submission-guidelines):
 
 1. **Trademark / IP** — the lens name `PapAR` and the "Paper.io-inspired" framing trade on Paper.io, a trademarked game by Voodoo. IP issues almost always trigger the generic boilerplate rejection rather than specific feedback. **Fix**: rename the lens to something non-derivative (e.g. "Territory AR", "Claim Trails") and scrub references to Paper.io from the lens name, description, release notes, and any in-game text.
-2. **Encouragement of real-world risky behavior** — the core loop has players physically racing across an ~80m × 80m area in AR glasses with permadeath. Snap explicitly bans content that encourages risky real-life behavior. **Fix**: add an onboarding screen warning players to play in a safe, open area clear of obstacles and traffic, and consider shrinking the play area.
+2. **Encouragement of real-world risky behavior** — the core loop has players physically racing across an ~80m × 80m area in AR glasses. Snap explicitly bans content that encourages risky real-life behavior. **Fix**: add an onboarding screen warning players to play in a safe, open area clear of obstacles and traffic, and consider shrinking the play area.
 3. **Missing required submission metadata** — eligibility requires all of: custom icon, 3×4 preview image, concise description, release notes, reviewer test notes, version number displayed at launch, and on-activation visuals communicating the objective. None of these are currently wired into the scene.
-4. **Quality / stability flags for solo reviewers** — permadeath with no respawn (a reviewer who dies in the first 30s is stuck), multiplayer-only experience feels empty when tested solo, and the "conversion continues after death" bug ([Known Incomplete Areas](#game-mechanics)) spawns visuals for a dead player which reads as broken.
+4. **Quality / stability flags for solo reviewers** — the multiplayer-only experience feels empty when tested solo, and the "conversion continues after death" behavior ([Known Incomplete Areas](#game-mechanics)) spawns visuals for a dead player which reads as broken. (The former permadeath blocker is resolved — players now respawn after a 3-second countdown, so a reviewer who dies early is no longer stuck.)
