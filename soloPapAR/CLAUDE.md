@@ -286,7 +286,7 @@ Material cloning: each `Image` in `miniMapCells` gets its material cloned on the
 
 #### Direction arrow
 
-`onUpdate()` reads `deviceTracker.getDeviceTrackerRotation()` every frame. If yaw changed, `rotatePlayerArrow(yawRads)` applies `quat.fromEulerAngles(0, 0, -yawRads + π/2)` to the arrow's `ScreenTransform`. The `+ π/2` offset aligns screen space "up" with world-space "forward".
+`onUpdate()` reads `deviceTracker.getDeviceTrackerRotation()` every frame. If the yaw actually changed since the last frame, `rotatePlayerArrow(yawRads)` applies `quat.fromEulerAngles(0, 0, yawRads)` to the arrow's 3D `Transform` (via `playerArrow.getTransform().setLocalRotation()` — note `playerArrow` is typed `ScreenTransform`, but `getTransform()` returns the underlying 3D Transform, which is what gets rotated). The "changed since last frame" guard is memoized in `previousRotation`, which `onUpdate()` updates after each rotate — so a perfectly still head skips the quaternion rebuild. Because `getDeviceTrackerRotation()` returns a continuous `atan2` value, the arrow still updates on nearly every frame while the head is turning.
 
 #### HUD text
 
@@ -629,6 +629,16 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ## Known Incomplete Areas
 
+> **See [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md)** for the status-tracked defect & tech-debt
+> register (severity, status, file+symbol, impact, fix hints). The prose below is the
+> narrative source for the open items; the register is the checklist. Keep the two in sync.
+>
+> **Resolved on the `Respawning` branch (2026-07-09):** arrow-rotation guard now memoizes
+> (`previousRotation`); arrow doc corrected to the real formula; home claim guaranteed on
+> spawn via the `prevGridPos = (-1,-1)` sentinel; all `print` logging gated behind a
+> per-file `showLogs` `@input` (default off) via a `this.log()` helper — new logs must use
+> `this.log(...)`. See `KNOWN_ISSUES.md` IDs D1/D2/D4/LOG.
+
 ### Game mechanics
 
 - **Respawn edge cases**: Respawn is implemented (`Networker.respawn()` + `LocationTracker.handleRespawnCountdown()` — a 3-second countdown that resets whenever the player stands on any claimed/staked cell, then places a fresh home claim). A few edges remain: (1) if an enemy claims the respawn cell in the 0.3s between the last countdown check and respawn, the forced home claim silently overwrites it; (2) the respawning player's color can change if another player claimed their freed slot during the dead window; (3) stale `spawnedInstances` references from the pre-death visuals persist on the local device (harmless — see Code quality).
@@ -642,6 +652,7 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 - **ClientID race condition**: `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` are independent callbacks in `LocationTracker.onAwake()`. If the instantiator fires first, the position loop starts with `clientID = undefined`, and the first few `sendData()` calls pass `undefined` as the player ID.
 - **clientID 0 collides with "unclaimed"**: `getDeterministicPlayerId` returns `0` if `displayName` is null. `computeClientID` in `Networker` guards against this (skips cleanup if result is 0), but a player who actually joins with a null display name would have their claims treated as unclaimed cells in `sendData()`'s decision tree, causing them to perpetually re-stake their own territory instead of triggering loop closure.
 - **Simultaneous death-cleanup writes**: When multiple remaining clients all handle a death event (via RPC or `onUserLeftSession`), each independently writes `vec2.zero()` to the same cloud cells. These writes are idempotent but produce redundant cloud traffic proportional to `(remaining players) × (dead player's subscribed cells)`.
+- **Delayed stake write can clobber a completed claim or write for a dead player**: In `sendData()`'s enemy-stake branch (`Networker.ts`), when the local player steps onto a cell staked by someone else, the cell is pushed to `stakeList`, cached in `localCellState`, and given a stake visual **immediately**, but the cloud write is deferred by 500 ms (`DelayedCallbackEvent` with `reset(0.5)`). The delay is intentional — it makes our stake write arrive at the cloud *after* the killed player's `handlePlayerDeath` death-clear (`vec2(claimedBy, 0)`), so our stake wins the race instead of being erased. But the closure captures the cell's coords and value with no cancellation, so two windows misbehave: (1) if the player loops back to their own claim within 500 ms, `addStakedRegionToClaim` converts that cell to a claim (`vec2(clientID, 0)`) and spawns a claim visual, then the delayed callback fires and overwrites the cloud cell back to a stake — leaving a cell that should be claimed staked, with its claim visual now mismatching cloud state; (2) if the player dies within 500 ms, the delayed callback still fires and writes a stake for a now-dead player (same family as **Conversion continues after death** above). A future fix would tag/cancel the pending write on conversion or death. Not addressed yet.
 - **Player count cap**: `assignAndWritePlayerID` supports up to 5 unique colors; a 6th player falls back to a hash-derived slot, potentially overwriting another active player's color entry. No hard cap exists in code.
 
 ### Code quality

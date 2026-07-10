@@ -50,6 +50,7 @@
     respawnCountdownText: false
     screenTransform: false
     showHUDText: false
+    showLogs: false
     uiText: false
     whiteCell: false
   ScriptTypesHidden:
@@ -60,6 +61,7 @@
     - uiText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       respawnCountdownText: !<reference.Text> 00000000-0000-0000-0000-000000000000
       showHUDText: true
+      showLogs: false
       screenTransform: !<reference.ScreenTransform> 00000000-0000-0000-0000-000000000000
       cellMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       whiteCell: !<reference.Texture> 00000000-0000-0000-0000-000000000000
@@ -90,6 +92,7 @@
     - // @input Component.Text uiText
     - // @input Component.Text respawnCountdownText
     - // @input bool showHUDText = true
+    - // @input bool showLogs
     - // @input Component.ScreenTransform screenTransform
     - // @input Asset.Material cellMaterial
     - // @input Asset.Texture whiteCell

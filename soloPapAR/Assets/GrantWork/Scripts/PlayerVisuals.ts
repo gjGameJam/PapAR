@@ -16,9 +16,14 @@ export class PlayerVisuals extends BaseScriptComponent {
     showHUDText: boolean = true; // Toggle to show/hide the location HUD text
 
     @input
+    showLogs: boolean = false; // gate debug prints via this.log()
+
+    @input
     screenTransform: ScreenTransform; //reference to screen to render minimap on
     
-    prevGridPos: vec2 = new vec2(0, 0); //previous grid (only update minimap if new != previous)
+    // sentinel: no in-bounds cell is negative, so the first ready tick always registers as a
+    // new cell (guarantees the home claim fires even if the spawn cell is (0,0))
+    prevGridPos: vec2 = new vec2(-1, -1); //previous grid (only update minimap if new != previous)
     
     @input
     cellMaterial: Material;
@@ -184,7 +189,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     //creates a cell cube visual for claimed cell via instantiator.instantiate
     createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number){
         if (!this.networkedInstantiator.isReady()){
-            print('instantiator not ready:(');
+            this.log('instantiator not ready:(');
             return;
         }
         const newPosition = new vec3(x, y - (scale / 6), z);
@@ -202,7 +207,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     //creates cube visuals for staked cell via instantiator.instantiate
     createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number){
         if (!this.networkedInstantiator.isReady()){
-            print('instantiator not ready:(');
+            this.log('instantiator not ready:(');
             return;
         }
         const newPosition = new vec3(x, y - (scale / 6), z);
@@ -232,7 +237,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         const prefix = "P" + visualID;
         const instances = (this.networkedInstantiator as any).spawnedInstances;
         if (!instances) {
-            print("PlayerVisuals: spawnedInstances not accessible, cannot destroy remote player visuals");
+            this.log("PlayerVisuals: spawnedInstances not accessible, cannot destroy remote player visuals");
             return;
         }
         const toDestroy: SceneObject[] = [];
@@ -247,7 +252,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         for (const obj of toDestroy) {
             if (obj) obj.destroy();
         }
-        print("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
+        this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
     }
 
     //destroy all visible color volumes representing home claims
@@ -260,7 +265,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         }
         //set length to 0 to be reused
         this.spawnedClaims.length = 0;
-        print('removed all home claims');
+        this.log('removed all home claims');
     }
     
     //destroy all visible color volumes representing staked cells
@@ -273,7 +278,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         }
         //set length to 0 to be reused
         this.spawnedStakes.length = 0;
-        print('removed all stakes');
+        this.log('removed all stakes');
     }
    
     onAwake(){
@@ -299,7 +304,7 @@ export class PlayerVisuals extends BaseScriptComponent {
 
     private alignMiniMapCells(): void {
         if (this.miniMapCells.length < 25) {
-            print(`miniMapCells only has ${this.miniMapCells.length} entries, expected 25`);
+            this.log(`miniMapCells only has ${this.miniMapCells.length} entries, expected 25`);
             return;
         }
 
@@ -336,7 +341,7 @@ export class PlayerVisuals extends BaseScriptComponent {
             for (let col = 0; col < 5; col++) {
                 const idx = row * 5 + col;
                 const st = getST(idx);
-                if (!st) { print(`tile[${idx}] is null or missing ScreenTransform`); continue; }
+                if (!st) { this.log(`tile[${idx}] is null or missing ScreenTransform`); continue; }
 
                 // Cell corners in world space
                 const wL = gridLeft + col * cellPix;
@@ -363,26 +368,23 @@ export class PlayerVisuals extends BaseScriptComponent {
     onUpdate() {
         // get radians rotation in z
         const yawRadians = this.deviceTracker.getDeviceTrackerRotation();
-        //update arrow if new rotation is found
+        //update arrow only if the heading actually changed (memoized in previousRotation)
         if (this.previousRotation != yawRadians){
             // update the player arrow with appropriate rotation
             this.rotatePlayerArrow(yawRadians);
+            this.previousRotation = yawRadians; // remember this heading so a still head skips the rebuild
         }
-        
+
     }
     
     //main function to adjust player direction facing arrow given rotation
     rotatePlayerArrow(yawRads: number){
-        const yawDegrees = (yawRads * 180) / Math.PI;
-        //print('rotating arrow: ' + yawDegrees);
         // Access the transform component of the playerArrow img
         let arrowTransform = this.playerArrow.getTransform();
-        const adjustedRads = yawRads;
-        let rotationQuat = quat.fromEulerAngles(0, 0, adjustedRads);
-        
+        let rotationQuat = quat.fromEulerAngles(0, 0, yawRads);
+
         // Set the rotation of the transform component
         arrowTransform.setLocalRotation(rotationQuat);
-        //arrowTransform.setLocalRotation(quat.angleAxis(yawDegrees, vec3.back()));
     }
     
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)
@@ -406,12 +408,12 @@ export class PlayerVisuals extends BaseScriptComponent {
                 if (gridX >= 0 && gridX < gridLength && gridY >= 0 && gridY < gridLength) {
                     //gets and renders the cell state
                     const cellState = grid.getCellState(gridX, gridY);
-                    //print('x: ' + gridX + ', y: ' + gridY + ', state: ' + cellState);
+                    //this.log('x: ' + gridX + ', y: ' + gridY + ', state: ' + cellState);
                     this.renderMiniMapCell(miniMapX, miniMapY, cellState);
                 } else {
                     //renders null cell state
                     this.renderMiniMapCell(miniMapX, miniMapY, null); // Out of bounds = boundary
-                    //print('x: ' + gridX + ', y: ' + gridY + ', is out of bounds?');
+                    //this.log('x: ' + gridX + ', y: ' + gridY + ', is out of bounds?');
                 }
             }
         }
@@ -429,14 +431,14 @@ export class PlayerVisuals extends BaseScriptComponent {
         // 1. Create SceneObject
         const cellObj = global.scene.createSceneObject("CellObject");
         if (!cellObj) {
-            print("Failed to create CellObject scene object.");
+            this.log("Failed to create CellObject scene object.");
             return;
         }
     
         // 2. Parent it to the screen transform’s scene object
         const parentObj = this.screenTransform.getSceneObject();
         if (!parentObj) {
-            print("screenTransform's SceneObject is null.");
+            this.log("screenTransform's SceneObject is null.");
             return;
         }
         cellObj.setParent(parentObj);
@@ -444,21 +446,21 @@ export class PlayerVisuals extends BaseScriptComponent {
         // 3. Add a ScreenTransform for UI positioning
         const transform = cellObj.createComponent("Component.ScreenTransform");
         if (!transform) {
-            print("Failed to create ScreenTransform on CellObject.");
+            this.log("Failed to create ScreenTransform on CellObject.");
             return;
         }
     
         // 4. Add the Image component
         const newImage = cellObj.createComponent("Component.Image");
         if (!newImage) {
-            print("Failed to create Image component on CellObject.");
+            this.log("Failed to create Image component on CellObject.");
             return;
         }
     
         // 5. Clone the material and assign
         const matClone = this.getCellMatClone();
         if (!matClone) {
-            print("Material clone is null. Check that cellMaterial is assigned.");
+            this.log("Material clone is null. Check that cellMaterial is assigned.");
             return;
         }
     
@@ -468,7 +470,7 @@ export class PlayerVisuals extends BaseScriptComponent {
         if (newImage.mainPass) {
             newImage.mainPass.baseTex = this.whiteCell;
         } else {
-            print("newImage.mainPass is null — check if material has valid shader with baseTex input.");
+            this.log("newImage.mainPass is null — check if material has valid shader with baseTex input.");
         }
     
         // 7. Set transform position and scale
@@ -494,7 +496,7 @@ export class PlayerVisuals extends BaseScriptComponent {
             //above if makes sure grid cells don't share colors accidentally
             img.mainPass.baseColor = color; // assuming `color` is already a vec4
         } else {
-            print(`MiniMap cell "${img}" does not exist.`);
+            this.log(`MiniMap cell "${img}" does not exist.`);
         }
         //this[imgName].mainPass.baseColor = new vec4(255, 0, 0, 1.0);
     }
@@ -580,5 +582,12 @@ export class PlayerVisuals extends BaseScriptComponent {
             `Grid: (${clampedLat}, ${clampedLong})\n` +
             `WorldPos: (${clampedgridx}, ${clampedgridy})\n` +
             `N/A: (${clampedlatOff}, ${clampedlongOff})`;
+    }
+
+    //gated logging: only prints when showLogs is enabled
+    private log(msg: string): void {
+        if (this.showLogs) {
+            print(msg);
+        }
     }
 }

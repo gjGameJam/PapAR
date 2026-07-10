@@ -7,8 +7,9 @@ import { PlayerVisuals } from './PlayerVisuals';
 
 @component
 export class Networker extends BaseScriptComponent {
-    //to help debug
-    showLogs: boolean = true;
+    //to help debug — gated logging via this.log(); toggle in the Inspector
+    @input
+    showLogs: boolean = false;
     //connection id
     clientID: number;
     
@@ -58,12 +59,12 @@ export class Networker extends BaseScriptComponent {
         this.gridSyncEntity = new SyncEntity(this);
 
         if (this.showLogs) {
-            print("NetworkerV2: Sync entity created")
+            this.log("NetworkerV2: Sync entity created")
         }
 
         // Set up the sync entity notify on ready callback
         this.gridSyncEntity.notifyOnReady(() => {
-            print("NetworkerV2: SyncEntity ready")
+            this.log("NetworkerV2: SyncEntity ready")
             this.gridReady = true;
 
             // Initialize all grid cells as individual storage properties
@@ -76,22 +77,22 @@ export class Networker extends BaseScriptComponent {
             const deadPlayerID = deathData.x;
             const killerID = deathData.y;
 
-            print("NetworkerV2: Death event — player " + deadPlayerID + " killed by " + killerID + " (self=" + this.clientID + ")");
+            this.log("NetworkerV2: Death event — player " + deadPlayerID + " killed by " + killerID + " (self=" + this.clientID + ")");
             this.handlePlayerDeath(deadPlayerID);
         });
 
         // When a player leaves, treat it as death-by-self on all remaining clients
         SessionController.getInstance().onUserLeftSession.add((_session, userInfo) => {
             if (!userInfo.displayName) {
-                print("NetworkerV2: Player left with null display name, skipping cleanup");
+                this.log("NetworkerV2: Player left with null display name, skipping cleanup");
                 return;
             }
             const leftClientID = this.computeClientID(userInfo.displayName);
             if (leftClientID === 0) {
-                print("NetworkerV2: Leaving player hashes to clientID 0 (null-name collision), skipping cleanup");
+                this.log("NetworkerV2: Leaving player hashes to clientID 0 (null-name collision), skipping cleanup");
                 return;
             }
-            print("NetworkerV2: Player left: " + userInfo.displayName + " (clientID=" + leftClientID + ")");
+            this.log("NetworkerV2: Player left: " + userInfo.displayName + " (clientID=" + leftClientID + ")");
             this.handlePlayerDeath(leftClientID);
         });
     }
@@ -99,13 +100,13 @@ export class Networker extends BaseScriptComponent {
     // Initialize grid cells as individual storage properties
     private initializeGridCells() {
         if (this.showLogs) {
-            print("NetworkerV2: Initializing grid cells as individual storage properties");
+            this.log("NetworkerV2: Initializing grid cells as individual storage properties");
         }
         
         // Only initialize cells as needed (lazy initialization)
         // This avoids creating 1600 storage properties at once
         if (this.showLogs) {
-            print("NetworkerV2: Grid cells will be initialized on-demand");
+            this.log("NetworkerV2: Grid cells will be initialized on-demand");
         }
 
         for (let i = 1; i <= 5; i++) {
@@ -126,11 +127,11 @@ export class Networker extends BaseScriptComponent {
         
         // Check if property already exists
         if (this.gridCells.has(key)) {
-            if (this.showLogs) print("NetworkerV2: CELL REUSE - Using existing property for cell (" + x + ", " + y + ")");
+            if (this.showLogs) this.log("NetworkerV2: CELL REUSE - Using existing property for cell (" + x + ", " + y + ")");
             return this.gridCells.get(key);
         }
 
-        if (this.showLogs) print("NetworkerV2: CELL CREATE - Creating new property for cell (" + x + ", " + y + ")");
+        if (this.showLogs) this.log("NetworkerV2: CELL CREATE - Creating new property for cell (" + x + ", " + y + ")");
         
         // Create new storage property for this cell
         const cellProp = StorageProperty.manualVec2(key, vec2.zero());
@@ -143,7 +144,7 @@ export class Networker extends BaseScriptComponent {
         
         // Add change listener for this cell
         cellProp.onAnyChange.add((newVal: vec2, oldVal: vec2) => {
-            print("NetworkerV2: CELL CHANGE DETECTED - Cell (" + x + ", " + y + "):");
+            this.log("NetworkerV2: CELL CHANGE DETECTED - Cell (" + x + ", " + y + "):");
             
             // Handle potentially null values
             const oldClaimed = oldVal ? oldVal.x : 0;
@@ -151,8 +152,8 @@ export class Networker extends BaseScriptComponent {
             const newClaimed = newVal ? newVal.x : 0;
             const newStaked = newVal ? newVal.y : 0;
             
-            print("  OLD VALUE: claimed=" + oldClaimed + ", staked=" + oldStaked + " (was " + (oldVal ? "valid" : "null") + ")");
-            print("  NEW VALUE: claimed=" + newClaimed + ", staked=" + newStaked + " (is " + (newVal ? "valid" : "null") + ")");
+            this.log("  OLD VALUE: claimed=" + oldClaimed + ", staked=" + oldStaked + " (was " + (oldVal ? "valid" : "null") + ")");
+            this.log("  NEW VALUE: claimed=" + newClaimed + ", staked=" + newStaked + " (is " + (newVal ? "valid" : "null") + ")");
             
             // Cloud is now authoritative — always clear local cache on any cloud update.
             // Previously this only cleared when cloud value matched local cache (to detect
@@ -163,16 +164,16 @@ export class Networker extends BaseScriptComponent {
             if (this.localCellState.has(cellKey)) {
                 this.localCellState.delete(cellKey);
                 this.localCacheTimestamps.delete(cellKey);
-                print("  🧹 LOCAL CACHE CLEARED - Cloud update received (cloud authoritative)");
+                this.log("  🧹 LOCAL CACHE CLEARED - Cloud update received (cloud authoritative)");
             }
             
             // Special logging for stake-to-claim conversions (with null safety)
             if (oldStaked !== 0 && newStaked === 0 && newClaimed !== 0) {
-                print("  ✓✓✓ STAKE SUCCESSFULLY CONVERTED TO CLAIM ✓✓✓");
+                this.log("  ✓✓✓ STAKE SUCCESSFULLY CONVERTED TO CLAIM ✓✓✓");
             }
         });
         
-        if (this.showLogs) print("NetworkerV2: Total cells in map: " + this.gridCells.size);
+        if (this.showLogs) this.log("NetworkerV2: Total cells in map: " + this.gridCells.size);
         
         return cellProp;
     }
@@ -188,32 +189,32 @@ export class Networker extends BaseScriptComponent {
         const cellProp = this.getCellProperty(x, y);
         
         if (!cellProp) {
-            print("NetworkerV2: ERROR - Could not update cell (" + x + ", " + y + ") - no property");
+            this.log("NetworkerV2: ERROR - Could not update cell (" + x + ", " + y + ") - no property");
             return false;
         }
         
         // For critical operations like bulk conversions, use setValueImmediate when possible
         if (this.gridSyncEntity.canIModifyStore() && (description.includes("CONVERSION") || description.includes("INTERIOR"))) {
-            print("NetworkerV2: CRITICAL OPERATION - Using setValueImmediate for " + description);
+            this.log("NetworkerV2: CRITICAL OPERATION - Using setValueImmediate for " + description);
             cellProp.setValueImmediate(this.gridSyncEntity.currentStore, newValue);
-            print("NetworkerV2: CLOUD IMMEDIATE - Cell (" + x + ", " + y + ") " + description + ": claimed=" + newValue.x + ", staked=" + newValue.y);
+            this.log("NetworkerV2: CLOUD IMMEDIATE - Cell (" + x + ", " + y + ") " + description + ": claimed=" + newValue.x + ", staked=" + newValue.y);
         } else {
             // Use setPendingValue for normal operations
             cellProp.setPendingValue(newValue);
-            print("NetworkerV2: CLOUD PENDING - Cell (" + x + ", " + y + ") " + description + ": claimed=" + newValue.x + ", staked=" + newValue.y);
+            this.log("NetworkerV2: CLOUD PENDING - Cell (" + x + ", " + y + ") " + description + ": claimed=" + newValue.x + ", staked=" + newValue.y);
         }
         
         // ALSO update local state for immediate reads (ensures consistency until cloud sync)
         this.localCellState.set(cellKey, newValue);
         this.localCacheTimestamps.set(cellKey, Date.now()); // Track when we cached this
-        print("NetworkerV2: LOCAL CACHED - Cell (" + x + ", " + y + ") for immediate reads");
+        this.log("NetworkerV2: LOCAL CACHED - Cell (" + x + ", " + y + ") for immediate reads");
         
         return true;
     }
     
     setPlayerID(passedID: number): void {
         this.clientID = passedID;
-        print("NetworkerV2: client ID set to: " + this.clientID);
+        this.log("NetworkerV2: client ID set to: " + this.clientID);
         if (this.gridReady) {
             this.assignAndWritePlayerID();
         } else {
@@ -229,7 +230,7 @@ export class Networker extends BaseScriptComponent {
             const val = this.playerColorSlots[i].currentValue;
             if (val && val.x === this.clientID) {
                 this.playerID = val.y;
-                print("NetworkerV2: Rejoining — reusing playerID=" + this.playerID + " from slot " + i);
+                this.log("NetworkerV2: Rejoining — reusing playerID=" + this.playerID + " from slot " + i);
                 return;
             }
         }
@@ -240,14 +241,14 @@ export class Networker extends BaseScriptComponent {
             if (!val || val.x === 0) {
                 this.playerID = i + 1;
                 this.playerColorSlots[i].setPendingValue(new vec2(this.clientID, this.playerID));
-                print("NetworkerV2: New player — claiming slot " + i + ", playerID=" + this.playerID);
+                this.log("NetworkerV2: New player — claiming slot " + i + ", playerID=" + this.playerID);
                 return;
             }
         }
         // All 5 slots occupied (6+ players): hash fallback
         this.playerID = (this.clientID % 5) || 5;
         this.playerColorSlots[this.playerID - 1].setPendingValue(new vec2(this.clientID, this.playerID));
-        print("NetworkerV2: All slots full — hash fallback playerID=" + this.playerID);
+        this.log("NetworkerV2: All slots full — hash fallback playerID=" + this.playerID);
     }
 
     getPlayerVisualID(clientID: number): number {
@@ -322,14 +323,14 @@ export class Networker extends BaseScriptComponent {
         // Block updates during bulk conversion to prevent race conditions
         if (this.isPerformingBulkConversion) {
             if (this.showLogs) {
-                print("NetworkerV2: Skipping sendData during bulk conversion");
+                this.log("NetworkerV2: Skipping sendData during bulk conversion");
             }
             return;
         }
         
         if (!this.gridReady) {
             if (this.showLogs) {
-                print("NetworkerV2: SEND - Grid not ready, cannot send");
+                this.log("NetworkerV2: SEND - Grid not ready, cannot send");
             }
             return;
         }
@@ -337,7 +338,7 @@ export class Networker extends BaseScriptComponent {
         // Get the cell property for this position
         const cellProp = this.getCellProperty(xpos, zpos);
         if (!cellProp) {
-            print("NetworkerV2: ERROR - Could not get/create cell property");
+            this.log("NetworkerV2: ERROR - Could not get/create cell property");
             return;
         }
         
@@ -353,7 +354,7 @@ export class Networker extends BaseScriptComponent {
 
         //special/base case of creating home claim on start
         if (this.firstClaim == true){
-            print("NetworkerV2: SEND - creating home claim with cloud storage");
+            this.log("NetworkerV2: SEND - creating home claim with cloud storage");
             //set first claim to false to not allow multiple home claims
             this.firstClaim = false;
 
@@ -374,7 +375,7 @@ export class Networker extends BaseScriptComponent {
         const claimedBy = currentCellValue.x;
         const stakedBy = currentCellValue.y;
 
-        print("NetworkerV2: new cell is claimed by " + claimedBy + " and staked by " + stakedBy)
+        this.log("NetworkerV2: new cell is claimed by " + claimedBy + " and staked by " + stakedBy)
 
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
@@ -433,24 +434,24 @@ export class Networker extends BaseScriptComponent {
         }
         
         if (this.showLogs) {
-            print("NetworkerV2: SEND - Successfully updated cell (" + xpos + ", " + zpos + ")");
+            this.log("NetworkerV2: SEND - Successfully updated cell (" + xpos + ", " + zpos + ")");
         }
     }
     
     // function for accessing grid data
     getData(ID: number, xpos: number, zpos: number): vec2 {
-        print("NetworkerV2: getData() called with ID=" + ID + ", xpos=" + xpos + ", zpos=" + zpos);
+        this.log("NetworkerV2: getData() called with ID=" + ID + ", xpos=" + xpos + ", zpos=" + zpos);
         
         // Always return a valid vec2, never undefined
         const fallbackVec = vec2.zero();
         
         try {
             if (!this.gridReady) {
-                print("NetworkerV2: GET - Grid not ready, returning zero vec2");
+                this.log("NetworkerV2: GET - Grid not ready, returning zero vec2");
                 return fallbackVec;
             }
             
-            print("NetworkerV2: GET REQUEST - Retrieving cell (" + xpos + ", " + zpos + ")");
+            this.log("NetworkerV2: GET REQUEST - Retrieving cell (" + xpos + ", " + zpos + ")");
             
             const cellKey = this.getCellKey(xpos, zpos);
             
@@ -462,11 +463,11 @@ export class Networker extends BaseScriptComponent {
                 // Use cache if it's fresh (less than 5 seconds old)
                 if (cacheAge < 5000) {
                     const localValue = this.localCellState.get(cellKey);
-                    print("NetworkerV2: ✅ GET LOCAL CACHE - Cell (" + xpos + ", " + zpos + "): claimed=" + localValue.x + ", staked=" + localValue.y + " (age: " + cacheAge + "ms)");
+                    this.log("NetworkerV2: ✅ GET LOCAL CACHE - Cell (" + xpos + ", " + zpos + "): claimed=" + localValue.x + ", staked=" + localValue.y + " (age: " + cacheAge + "ms)");
                     return localValue;
                 } else {
                     // Cache is stale, remove it and fall through to cloud storage
-                    print("NetworkerV2: 🗑️ STALE CACHE REMOVED - Cell (" + xpos + ", " + zpos + ") cache age: " + cacheAge + "ms");
+                    this.log("NetworkerV2: 🗑️ STALE CACHE REMOVED - Cell (" + xpos + ", " + zpos + ") cache age: " + cacheAge + "ms");
                     this.localCellState.delete(cellKey);
                     this.localCacheTimestamps.delete(cellKey);
                 }
@@ -474,36 +475,36 @@ export class Networker extends BaseScriptComponent {
             
             const cellProp = this.getCellProperty(xpos, zpos);
             if (!cellProp) {
-                print("NetworkerV2: ERROR - Could not get cell property, returning zero vec2");
+                this.log("NetworkerV2: ERROR - Could not get cell property, returning zero vec2");
                 return fallbackVec;
             }
 
             let cellVec = cellProp.currentValue;
             if (!cellVec) {
-                print("NetworkerV2: WARNING - Cell has no value, returning zero vec2");
+                this.log("NetworkerV2: WARNING - Cell has no value, returning zero vec2");
                 cellVec = fallbackVec;
             }
             
             // Ensure we have a valid vec2
             if (typeof cellVec.x === 'undefined' || typeof cellVec.y === 'undefined') {
-                print("NetworkerV2: ERROR - Invalid vec2 structure, returning zero vec2");
-                print("NetworkerV2: cellVec type: " + typeof cellVec + ", value: " + cellVec);
+                this.log("NetworkerV2: ERROR - Invalid vec2 structure, returning zero vec2");
+                this.log("NetworkerV2: cellVec type: " + typeof cellVec + ", value: " + cellVec);
                 return fallbackVec;
             }
             
-            print("NetworkerV2: GET CLOUD - Cell (" + xpos + ", " + zpos + "): claimed=" + cellVec.x + ", staked=" + cellVec.y);
+            this.log("NetworkerV2: GET CLOUD - Cell (" + xpos + ", " + zpos + "): claimed=" + cellVec.x + ", staked=" + cellVec.y);
             
             // Log if this is a problematic stake that should have been converted
             if (cellVec.y === ID) {
-                print("  ⚠️ WARNING: Cell is still staked by player " + ID + " - Cloud storage may not have persisted yet!");
+                this.log("  ⚠️ WARNING: Cell is still staked by player " + ID + " - Cloud storage may not have persisted yet!");
             }
             
-            print("NetworkerV2: Returning valid vec2: " + cellVec);
+            this.log("NetworkerV2: Returning valid vec2: " + cellVec);
             return cellVec;
             
         } catch (error) {
-            print("NetworkerV2: EXCEPTION in getData(): " + error);
-            print("NetworkerV2: Returning fallback zero vec2");
+            this.log("NetworkerV2: EXCEPTION in getData(): " + error);
+            this.log("NetworkerV2: Returning fallback zero vec2");
             return fallbackVec;
         }
     }
@@ -531,7 +532,7 @@ export class Networker extends BaseScriptComponent {
     
     //function for handling player death — runs on ALL clients for both normal kills and player-leave events
     handlePlayerDeath(ID: number){
-        print("NetworkerV2: Handling death of player " + ID);
+        this.log("NetworkerV2: Handling death of player " + ID);
 
         if (ID === this.clientID) {
             // Local-only: mark this device as dead and tear down its own tracking state
@@ -574,7 +575,7 @@ export class Networker extends BaseScriptComponent {
             const val = this.playerColorSlots[i].currentValue;
             if (val && val.x === ID) {
                 this.playerColorSlots[i].setPendingValue(vec2.zero());
-                print("NetworkerV2: Freed color slot " + i + " for player " + ID);
+                this.log("NetworkerV2: Freed color slot " + i + " for player " + ID);
                 break;
             }
         }
@@ -592,14 +593,14 @@ export class Networker extends BaseScriptComponent {
         this.stakeList = [];
         this.isPerformingBulkConversion = false;
         this.assignAndWritePlayerID();       // re-claim a color slot + set this.playerID
-        print("NetworkerV2: Player " + this.clientID + " respawned");
+        this.log("NetworkerV2: Player " + this.clientID + " respawned");
     }
 
     //function for returning to claimed region and adding staked region to claim
     addStakedRegionToClaim(realWorldCoords: vec3){
         // Prevent multiple bulk conversions from happening simultaneously
         if (this.isPerformingBulkConversion) {
-            print("NetworkerV2: Bulk conversion already in progress, skipping");
+            this.log("NetworkerV2: Bulk conversion already in progress, skipping");
             return;
         }
         
@@ -610,7 +611,7 @@ export class Networker extends BaseScriptComponent {
         }
         
         this.isPerformingBulkConversion = true; // Set flag to prevent re-entry
-        print("NetworkerV2: BULK CONVERSION START - Converting " + numOfStakes + " stakes to claims with proper cloud storage");
+        this.log("NetworkerV2: BULK CONVERSION START - Converting " + numOfStakes + " stakes to claims with proper cloud storage");
         
         // Destroy stake visuals immediately
         this.PlayerVisuals.DestroyAllStakes();
@@ -620,35 +621,35 @@ export class Networker extends BaseScriptComponent {
         
         // Clear the stake list early to prevent new stakes during conversion
         this.stakeList = [];
-        print("NetworkerV2: stakeList cleared, length now: " + this.stakeList.length);
+        this.log("NetworkerV2: stakeList cleared, length now: " + this.stakeList.length);
         
         // Start sequential conversion with proper cloud storage callbacks
         this.convertStakesSequentially(stakesToConvert, 0, realWorldCoords, () => {
-            print("NetworkerV2: ✅ ALL STAKES SUCCESSFULLY CONVERTED TO CLOUD STORAGE!");
+            this.log("NetworkerV2: ✅ ALL STAKES SUCCESSFULLY CONVERTED TO CLOUD STORAGE!");
             
             // Find and fill enclosed region after successful conversion
             this.findAndFillEnclosedRegion(stakesToConvert, realWorldCoords);
             
             // Reset the conversion flag
             this.isPerformingBulkConversion = false;
-            print("NetworkerV2: 🔄 Bulk conversion flag RESET - Normal operations resumed");
+            this.log("NetworkerV2: 🔄 Bulk conversion flag RESET - Normal operations resumed");
         });
     }
     
     // New method: Sequential stake conversion with proper cloud storage callbacks
     private convertStakesSequentially(stakes: vec2[], index: number, realWorldCoords: vec3, onComplete: () => void) {
         if (index >= stakes.length) {
-            print("NetworkerV2: Sequential conversion completed for all " + stakes.length + " stakes");
+            this.log("NetworkerV2: Sequential conversion completed for all " + stakes.length + " stakes");
             onComplete();
             return;
         }
         
         const stake = stakes[index];
-        print("NetworkerV2: [" + (index + 1) + "/" + stakes.length + "] Converting stake at (" + stake.x + ", " + stake.y + ")");
+        this.log("NetworkerV2: [" + (index + 1) + "/" + stakes.length + "] Converting stake at (" + stake.x + ", " + stake.y + ")");
         
         const cellProp = this.getCellProperty(stake.x, stake.y);
         if (!cellProp) {
-            print("NetworkerV2: ERROR - Could not get cell property for stake conversion");
+            this.log("NetworkerV2: ERROR - Could not get cell property for stake conversion");
             // Continue with next stake
             this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
             return;
@@ -656,11 +657,11 @@ export class Networker extends BaseScriptComponent {
         
         const cellKey = this.getCellKey(stake.x, stake.y);
         const currentValue = this.localCellState.get(cellKey) || cellProp.currentValue || vec2.zero();
-        print("  BEFORE: claimed=" + currentValue.x + ", staked=" + currentValue.y);
+        this.log("  BEFORE: claimed=" + currentValue.x + ", staked=" + currentValue.y);
         
         // Verify this cell is actually staked by us
         if (currentValue.y !== this.clientID) {
-            print("  WARNING: Cell not staked by us! Staked by: " + currentValue.y + ", our ID: " + this.clientID);
+            this.log("  WARNING: Cell not staked by us! Staked by: " + currentValue.y + ", our ID: " + this.clientID);
         }
         
         // Convert stake to claim (set x to clientID, y to 0)
@@ -670,12 +671,12 @@ export class Networker extends BaseScriptComponent {
         const success = this.updateCellValue(stake.x, stake.y, newValue, "STAKE→CLAIM CONVERSION");
         
         if (success) {
-            print("  ✅ CONVERSION SUCCESS: Stake (" + stake.x + ", " + stake.y + ") → Claim");
-            print("  AFTER: claimed=" + newValue.x + ", staked=" + newValue.y);
+            this.log("  ✅ CONVERSION SUCCESS: Stake (" + stake.x + ", " + stake.y + ") → Claim");
+            this.log("  AFTER: claimed=" + newValue.x + ", staked=" + newValue.y);
             
             //Create visual for newly claimed cell (exterior loop cell)
             const cellCenterCoords = this.gridPosToWorldCoords(stake.x, stake.y);
-            //print("test first claim by id: " + this.playerID);
+            //this.log("test first claim by id: " + this.playerID);
             this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
@@ -686,7 +687,7 @@ export class Networker extends BaseScriptComponent {
             });
             delayedEvent.reset(0.04); // 40ms delay per conversion
         } else {
-            print("  ❌ CONVERSION FAILED: Could not convert stake (" + stake.x + ", " + stake.y + ")");
+            this.log("  ❌ CONVERSION FAILED: Could not convert stake (" + stake.x + ", " + stake.y + ")");
             // Continue to next stake even on failure
             this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
         }
@@ -710,7 +711,7 @@ export class Networker extends BaseScriptComponent {
         
         // Early return if the bounding box has no interior
         if (maxX - minX <= 1 || maxZ - minZ <= 1) {
-            print("NetworkerV2: findAndFillEnclosedRegion: stake bounding box has no interior, returning early.");
+            this.log("NetworkerV2: findAndFillEnclosedRegion: stake bounding box has no interior, returning early.");
             return;
         }
         
@@ -730,33 +731,33 @@ export class Networker extends BaseScriptComponent {
         }
         
         if (interiorCells.length === 0) {
-            print("NetworkerV2: No interior cells found to claim");
+            this.log("NetworkerV2: No interior cells found to claim");
             return;
         }
         
-        print("NetworkerV2: Found " + interiorCells.length + " interior cells to claim with cloud storage");
+        this.log("NetworkerV2: Found " + interiorCells.length + " interior cells to claim with cloud storage");
         
         // Convert interior cells using cloud storage (similar to stake conversion)
         this.claimInteriorCellsSequentially(interiorCells, 0, realWorldCoords, () => {
-            print("NetworkerV2: ✅ All interior cells successfully claimed in cloud storage!");
-            print("NetworkerV2: Scanline region fill complete!");
+            this.log("NetworkerV2: ✅ All interior cells successfully claimed in cloud storage!");
+            this.log("NetworkerV2: Scanline region fill complete!");
         });
     }
     
     // New method: Sequential interior cell claiming with proper cloud storage callbacks
     private claimInteriorCellsSequentially(cells: vec2[], index: number, realWorldCoords: vec3, onComplete: () => void) {
         if (index >= cells.length) {
-            print("NetworkerV2: Sequential interior claiming completed for all " + cells.length + " cells");
+            this.log("NetworkerV2: Sequential interior claiming completed for all " + cells.length + " cells");
             onComplete();
             return;
         }
         
         const cell = cells[index];
-        print("NetworkerV2: [" + (index + 1) + "/" + cells.length + "] Claiming interior cell at (" + cell.x + ", " + cell.y + ")");
+        this.log("NetworkerV2: [" + (index + 1) + "/" + cells.length + "] Claiming interior cell at (" + cell.x + ", " + cell.y + ")");
         
         const cellProp = this.getCellProperty(cell.x, cell.y);
         if (!cellProp) {
-            print("NetworkerV2: ERROR - Could not get cell property for interior cell");
+            this.log("NetworkerV2: ERROR - Could not get cell property for interior cell");
             // Continue with next cell
             this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
             return;
@@ -769,11 +770,11 @@ export class Networker extends BaseScriptComponent {
         const success = this.updateCellValue(cell.x, cell.y, newValue, "INTERIOR CLAIM");
         
         if (success) {
-            print("  ✅ INTERIOR CELL CLAIMED: (" + cell.x + ", " + cell.y + ") updated");
+            this.log("  ✅ INTERIOR CELL CLAIMED: (" + cell.x + ", " + cell.y + ") updated");
             
             // Create visual for newly claimed cell
             const cellCenterCoords = this.gridPosToWorldCoords(cell.x, cell.y);
-            //print("test first claim by id: " + this.playerID);
+            //this.log("test first claim by id: " + this.playerID);
             this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell);
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
@@ -784,7 +785,7 @@ export class Networker extends BaseScriptComponent {
             });
             delayedEvent.reset(0.05); // 50ms delay per claim
         } else {
-            print("  ❌ INTERIOR CLAIM FAILED: Could not claim cell (" + cell.x + ", " + cell.y + ")");
+            this.log("  ❌ INTERIOR CLAIM FAILED: Could not claim cell (" + cell.x + ", " + cell.y + ")");
             // Continue to next cell even on failure
             this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
         }
@@ -831,5 +832,12 @@ export class Networker extends BaseScriptComponent {
             hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
         }
         return (hash >>> 0) % 0xFFFFFF;
+    }
+
+    //gated logging: only prints when showLogs is enabled
+    private log(msg: string): void {
+        if (this.showLogs) {
+            print(msg);
+        }
     }
 }

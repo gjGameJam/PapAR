@@ -28,14 +28,17 @@
   MaxVisibility: Editable
   ScriptInputsHidden:
     PlayerVisuals: false
+    showLogs: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
   DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
   DefaultScriptInputs:
-    - PlayerVisuals: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
+    - showLogs: false
+      PlayerVisuals: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
+    - // @input bool showLogs
     - // @input AssignableType PlayerVisuals

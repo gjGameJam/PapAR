@@ -31,6 +31,7 @@
     PlayerVisuals: false
     networkedInstantiator: false
     playerTracker: false
+    showLogs: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -40,6 +41,7 @@
       Networker: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
       networkedInstantiator: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       PlayerVisuals: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      showLogs: false
   ScriptTypes:
     -
       {}
@@ -48,3 +50,4 @@
     - // @input AssignableType Networker
     - // @input AssignableType_1 networkedInstantiator
     - // @input AssignableType_2 PlayerVisuals
+    - // @input bool showLogs

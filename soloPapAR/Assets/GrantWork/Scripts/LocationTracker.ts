@@ -30,6 +30,9 @@ export class LocationTracker extends BaseScriptComponent {
   @input
   PlayerVisuals: PlayerVisuals;
 
+  @input
+  showLogs: boolean = false; // gate debug prints via this.log()
+
   private repeatUpdateUserLocation: DelayedCallbackEvent;
   private getNewPosition: DelayedCallbackEvent;
   private locationService: LocationService;
@@ -52,7 +55,7 @@ export class LocationTracker extends BaseScriptComponent {
       //only send location (relative to colocated world space) if seshController is ready
       this.seshController.notifyOnReady(() => { //session controller (colocated space) is ready
         // SessionController is ready to use
-        print('session controller notify on ready for location tracker');
+        this.log('session controller notify on ready for location tracker');
         //get snapchat display name (unique)
         var displayName = this.seshController.getLocalUserName();
         //create a unique player id via hashing instead of using string
@@ -128,7 +131,7 @@ export class LocationTracker extends BaseScriptComponent {
             // updated — the player never appears to "enter" their starting cell once the
             // grid becomes ready, so the first home claim is never placed unless they move.
             if (this.Networker.gridReady && !this.PlayerVisuals.isInSameCell(gridPos)){
-                print("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
+                this.log("cell: " + gridPos + " is claimed by: " + claimedBy + " and staked by: " + stakedBy);
                 this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition);
             }
         }
@@ -196,6 +199,13 @@ export class LocationTracker extends BaseScriptComponent {
         //ensure number can be stored within 32 bits
         const MAX_SAFE_FLOAT32_INT = 0xFFFFFF; // 16777215
         return (hash >>> 0) % MAX_SAFE_FLOAT32_INT;
+    }
+
+    //gated logging: only prints when showLogs is enabled
+    private log(msg: string): void {
+        if (this.showLogs) {
+            print(msg);
+        }
     }
 
 
