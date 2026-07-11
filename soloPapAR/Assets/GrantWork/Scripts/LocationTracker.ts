@@ -44,7 +44,7 @@ export class LocationTracker extends BaseScriptComponent {
   //respawn countdown state
   private respawnCountdown: number = -1;      // seconds remaining; -1 = inactive
   private readonly respawnDuration: number = 3.0;
-  private readonly respawnTick: number = 0.30; // must match getNewPosition.reset() interval
+  private readonly respawnTick: number = 0.10; // must match getNewPosition.reset() interval
 
 
   //on awake, start tracking once session controller starts up
@@ -118,6 +118,11 @@ export class LocationTracker extends BaseScriptComponent {
         // While dead, run the respawn countdown instead of the normal stake/claim flow.
         if (this.Networker.gridReady && !this.Networker.isAlive){
             this.handleRespawnCountdown(gridPos, worldPosition);
+        } else if (this.Networker.gridReady && !this.Networker.isInBounds(gridPos.x, gridPos.y)) {
+            // Leaving the arena kills you. killLocalPlayer flips us dead; next tick runs the
+            // respawn countdown (which blocks respawn until we're back in-bounds on open ground).
+            this.log("left play area at " + gridPos + " — dying");
+            this.Networker.killLocalPlayer();
         } else {
             //retrieve the state of the cell that this player is in
             //cell data is vec2 of (claimedBy = cellVec.x and stakedBy = cellVec.y;) because they can be different
@@ -137,7 +142,7 @@ export class LocationTracker extends BaseScriptComponent {
         }
 
         // delay in seconds before repeat call
-        this.getNewPosition.reset(.30);
+        this.getNewPosition.reset(.10);
     });
     
     // Kick it off immediately
@@ -148,25 +153,29 @@ export class LocationTracker extends BaseScriptComponent {
     // duration whenever the player stands on a claimed or staked cell (so they can't
     // respawn in an OP position), and respawns them once the timer runs out on open ground.
     private handleRespawnCountdown(gridPos: vec2, worldPosition: vec3): void {
+        // Off-grid cells read as vec2.zero() (open), so without this check a player who died
+        // by leaving the arena would respawn off-grid. Treat out-of-bounds as blocked too.
+        const outOfBounds = !this.Networker.isInBounds(gridPos.x, gridPos.y);
         // Pure, side-effect-free read: .x = claimedBy, .y = stakedBy (0 = none)
         const cell = this.Networker.getCellDataReadOnly(gridPos.x, gridPos.y);
         const inTerritory = cell.x !== 0 || cell.y !== 0;
+        const blocked = inTerritory || outOfBounds;
 
-        if (this.respawnCountdown < 0 || inTerritory) {
+        if (this.respawnCountdown < 0 || blocked) {
             this.respawnCountdown = this.respawnDuration;   // start / reset to full 3s
         } else {
             this.respawnCountdown -= this.respawnTick;
         }
 
         if (this.respawnCountdown <= 0) {
-            // Respawn now (current cell is guaranteed open — countdown only reaches 0 on open ground)
+            // Respawn now (current cell is guaranteed open and in-bounds — countdown only reaches 0 there)
             this.respawnCountdown = -1;
             this.PlayerVisuals.hideRespawnCountdown();
             this.Networker.respawn();
             this.PlayerVisuals.isInSameCell(gridPos);        // sync prevGridPos so we don't double-fire
             this.Networker.sendData(this.clientID, gridPos.x, gridPos.y, worldPosition); // firstClaim==true -> home claim here
         } else {
-            this.PlayerVisuals.showRespawnCountdown(Math.ceil(this.respawnCountdown), inTerritory);
+            this.PlayerVisuals.showRespawnCountdown(Math.ceil(this.respawnCountdown), blocked, outOfBounds);
         }
     }
 

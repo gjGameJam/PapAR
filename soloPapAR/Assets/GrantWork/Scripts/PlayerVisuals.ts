@@ -199,6 +199,7 @@ export class PlayerVisuals extends BaseScriptComponent {
             localScale: cellScale,
             onSuccess: (networkRoot) => {
                 this.spawnedClaims.push(networkRoot.sceneObject);
+                this.pruneOnDestroy(networkRoot);
             }
         });
     }
@@ -216,6 +217,7 @@ export class PlayerVisuals extends BaseScriptComponent {
             localScale: new vec3(scale, scale, scale),
             onSuccess: (networkRoot) => {
                 this.spawnedStakes.push(networkRoot.sceneObject);
+                this.pruneOnDestroy(networkRoot);
             }
         });
         this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), {
@@ -223,15 +225,30 @@ export class PlayerVisuals extends BaseScriptComponent {
             localScale: new vec3(1, scale, 1),
             onSuccess: (networkRoot) => {
                 this.spawnedStakes.push(networkRoot.sceneObject);
+                this.pruneOnDestroy(networkRoot);
             }
         });
     }
     
+    // Keep the Instantiator's spawnedInstances map from accumulating destroyed holders:
+    // when this locally-spawned object is destroyed (locally OR remotely), drop its entry.
+    // onDestroyed (NetworkRootInfo) fires for both destruction paths, so this also covers
+    // the self-death path (DestroyAllClaims/Stakes), where spawnedInstances is never pruned.
+    private pruneOnDestroy(networkRoot: any): void {
+        if (!networkRoot || !networkRoot.onDestroyed) return;
+        networkRoot.onDestroyed.add(() => {
+            const inst = (this.networkedInstantiator as any).spawnedInstances;
+            if (inst) delete inst[networkRoot.networkId];
+        });
+    }
+
     // Destroy all visual objects (claims + stakes + pillars) spawned by a specific player.
     // Works on every device: iterates the Instantiator's internal spawnedInstances map,
     // which holds all objects created during the session (both local and remote spawns).
     // Prefab names are in the form "P{visualID}ClaimCube", "P{visualID}StakeCube", etc.,
     // so matching the "P{N}" prefix is sufficient to find all objects for that player.
+    // The SDK never prunes spawnedInstances, so we prune matched (and stale) entries here to
+    // stop re-scanning destroyed holders and reading from their deleted realtime stores.
     destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number): void {
         const visualID = getPlayerVisualID(clientID);
         const prefix = "P" + visualID;
@@ -240,17 +257,29 @@ export class PlayerVisuals extends BaseScriptComponent {
             this.log("PlayerVisuals: spawnedInstances not accessible, cannot destroy remote player visuals");
             return;
         }
-        const toDestroy: SceneObject[] = [];
+        const toDestroy: { id: string; obj: SceneObject }[] = [];
         for (const networkId in instances) {
             const networkRoot = instances[networkId];
-            if (!networkRoot || !networkRoot.dataStore) continue;
-            const prefabName = networkRoot.dataStore.getString("_prefab_name");
+            // Drop obviously-stale entries (already-destroyed holder / missing store) as we go.
+            if (!networkRoot || !networkRoot.dataStore || !networkRoot.sceneObject) {
+                delete instances[networkId];
+                continue;
+            }
+            let prefabName = "";
+            try {
+                prefabName = networkRoot.dataStore.getString("_prefab_name");
+            } catch (e) {
+                // Reading a deleted realtime store — the entry is stale; prune and skip.
+                delete instances[networkId];
+                continue;
+            }
             if (prefabName && prefabName.startsWith(prefix)) {
-                toDestroy.push(networkRoot.sceneObject);
+                toDestroy.push({ id: networkId, obj: networkRoot.sceneObject });
             }
         }
-        for (const obj of toDestroy) {
-            if (obj) obj.destroy();
+        for (const entry of toDestroy) {
+            if (entry.obj) entry.obj.destroy();
+            delete instances[entry.id]; // prune so this entry is never re-scanned on a later death
         }
         this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
     }
@@ -287,13 +316,18 @@ export class PlayerVisuals extends BaseScriptComponent {
         this.hideRespawnCountdown();
     }
 
-    // seconds = whole seconds remaining; blocked = standing in claimed/staked territory (timer frozen)
-    showRespawnCountdown(seconds: number, blocked: boolean): void {
+    // seconds = whole seconds remaining; blocked = timer frozen (on territory OR out of bounds);
+    // outOfBounds = frozen specifically because the player is outside the arena.
+    showRespawnCountdown(seconds: number, blocked: boolean, outOfBounds: boolean = false): void {
         if (!this.respawnCountdownText) return;
         this.respawnCountdownText.getSceneObject().enabled = true;
-        this.respawnCountdownText.text = blocked
-            ? "You died!\nMove to open ground"
-            : "You died!\nRespawning in " + seconds;
+        if (blocked) {
+            this.respawnCountdownText.text = outOfBounds
+                ? "You died!\nReturn to the play area"
+                : "You died!\nMove to open ground";
+        } else {
+            this.respawnCountdownText.text = "You died!\nRespawning in " + seconds;
+        }
     }
 
     hideRespawnCountdown(): void {
@@ -513,7 +547,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
 
     
-    //renders the 5x5 minimap from networked cloud data; called every 0.3s tick by LocationTracker
+    //renders the 5x5 minimap from networked cloud data; called every 0.1s tick by LocationTracker
     updateMiniMapNetworked(cells: (vec2 | null)[], getPlayerVisualID: (id: number) => number): void {
         for (let i = 0; i < 25; i++) {
             const miniMapX = i % 5;

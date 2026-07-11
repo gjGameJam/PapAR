@@ -1,13 +1,16 @@
 # KNOWN_ISSUES.md — Defect & Tech-Debt Register
 
 > Status-tracked companion to `CLAUDE.md`. `CLAUDE.md` documents **how the system works**
-> (architecture, data flow, coordinate systems); this file tracks **what's wrong or
-> incomplete** and where to fix it. When an item here is resolved, update its status and
-> mirror the change into the relevant `CLAUDE.md` section.
+> (architecture, data flow, coordinate systems); this file tracks **what's still wrong or
+> incomplete** and where to fix it.
 >
-> **Last updated:** 2026-07-09
-> **Line numbers** are marked "as of 2026-07-09" and will drift — the file + symbol/function
-> name is the durable anchor.
+> **Policy:** when an item is resolved, **remove it from this register** (git history keeps the
+> detail) and mirror the change into the relevant `CLAUDE.md` section. This file lists only
+> open/documented/missing work — no "resolved" archive, to keep it scannable.
+>
+> **Last updated:** 2026-07-11
+> **Line numbers** are approximate and will drift — the file + symbol/function name is the
+> durable anchor.
 
 ---
 
@@ -16,12 +19,13 @@
 - Every finding has a stable **ID**, a **severity**, a **status**, a **location**
   (file + symbol), the **impact**, a **repro/trigger**, and a **fix hint**.
 - Severity reflects gameplay/data impact in realistic play, not just theoretical risk.
-- IDs prefixed `D#` correspond to the original 3-round audit's "Defects" numbering so they
-  tie back to that discussion; other prefixes (`NET`, `DEAD`, `TD`, `FEAT`) are grouped by
-  category.
+- ID prefixes group findings by category: `D#` (from the original audit's "Defects"
+  numbering), `NET` (networking), `DEAD` (dead/broken code), `TD` (tech debt), `FEAT`
+  (missing features). IDs are stable anchors — numbering gaps mean an item was fixed and
+  removed.
 
 **Severity:** 🔴 High · 🟠 Medium · 🟡 Low
-**Status:** ✅ Fixed · 📝 Documented (not fixed) · ⬜ Open
+**Status:** 📝 Documented (not fixed) · ⬜ Open · ⬜ Missing (design gap)
 
 ---
 
@@ -29,10 +33,6 @@
 
 | ID | Title | Sev | Status |
 |----|-------|-----|--------|
-| D1 | Arrow-rotation guard never memoized | 🟡 | ✅ Fixed |
-| D2 | Arrow-rotation doc mismatch + dead locals | 🟡 | ✅ Fixed |
-| D4 | Home claim skipped when spawn cell is (0,0) | 🟠 | ✅ Fixed |
-| LOG | Per-tick `print` spam not gated by `showLogs` | 🟠 | ✅ Fixed |
 | D3 | Delayed 500 ms stake write clobbers claim / writes for dead player | 🟠 | 📝 Documented |
 | NET-1 | ClientID race — `sendData` can run with `clientID = undefined` | 🟠 | ⬜ Open |
 | NET-2 | clientID `0` (null display name) collides with "unclaimed" | 🟡 | ⬜ Open |
@@ -41,12 +41,12 @@
 | NET-5 | Death cloud cleanup is best-effort (stale ghost cells) | 🟡 | ⬜ Open |
 | NET-6 | Redundant simultaneous death-cleanup writes | 🟡 | ⬜ Open |
 | NET-7 | 6th+ player overwrites an active color slot | 🟠 | ⬜ Open |
-| NET-8 | Respawn cell can be stolen in the last 0.3 s window | 🟡 | ⬜ Open |
+| NET-8 | Respawn cell can be stolen in the last 0.1 s window | 🟡 | ⬜ Open |
 | DEAD-1 | `GridClaimer` single-player pipeline dead; `updateMiniMap` colors latently broken | 🟡 | ⬜ Open |
 | DEAD-2 | `UnionFindLoopDetection` empty stub component | 🟡 | ⬜ Open |
 | DEAD-3 | Dead legacy GPS fields in `LocationTracker` | 🟡 | ⬜ Open |
 | DEAD-4 | Dead helpers `coordsToIndex` / `indexToCoords` / `lastIdx` | 🟡 | ⬜ Open |
-| TD-1 | `getData()` now called every tick for nothing (post-LOG) | 🟡 | ⬜ Open |
+| TD-1 | `getData()` called every tick for nothing (post-LOG) | 🟡 | ⬜ Open |
 | TD-2 | FNV hash + coord conversion + constants duplicated across files | 🟡 | ⬜ Open |
 | TD-3 | `as any` reach into SyncKit `spawnedInstances` internals | 🟠 | ⬜ Open |
 | TD-4 | `updateHUDText` misleading legacy param names | 🟡 | ⬜ Open |
@@ -54,7 +54,6 @@
 | TD-6 | `getCellDataReadOnly` has no cache TTL (unlike `getData`/`getMiniMapCells`) | 🟡 | ⬜ Open |
 | TD-7 | Magic numbers (delays, TTL, `scale/6`) uncentralized | 🟡 | ⬜ Open |
 | TD-8 | Non-strict TS: `map.has()`→`map.get()` deref without narrowing | 🟡 | ⬜ Open |
-| TD-9 | Stale `spawnedInstances` refs linger after self-death | 🟡 | ⬜ Open |
 | FEAT-1 | No kill on entering enemy **claimed** territory | — | ⬜ Missing |
 | FEAT-2 | No score / leaderboard | — | ⬜ Missing |
 | FEAT-3 | No kill feed / death announcement | — | ⬜ Missing |
@@ -62,50 +61,18 @@
 
 ---
 
-## Resolved this session (2026-07-09)
-
-### ✅ D1 — Arrow-rotation guard never memoized
-`PlayerVisuals.onUpdate()` compared `previousRotation != yawRadians` but never wrote
-`previousRotation`, so the "rotate only when heading changed" guard was inert (arrow
-rebuilt its quaternion nearly every frame; and if yaw were ever exactly `0` it wouldn't
-update). **Fix:** added `this.previousRotation = yawRadians;` inside the guard.
-
-### ✅ D2 — Arrow-rotation doc mismatch + dead locals
-The arrow math was correct on-device, but `CLAUDE.md` described a different formula
-(`-yawRads + π/2` on a `ScreenTransform`) than the code runs
-(`quat.fromEulerAngles(0, 0, yawRads)` on a 3D `Transform`). **Fix:** corrected both
-`CLAUDE.md` passages (§"Rotation" and §"Direction arrow") and tidied `rotatePlayerArrow`
-(removed dead `yawDegrees`, inlined redundant `adjustedRads`). No behavior change.
-
-### ✅ D4 — Home claim skipped when spawn cell is (0,0)
-`PlayerVisuals.prevGridPos` initialized to `(0,0)`; a player whose first grid cell was
-literally `(0,0)` got `isInSameCell → true` on the first ready tick, so the `firstClaim`
-home claim never fired until they moved. **Fix:** initializer is now the out-of-range
-sentinel `(-1,-1)` (no in-bounds cell is negative). Respawn path is unaffected — it
-re-syncs `prevGridPos` explicitly.
-
-### ✅ LOG — Per-tick logging not gated
-`showLogs` defaulted `true` and many hot-path `print`s ignored it entirely (`getData`
-every tick; `getCellProperty` ×25/tick from the minimap; `onAnyChange`; `updateCellValue`)
-— ~100+ prints/sec on-device. **Fix:** each active class got a `showLogs`-gated
-`private log(msg)` helper; all ~90 `print(` call sites route through it; `showLogs` is now
-an `@input boolean = false` per file (Networker, PlayerVisuals, LocationTracker) — off by
-default, toggle in the Inspector. `GridClaimer` (dead code) left untouched. **New logging
-must use `this.log(...)`, not `print(...)`.**
-
----
-
 ## Open defects
 
 ### 📝 D3 — Delayed 500 ms stake write clobbers a completed claim / writes for a dead player
 - **Sev:** 🟠 Medium · **Location:** `Networker.sendData()`, enemy-stake branch,
-  `delayedWrite.reset(0.5)` (~L413, as of 2026-07-09).
+  `delayedWrite.reset(0.5)`.
 - **What/why:** When you step onto a cell staked by *another* player, the cell is pushed to
   `stakeList`, cached in `localCellState`, and given a stake visual **immediately**, but the
   cloud write is deferred 500 ms. The delay is intentional — it makes our stake land in the
   cloud *after* the killed player's `handlePlayerDeath` death-clear, so our stake wins the
   race instead of being erased. The closure captures the cell coords/value with **no
-  cancellation**.
+  cancellation**. (The one-shot event is now `removeEvent`'d after firing, but that only
+  bounds event accumulation — it does not cancel the pending write.)
 - **Impact / repro:** (1) If you loop back to your own claim within 500 ms,
   `addStakedRegionToClaim` converts that cell to a claim (`vec2(clientID, 0)`) and spawns a
   claim visual, then the late callback overwrites the cloud cell back to a stake — the cell
@@ -122,7 +89,8 @@ must use `this.log(...)`, not `print(...)`.**
 - **Impact:** If the instantiator becomes ready first, the position loop starts before
   `clientID`/`playerID` are assigned. A cell-change in that window calls
   `sendData(undefined, …)`, writing `vec2(NaN, 0)` to the cloud and selecting a null prefab
-  (`getClaimVolumeFromPlayerID(undefined) → null`) for the home claim.
+  (`getClaimVolumeFromPlayerID(undefined) → null`) for the home claim, which then throws in
+  `Instantiator.instantiate` on `prefab.name`.
 - **Fix hint:** Gate the position loop on both readiness signals (only start once
   `clientID` is set), or early-return in `sendData`/`handleRespawnCountdown` while
   `clientID == null`.
@@ -138,8 +106,8 @@ must use `this.log(...)`, not `print(...)`.**
 
 ### NET-3 — Conversion / interior-fill chains continue after death
 - **Sev:** 🟠 Medium · **Location:** `Networker.convertStakesSequentially()` (40 ms chain,
-  `reset(0.04)` ~L688) and `claimInteriorCellsSequentially()` (50 ms chain, `reset(0.05)`
-  ~L786). Neither checks `isAlive`.
+  `reset(0.04)`) and `claimInteriorCellsSequentially()` (50 ms chain, `reset(0.05)`). Neither
+  checks `isAlive`.
 - **Impact:** If a death RPC arrives mid-conversion, `handlePlayerDeath` tears down state and
   visuals, but the in-flight `DelayedCallbackEvent` chain keeps spawning claim visuals and
   writing cells for the dead player until it drains. A chain still running when the player
@@ -182,10 +150,10 @@ must use `this.log(...)`, not `print(...)`.**
   No hard cap enforces ≤5.
 - **Fix hint:** Enforce a 5-player cap (reject/limit join), or extend the slot scheme.
 
-### NET-8 — Respawn cell can be stolen in the last 0.3 s window
+### NET-8 — Respawn cell can be stolen in the last 0.1 s window
 - **Sev:** 🟡 Low · **Location:** `LocationTracker.handleRespawnCountdown()` — the read
   (`getCellDataReadOnly`) and the respawn `sendData` are one tick apart.
-- **Impact:** If an enemy claims the respawn cell in the 0.3 s between the final "open
+- **Impact:** If an enemy claims the respawn cell in the 0.1 s between the final "open
   ground" check and the respawn, the forced home claim silently overwrites their claim.
   Related: the respawning player's color can change if another player grabbed their freed
   slot during the dead window (see `respawn()` → `assignAndWritePlayerID`).
@@ -217,26 +185,25 @@ must use `this.log(...)`, not `print(...)`.**
 
 ### DEAD-3 — Dead legacy GPS fields in `LocationTracker`
 - **Sev:** 🟡 Low · **Location:** `LocationTracker.ts` — `latitude`, `longitude`, `altitude`,
-  `horizontalAccuracy`, `verticalAccuracy`, `timestamp`, `locationSource` (~L9-15),
-  `repeatUpdateUserLocation` (~L36), `locationService` (~L38), `hasStarted` (~L39). None are
-  read/written; leftovers from a GPS-based prototype.
+  `horizontalAccuracy`, `verticalAccuracy`, `timestamp`, `locationSource`,
+  `repeatUpdateUserLocation`, `locationService`, `hasStarted`. None are read/written;
+  leftovers from a GPS-based prototype.
 - **Fix hint:** Remove all ten fields.
 
 ### DEAD-4 — Dead helpers `coordsToIndex` / `indexToCoords` / `lastIdx`
-- **Sev:** 🟡 Low · **Location:** `Networker.ts` — `lastIdx` (~L35), `coordsToIndex()`
-  (~L513), `indexToCoords()` (~L518). Never called (the grid is a keyed `Map`, not a flat
-  index).
+- **Sev:** 🟡 Low · **Location:** `Networker.ts` — `lastIdx`, `coordsToIndex()`,
+  `indexToCoords()`. Never called (the grid is a keyed `Map`, not a flat index).
 - **Fix hint:** Remove.
 
 ---
 
 ## Tech debt / antipractices
 
-### TD-1 — `getData()` is now called every tick for nothing
+### TD-1 — `getData()` is called every tick for nothing
 - **Sev:** 🟡 Low · **Location:** `LocationTracker` position loop calls
-  `Networker.getData(clientID, x, y)` every 0.3 s (~L121). Its return value's only consumer
-  was a debug `print`, now gated off by the LOG fix. Its `ID` parameter is unused inside the
-  body. So the call is pure per-tick overhead post-LOG.
+  `Networker.getData(clientID, x, y)` every 0.1 s (alive branch). Its return value's only
+  consumer is a `this.log(...)` (gated off by default), and its `ID` parameter is unused
+  inside the body. So the call is pure per-tick overhead.
 - **Fix hint:** Delete the per-tick `getData` call (and the unused `ID` param), or keep it
   only inside an `if (showLogs)` guard.
 
@@ -250,12 +217,18 @@ must use `this.log(...)`, not `print(...)`.**
 - **Fix hint:** Extract a shared `GridMath`/`PlayerId` util module.
 
 ### TD-3 — `as any` reach into SyncKit `spawnedInstances`
-- **Sev:** 🟠 Medium · **Location:** `PlayerVisuals.destroyPlayerVisuals()` —
-  `(this.networkedInstantiator as any).spawnedInstances` (~L238).
+- **Sev:** 🟠 Medium · **Location:** `PlayerVisuals.destroyPlayerVisuals()` and
+  `pruneOnDestroy()` — `(this.networkedInstantiator as any).spawnedInstances`.
 - **Risk:** Depends on a private SpectaclesSyncKit map; a SDK update can silently break
   remote-player visual cleanup (dead players' cubes would persist on other devices).
+- **Partially mitigated:** the map is now pruned on destroy (`destroyPlayerVisuals` deletes
+  matched/stale entries; each spawn registers `networkRoot.onDestroyed` to delete its own
+  entry) and reads are wrapped in try/catch — but the code still reaches `spawnedInstances`
+  via `as any`, so the dependency on SDK internals remains.
 - **Fix hint:** Track spawned objects ourselves (keyed by clientID/prefab) instead of reading
-  SDK internals, or use a supported public API if one exists.
+  SDK internals, or use a supported public API if one exists. Note: the SDK exposes no spawn
+  event for *remote* spawns, so a fully self-tracked map cannot see other clients' objects —
+  the scan is currently the only way to find them.
 
 ### TD-4 — `updateHUDText` misleading legacy param names
 - **Sev:** 🟡 Low · **Location:** `PlayerVisuals.updateHUDText(lat, long, gridx, gridy, …)`
@@ -265,7 +238,7 @@ must use `this.log(...)`, not `print(...)`.**
   `latOff/longOff`.
 
 ### TD-5 — `Array(25).fill(vec2.zero())` shares one instance
-- **Sev:** 🟡 Low · **Location:** `Networker.getMiniMapCells()` not-ready return (~L280) — all
+- **Sev:** 🟡 Low · **Location:** `Networker.getMiniMapCells()` not-ready return — all
   25 slots reference the same `vec2`. Harmless today (read-only), a latent aliasing bug if a
   consumer ever mutates a cell.
 - **Fix hint:** `Array.from({length:25}, () => vec2.zero())`.
@@ -273,16 +246,15 @@ must use `this.log(...)`, not `print(...)`.**
 ### TD-6 — `getCellDataReadOnly` has no cache TTL
 - **Sev:** 🟡 Low · **Location:** `Networker.getCellDataReadOnly()` returns any
   `localCellState` entry regardless of age, unlike `getData`/`getMiniMapCells` (5 s TTL).
-  Currently safe because `localCellState` is cleared on death and not repopulated while dead
-  (its only caller is the respawn read), but the inconsistent contract will mislead future
-  callers.
+  Currently safe because `localCellState` is cleared on death (its main caller is the respawn
+  read, which runs while dead), but the inconsistent contract will mislead future callers.
 - **Fix hint:** Apply the same 5 s TTL, or document the intentional difference at the call
   site.
 
 ### TD-7 — Magic numbers uncentralized
 - **Sev:** 🟡 Low · **Location:** conversion delay `0.04`, interior delay `0.05`, delayed
-  stake `0.5`, cache TTL `5000`, visual drop `scale/6`, respawn `3.0`/`0.30`. Scattered as
-  literals.
+  stake `0.5`, cache TTL `5000`, visual drop `scale/6`, poll `0.10`, respawn `3.0`/`0.10`.
+  Scattered as literals.
 - **Fix hint:** Promote to named constants (some already are in `CLAUDE.md`'s constants
   table — mirror them in code).
 
@@ -292,14 +264,6 @@ must use `this.log(...)`, not `print(...)`.**
   typed `vec2 | undefined`; only safe because strict null checks are off.
 - **Fix hint:** Bind the `get()` result to a local and null-check it (works regardless of TS
   strictness).
-
-### TD-9 — Stale `spawnedInstances` refs after self-death
-- **Sev:** 🟡 Low · **Location:** On self-death, `DestroyAllClaims/Stakes` destroy the local
-  objects and clear the tracking arrays, but the now-invalid `SceneObject` refs remain in the
-  Instantiator's `spawnedInstances`. Harmless in practice (self path never calls
-  `destroyPlayerVisuals`), but would bite if that ever changed.
-- **Fix hint:** No action required unless the self-death teardown path changes; noted for
-  awareness.
 
 ---
 
@@ -313,7 +277,7 @@ must use `this.log(...)`, not `print(...)`.**
   subscribed `gridCells`, or track a dedicated `StorageProperty<number>` per player.
 - **FEAT-3 — Kill feed / death announcement:** deaths only `this.log`. The
   `playerDeathEvent` payload already carries `vec2(deadPlayerID, killerID)`
-  (`killerID === deadPlayerID` ⇒ voluntary leave).
+  (`killerID === deadPlayerID` ⇒ voluntary leave or out-of-bounds death).
 - **FEAT-4 — Sub-cell minimap indicator:** the minimap snaps on cell-boundary crossings; a
   fractional-position marker would smooth it.
 
@@ -323,12 +287,11 @@ must use `this.log(...)`, not `print(...)`.**
 
 | Topic | `CLAUDE.md` section |
 |-------|---------------------|
-| Position loop, respawn countdown, IDs | "Script Architecture → `LocationTracker.ts`" |
-| Cell format, `sendData` decision tree, death handling, respawn | "`Networker.ts`" |
+| Position loop, respawn countdown, out-of-bounds death, IDs | "Script Architecture → `LocationTracker.ts`" |
+| Cell format, `sendData` decision tree, death handling, respawn, bounds | "`Networker.ts`" |
 | Stake→claim conversion, interior fill | "Stake → claim conversion pipeline" / "Interior fill algorithm" |
 | `currentValue` vs `currentOrPendingValue` gotcha | "Networking Architecture → Reading lazily-subscribed properties" |
 | Visual spawning, minimap, arrow, HUD, respawn text | "`PlayerVisuals.ts`" |
 | Player identity, color cycling | "Player Identity & Color Cycling" |
-| Prior resolved networking bugs (1–7) | "Frontend Networking — Resolved Bugs" |
 | Full open-issue prose | "Known Incomplete Areas" |
 | Submission blockers (IP, safety, metadata) | "Lens Publication — Known Submission Blockers" |

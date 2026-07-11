@@ -409,6 +409,7 @@ export class Networker extends BaseScriptComponent {
                 const delayedWrite = this.createEvent("DelayedCallbackEvent");
                 delayedWrite.bind(() => {
                     this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
+                    this.removeEvent(delayedWrite); // one-shot: drop it so events don't accumulate unbounded
                 });
                 delayedWrite.reset(0.5); // 500ms — enough for death-clear to propagate
             }
@@ -596,6 +597,23 @@ export class Networker extends BaseScriptComponent {
         this.log("NetworkerV2: Player " + this.clientID + " respawned");
     }
 
+    // True when (x, y) is a valid grid cell [0, height). Same predicate used by getMiniMapCells.
+    isInBounds(x: number, y: number): boolean {
+        return x >= 0 && x < this.height && y >= 0 && y < this.height;
+    }
+
+    // Kill the LOCAL player (e.g. they walked out of the arena). Robust regardless of
+    // whether sendEvent echoes to the local sender.
+    killLocalPlayer(): void {
+        if (!this.gridReady || !this.isAlive) return;
+        // Tell every other client to destroy our visuals, clear our cells, and free our color slot.
+        // onlySendRemote=true so the event does NOT loop back and double-run handlePlayerDeath locally.
+        this.gridSyncEntity.sendEvent(this.deathEventString, new vec2(this.clientID, this.clientID), true);
+        // Run our own teardown now (mirrors the onUserLeftSession path, which calls this directly).
+        this.handlePlayerDeath(this.clientID);
+        this.log("NetworkerV2: Player " + this.clientID + " died (left play area)");
+    }
+
     //function for returning to claimed region and adding staked region to claim
     addStakedRegionToClaim(realWorldCoords: vec3){
         // Prevent multiple bulk conversions from happening simultaneously
@@ -682,8 +700,9 @@ export class Networker extends BaseScriptComponent {
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
             delayedEvent.bind(() => {
-                // Continue to next stake after delay
+                // Continue to next stake after delay (creates the next event before we drop this one)
                 this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
+                this.removeEvent(delayedEvent); // one-shot: bound live events to ~1 per active chain
             });
             delayedEvent.reset(0.04); // 40ms delay per conversion
         } else {
@@ -780,8 +799,9 @@ export class Networker extends BaseScriptComponent {
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
             delayedEvent.bind(() => {
-                // Continue to next cell after delay
+                // Continue to next cell after delay (creates the next event before we drop this one)
                 this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
+                this.removeEvent(delayedEvent); // one-shot: bound live events to ~1 per active chain
             });
             delayedEvent.reset(0.05); // 50ms delay per claim
         } else {
