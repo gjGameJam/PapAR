@@ -230,6 +230,55 @@ export class PlayerVisuals extends BaseScriptComponent {
         });
     }
     
+    // ── SDK-internals adapter (TD-3) ────────────────────────────────────────────────────────
+    // The Instantiator exposes no public way to enumerate spawned objects and fires no callback
+    // for REMOTE spawns, so destroying another player's visuals requires reaching its private
+    // `spawnedInstances`. These three helpers are the ONLY place that `as any` cast lives, and
+    // they tolerate both representations of the map:
+    //   • current SDK: declared `Map<string, NetworkRootInfo>` but entries are stored as plain
+    //     OBJECT properties (`map[id] = root`), never `.set()`; enumerate with `for..in`.
+    //   • hypothetical future SDK: a real Map used via `.set()/.forEach()/.delete()`.
+    // NOTE: do NOT branch on `instanceof Map` — the current map IS a Map instance yet holds its
+    // entries as own properties, so `.forEach()` would visit zero of them. Hence "for..in first,
+    // fall back to forEach only if for..in found nothing".
+
+    // Single audited access point. Returns null (with a loud log) if the SDK removed/renamed it.
+    private getSpawnedInstances(): any {
+        const inst = (this.networkedInstantiator as any).spawnedInstances;
+        if (!inst) {
+            this.log("PlayerVisuals: WARNING - Instantiator.spawnedInstances is missing (SDK changed?) — remote-player visual cleanup is disabled");
+            return null;
+        }
+        return inst;
+    }
+
+    // Iterate (networkId, networkRoot) pairs across either representation. Safe to delete the
+    // current key from within `cb` (true for both for..in and Map.forEach).
+    private forEachSpawnedInstance(cb: (networkId: string, networkRoot: any) => void): void {
+        const inst = this.getSpawnedInstances();
+        if (!inst) return;
+        let sawAny = false;
+        for (const networkId in inst) {
+            sawAny = true;
+            cb(networkId, inst[networkId]);
+        }
+        if (!sawAny && typeof inst.forEach === "function") {
+            inst.forEach((networkRoot: any, networkId: string) => cb(networkId, networkRoot));
+        }
+    }
+
+    // Delete an entry from either representation.
+    private deleteSpawnedInstance(networkId: string): void {
+        const inst = this.getSpawnedInstances();
+        if (!inst) return;
+        if (Object.prototype.hasOwnProperty.call(inst, networkId)) {
+            delete inst[networkId];
+        } else if (typeof inst.delete === "function") {
+            inst.delete(networkId);
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────────────────────────
+
     // Keep the Instantiator's spawnedInstances map from accumulating destroyed holders:
     // when this locally-spawned object is destroyed (locally OR remotely), drop its entry.
     // onDestroyed (NetworkRootInfo) fires for both destruction paths, so this also covers
@@ -237,8 +286,7 @@ export class PlayerVisuals extends BaseScriptComponent {
     private pruneOnDestroy(networkRoot: any): void {
         if (!networkRoot || !networkRoot.onDestroyed) return;
         networkRoot.onDestroyed.add(() => {
-            const inst = (this.networkedInstantiator as any).spawnedInstances;
-            if (inst) delete inst[networkRoot.networkId];
+            this.deleteSpawnedInstance(networkRoot.networkId);
         });
     }
 
@@ -252,34 +300,28 @@ export class PlayerVisuals extends BaseScriptComponent {
     destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number): void {
         const visualID = getPlayerVisualID(clientID);
         const prefix = "P" + visualID;
-        const instances = (this.networkedInstantiator as any).spawnedInstances;
-        if (!instances) {
-            this.log("PlayerVisuals: spawnedInstances not accessible, cannot destroy remote player visuals");
-            return;
-        }
         const toDestroy: { id: string; obj: SceneObject }[] = [];
-        for (const networkId in instances) {
-            const networkRoot = instances[networkId];
+        this.forEachSpawnedInstance((networkId, networkRoot) => {
             // Drop obviously-stale entries (already-destroyed holder / missing store) as we go.
             if (!networkRoot || !networkRoot.dataStore || !networkRoot.sceneObject) {
-                delete instances[networkId];
-                continue;
+                this.deleteSpawnedInstance(networkId);
+                return;
             }
             let prefabName = "";
             try {
                 prefabName = networkRoot.dataStore.getString("_prefab_name");
             } catch (e) {
                 // Reading a deleted realtime store — the entry is stale; prune and skip.
-                delete instances[networkId];
-                continue;
+                this.deleteSpawnedInstance(networkId);
+                return;
             }
             if (prefabName && prefabName.startsWith(prefix)) {
                 toDestroy.push({ id: networkId, obj: networkRoot.sceneObject });
             }
-        }
+        });
         for (const entry of toDestroy) {
             if (entry.obj) entry.obj.destroy();
-            delete instances[entry.id]; // prune so this entry is never re-scanned on a later death
+            this.deleteSpawnedInstance(entry.id); // prune so this entry is never re-scanned on a later death
         }
         this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
     }

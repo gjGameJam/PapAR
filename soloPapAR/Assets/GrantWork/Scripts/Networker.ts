@@ -39,6 +39,12 @@ export class Networker extends BaseScriptComponent {
     private firstClaim = true; //flag to create home claim on start
     
     private isPerformingBulkConversion = false; //flag to prevent multiple bulk conversions
+
+    // NET-3/D3: monotonic counter bumped on death and at conversion-start. In-flight conversion
+    // chains and the delayed 500ms stake write capture it and self-abort when it changes, so a
+    // death (or a superseding conversion) invalidates work scheduled by a prior life/batch —
+    // even across a respawn, where isAlive flips back to true.
+    private conversionEpoch = 0;
     
     //player visuals script for minimap and world objects
     @input
@@ -245,10 +251,14 @@ export class Networker extends BaseScriptComponent {
                 return;
             }
         }
-        // All 5 slots occupied (6+ players): hash fallback
+        // NET-7: All 5 slots occupied (6+ players, none ours). Do NOT overwrite an active player's
+        // slot — that corrupts their color mapping on every client. Instead take a shared fallback
+        // color locally and skip the cloud write. getPlayerVisualID() derives the same
+        // (clientID % 5) || 5 for any player with no slot, so remote coloring stays consistent.
+        // Known tradeoff (accepted): this 6th+ player shares a color with an active player, and their
+        // death can destroy the co-colored player's cubes on remote clients. No slot data is corrupted.
         this.playerID = (this.clientID % 5) || 5;
-        this.playerColorSlots[this.playerID - 1].setPendingValue(new vec2(this.clientID, this.playerID));
-        this.log("NetworkerV2: All slots full — hash fallback playerID=" + this.playerID);
+        this.log("NetworkerV2: All slots full — shared fallback color playerID=" + this.playerID + " (no slot write)");
     }
 
     getPlayerVisualID(clientID: number): number {
@@ -405,10 +415,19 @@ export class Networker extends BaseScriptComponent {
                     this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell
                 );
 
-                // Delayed cloud write wins the race against the dead player's death-clear writes
+                // Delayed cloud write wins the race against the dead player's death-clear writes.
+                // D3: capture the epoch now and only write if it's unchanged when the timer fires.
+                // A conversion (we looped back to our claim) or our own death bumps the epoch, so a
+                // stale write can't revert a just-converted claim back to a stake, nor write a stake
+                // for a now-dead player. If neither happened, the epoch matches and the write proceeds.
+                const writeEpoch = this.conversionEpoch;
                 const delayedWrite = this.createEvent("DelayedCallbackEvent");
                 delayedWrite.bind(() => {
-                    this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
+                    if (this.conversionEpoch === writeEpoch) {
+                        this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
+                    } else {
+                        this.log("NetworkerV2: dropped stale delayed stake write at (" + xpos + ", " + zpos + ") — epoch changed");
+                    }
                     this.removeEvent(delayedWrite); // one-shot: drop it so events don't accumulate unbounded
                 });
                 delayedWrite.reset(0.5); // 500ms — enough for death-clear to propagate
@@ -540,6 +559,11 @@ export class Networker extends BaseScriptComponent {
             this.isAlive = false;
             this.firstClaim = true;
             this.stakeList = [];
+            // NET-3: invalidate any in-flight conversion/interior chain and pending delayed stake
+            // write scheduled by this (now-dead) life, and clear the mutex so it can't linger while
+            // dead (respawn() also clears it, but clearing here keeps it consistent on death alone).
+            this.conversionEpoch++;
+            this.isPerformingBulkConversion = false;
             this.localCellState.clear();
             this.localCacheTimestamps.clear();
             // spawnedClaims/spawnedStakes track only locally-spawned objects, so these are the right teardown paths
@@ -629,25 +653,30 @@ export class Networker extends BaseScriptComponent {
         }
         
         this.isPerformingBulkConversion = true; // Set flag to prevent re-entry
+        // NET-3/D3: mark a new batch. Bumping here cancels any still-pending delayed stake write
+        // (D3) — every staked cell is in stakeList and thus in this conversion, so those writes
+        // must not fire — and stamps this chain so a later death aborts it.
+        this.conversionEpoch++;
+        const epoch = this.conversionEpoch;
         this.log("NetworkerV2: BULK CONVERSION START - Converting " + numOfStakes + " stakes to claims with proper cloud storage");
-        
+
         // Destroy stake visuals immediately
         this.PlayerVisuals.DestroyAllStakes();
-        
+
         // Create copy of stakeList for processing
         const stakesToConvert = [...this.stakeList];
-        
+
         // Clear the stake list early to prevent new stakes during conversion
         this.stakeList = [];
         this.log("NetworkerV2: stakeList cleared, length now: " + this.stakeList.length);
-        
+
         // Start sequential conversion with proper cloud storage callbacks
-        this.convertStakesSequentially(stakesToConvert, 0, realWorldCoords, () => {
+        this.convertStakesSequentially(stakesToConvert, 0, realWorldCoords, epoch, () => {
             this.log("NetworkerV2: ✅ ALL STAKES SUCCESSFULLY CONVERTED TO CLOUD STORAGE!");
-            
+
             // Find and fill enclosed region after successful conversion
-            this.findAndFillEnclosedRegion(stakesToConvert, realWorldCoords);
-            
+            this.findAndFillEnclosedRegion(stakesToConvert, realWorldCoords, epoch);
+
             // Reset the conversion flag
             this.isPerformingBulkConversion = false;
             this.log("NetworkerV2: 🔄 Bulk conversion flag RESET - Normal operations resumed");
@@ -655,21 +684,27 @@ export class Networker extends BaseScriptComponent {
     }
     
     // New method: Sequential stake conversion with proper cloud storage callbacks
-    private convertStakesSequentially(stakes: vec2[], index: number, realWorldCoords: vec3, onComplete: () => void) {
+    private convertStakesSequentially(stakes: vec2[], index: number, realWorldCoords: vec3, epoch: number, onComplete: () => void) {
+        // NET-3: abort a stale chain (player died, or a newer batch superseded this one). Return
+        // WITHOUT calling onComplete so a dead/superseded life never fills the interior.
+        if (this.conversionEpoch !== epoch) {
+            this.log("NetworkerV2: stake conversion chain aborted (epoch changed) at index " + index);
+            return;
+        }
         if (index >= stakes.length) {
             this.log("NetworkerV2: Sequential conversion completed for all " + stakes.length + " stakes");
             onComplete();
             return;
         }
-        
+
         const stake = stakes[index];
         this.log("NetworkerV2: [" + (index + 1) + "/" + stakes.length + "] Converting stake at (" + stake.x + ", " + stake.y + ")");
-        
+
         const cellProp = this.getCellProperty(stake.x, stake.y);
         if (!cellProp) {
             this.log("NetworkerV2: ERROR - Could not get cell property for stake conversion");
             // Continue with next stake
-            this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
+            this.convertStakesSequentially(stakes, index + 1, realWorldCoords, epoch, onComplete);
             return;
         }
         
@@ -701,84 +736,173 @@ export class Networker extends BaseScriptComponent {
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
             delayedEvent.bind(() => {
                 // Continue to next stake after delay (creates the next event before we drop this one)
-                this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
+                this.convertStakesSequentially(stakes, index + 1, realWorldCoords, epoch, onComplete);
                 this.removeEvent(delayedEvent); // one-shot: bound live events to ~1 per active chain
             });
             delayedEvent.reset(0.04); // 40ms delay per conversion
         } else {
             this.log("  ❌ CONVERSION FAILED: Could not convert stake (" + stake.x + ", " + stake.y + ")");
             // Continue to next stake even on failure
-            this.convertStakesSequentially(stakes, index + 1, realWorldCoords, onComplete);
+            this.convertStakesSequentially(stakes, index + 1, realWorldCoords, epoch, onComplete);
         }
     }
     
-    //main function for filling loop of cells
-    findAndFillEnclosedRegion(loop: vec2[], realWorldCoords: vec3) {
-        //calculate edges of loop
-        const edges = this.getLoopEdges(loop);
-        
-        //start the mins at infinity and maxes at -infinity
+    // Main function for filling the loop of cells.
+    //
+    // NET-4: enclosure on a discrete grid is a CONNECTIVITY problem, not a ray-cast/crossing-parity
+    // one (the old point-in-polygon `isInLoop` treated cells as idealized points and missed squares
+    // beside diagonal edges). Instead: build a barrier of cells the fill can't cross, flood the
+    // EXTERIOR with a 4-connected BFS seeded outside the loop, and claim every in-bbox cell the flood
+    // can't reach. This is the standard "flood the ocean, capture what it can't reach" technique.
+    findAndFillEnclosedRegion(loop: vec2[], realWorldCoords: vec3, epoch: number) {
+        // A loop needs at least a few cells to enclose anything.
+        if (loop.length < 4) {
+            return;
+        }
+
+        // Bounding box of the stake trail.
         let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-        
-        //iterate over cells in the stake loop and update smallest & largest values
         for (const cell of loop) {
             minX = Math.min(minX, cell.x);
             maxX = Math.max(maxX, cell.x);
             minZ = Math.min(minZ, cell.y);
             maxZ = Math.max(maxZ, cell.y);
         }
-        
-        // Early return if the bounding box has no interior
+
+        // A bbox that is a single cell wide/tall can't enclose anything.
         if (maxX - minX <= 1 || maxZ - minZ <= 1) {
             this.log("NetworkerV2: findAndFillEnclosedRegion: stake bounding box has no interior, returning early.");
             return;
         }
-        
-        // Collect interior cells first
-        const interiorCells: vec2[] = [];
-        
-        //loop from smallest x & y to largest (encompass rectangle spanning the entire loop)
-        for (let x = minX + 1; x < maxX; x++) {
-            for (let z = minZ + 1; z < maxZ; z++) {
-                const gridPos = new vec2(x, z);
-                
-                // Check if cell is not on the loop boundary and is inside the loop
-                if (!loop.some(v => this.vec2Equals(v, gridPos)) && this.isInLoop(x, z, edges)) {
-                    interiorCells.push(gridPos);
+
+        // Cells are in [0, height); (x, z) -> unique integer key (no per-cell string allocation).
+        const key = (x: number, z: number) => x * this.height + z;
+
+        const barrier = new Set<number>();
+        const addBarrier = (x: number, z: number) => {
+            if (this.isInBounds(x, z)) {
+                barrier.add(key(x, z));
+            }
+        };
+
+        // (a) The trail itself, DENSIFIED with an integer (Bresenham) line between consecutive cells,
+        // so a fast/diagonal step that crosses >1 cell in a single 0.1s tick can't leave a hole the
+        // exterior flood leaks through. Added UNCONDITIONALLY (never gated on a cell read) so the seal
+        // always holds. No last->first edge — the loop closes through owned territory (added in (b)).
+        for (let i = 0; i < loop.length; i++) {
+            addBarrier(loop[i].x, loop[i].y);
+            if (i + 1 < loop.length) {
+                const seg = this.bresenhamLine(loop[i], loop[i + 1]);
+                for (const c of seg) {
+                    addBarrier(c.x, c.y);
                 }
             }
         }
-        
+
+        // (b) My existing claimed cells within the bbox. These seal the gap between the trail's first
+        // and last cells through real territory (Paper.io: boundary = existing territory + new trail).
+        // Enemy-owned cells (.x !== clientID) are intentionally NOT barriers, so an enemy cell trapped
+        // inside the loop is unreachable by the flood -> captured and overwritten to me.
+        for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
+                if (this.isInBounds(x, z) && this.getCellDataReadOnly(x, z).x === this.clientID) {
+                    barrier.add(key(x, z));
+                }
+            }
+        }
+
+        // (c) 4-connected exterior flood over the bbox expanded by one cell (a guaranteed-outside
+        // ring). 4-connectivity is REQUIRED so a diagonal (8-connected) barrier seals: the flood can't
+        // slip through the corner-touch between two diagonally adjacent barrier cells. Out-of-grid
+        // neighbors count as exterior, so loops hugging the arena edge fill correctly (the arena edge
+        // is open, not a wall — consistent with out-of-bounds = death).
+        const loX = minX - 1, hiX = maxX + 1;
+        const loZ = minZ - 1, hiZ = maxZ + 1;
+        const inRegion = (x: number, z: number) => x >= loX && x <= hiX && z >= loZ && z <= hiZ;
+
+        const exterior = new Set<number>();
+        const queue: vec2[] = [];
+        const seed = (x: number, z: number) => {
+            if (!inRegion(x, z) || !this.isInBounds(x, z)) return;
+            const k = key(x, z);
+            if (barrier.has(k) || exterior.has(k)) return;
+            exterior.add(k);
+            queue.push(new vec2(x, z));
+        };
+
+        // Seed every in-bounds, non-barrier cell that touches the region border or the grid edge
+        // (i.e. has an out-of-region or out-of-grid 4-neighbor) — those are guaranteed exterior.
+        for (let x = loX; x <= hiX; x++) {
+            for (let z = loZ; z <= hiZ; z++) {
+                if (!this.isInBounds(x, z)) continue;
+                const onRegionBorder = x === loX || x === hiX || z === loZ || z === hiZ;
+                const touchesGridEdge = !this.isInBounds(x + 1, z) || !this.isInBounds(x - 1, z)
+                                     || !this.isInBounds(x, z + 1) || !this.isInBounds(x, z - 1);
+                if (onRegionBorder || touchesGridEdge) {
+                    seed(x, z);
+                }
+            }
+        }
+
+        // BFS: 4-connected, staying within the region, never crossing a barrier.
+        let head = 0;
+        while (head < queue.length) {
+            const cur = queue[head++];
+            seed(cur.x + 1, cur.y);
+            seed(cur.x - 1, cur.y);
+            seed(cur.x, cur.y + 1);
+            seed(cur.x, cur.y - 1);
+        }
+
+        // (d) Interior = in-bounds bbox cells that are neither barrier nor exterior. Iterate the FULL
+        // bbox: in concave loops a non-trail cell on the bbox border can be interior, and the flood
+        // has already marked it exterior if it was actually reachable from outside.
+        const interiorCells: vec2[] = [];
+        for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
+                if (!this.isInBounds(x, z)) continue;
+                const k = key(x, z);
+                if (!barrier.has(k) && !exterior.has(k)) {
+                    interiorCells.push(new vec2(x, z));
+                }
+            }
+        }
+
         if (interiorCells.length === 0) {
             this.log("NetworkerV2: No interior cells found to claim");
             return;
         }
-        
+
         this.log("NetworkerV2: Found " + interiorCells.length + " interior cells to claim with cloud storage");
-        
-        // Convert interior cells using cloud storage (similar to stake conversion)
-        this.claimInteriorCellsSequentially(interiorCells, 0, realWorldCoords, () => {
+
+        // Convert interior cells using cloud storage (unchanged async chain + epoch abort guard).
+        this.claimInteriorCellsSequentially(interiorCells, 0, realWorldCoords, epoch, () => {
             this.log("NetworkerV2: ✅ All interior cells successfully claimed in cloud storage!");
-            this.log("NetworkerV2: Scanline region fill complete!");
+            this.log("NetworkerV2: Flood-fill region fill complete!");
         });
     }
     
     // New method: Sequential interior cell claiming with proper cloud storage callbacks
-    private claimInteriorCellsSequentially(cells: vec2[], index: number, realWorldCoords: vec3, onComplete: () => void) {
+    private claimInteriorCellsSequentially(cells: vec2[], index: number, realWorldCoords: vec3, epoch: number, onComplete: () => void) {
+        // NET-3: abort a stale chain (player died, or a newer batch superseded this one).
+        if (this.conversionEpoch !== epoch) {
+            this.log("NetworkerV2: interior claim chain aborted (epoch changed) at index " + index);
+            return;
+        }
         if (index >= cells.length) {
             this.log("NetworkerV2: Sequential interior claiming completed for all " + cells.length + " cells");
             onComplete();
             return;
         }
-        
+
         const cell = cells[index];
         this.log("NetworkerV2: [" + (index + 1) + "/" + cells.length + "] Claiming interior cell at (" + cell.x + ", " + cell.y + ")");
-        
+
         const cellProp = this.getCellProperty(cell.x, cell.y);
         if (!cellProp) {
             this.log("NetworkerV2: ERROR - Could not get cell property for interior cell");
             // Continue with next cell
-            this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
+            this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, epoch, onComplete);
             return;
         }
         
@@ -800,46 +924,35 @@ export class Networker extends BaseScriptComponent {
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
             delayedEvent.bind(() => {
                 // Continue to next cell after delay (creates the next event before we drop this one)
-                this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
+                this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, epoch, onComplete);
                 this.removeEvent(delayedEvent); // one-shot: bound live events to ~1 per active chain
             });
             delayedEvent.reset(0.05); // 50ms delay per claim
         } else {
             this.log("  ❌ INTERIOR CLAIM FAILED: Could not claim cell (" + cell.x + ", " + cell.y + ")");
             // Continue to next cell even on failure
-            this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, onComplete);
+            this.claimInteriorCellsSequentially(cells, index + 1, realWorldCoords, epoch, onComplete);
         }
     }
     
-    // Convert loop to array of segments
-    getLoopEdges(loop: vec2[]): [number, number, number, number][] {
-        const edges: [number, number, number, number][] = [];
-        for (let i = 0; i < loop.length; i++) {
-            const x1 = loop[i].x;
-            const y1 = loop[i].y;
-            const secondCellIdx = (i + 1) % loop.length;
-            const x2 = loop[secondCellIdx].x;
-            const y2 = loop[secondCellIdx].y;
-            edges.push([x1, y1, x2, y2]);
+    // Integer (Bresenham) line between two grid cells, both endpoints inclusive. Used to densify the
+    // stake trail so a fast/diagonal step that skips cells still forms a connected barrier for the
+    // flood fill in findAndFillEnclosedRegion. A no-op (returns just the endpoints) for adjacent cells.
+    private bresenhamLine(a: vec2, b: vec2): vec2[] {
+        const points: vec2[] = [];
+        let x0 = Math.round(a.x), y0 = Math.round(a.y);
+        const x1 = Math.round(b.x), y1 = Math.round(b.y);
+        const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        while (true) {
+            points.push(new vec2(x0, y0));
+            if (x0 === x1 && y0 === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x0 += sx; }
+            if (e2 < dx) { err += dx; y0 += sy; }
         }
-        return edges;
-    }
-    
-    // Check if a point is inside the loop using ray casting
-    isInLoop(x: number, y: number, edges: [number, number, number, number][]): boolean {
-        let count = 0;
-        for (const [x1, y1, x2, y2] of edges) {
-            if ((y1 > y) !== (y2 > y)) {
-                const xCross = ((x2 - x1) * (y - y1)) / (y2 - y1) + x1;
-                if (xCross > x) count++;
-            }
-        }
-        return count % 2 == 1;
-    }
-    
-    // Helper function to compare vec2
-    vec2Equals(v1: vec2, v2: vec2): boolean {
-        return v1.x === v2.x && v1.y === v2.y;
+        return points;
     }
 
     // FNV-1a hash matching LocationTracker.getDeterministicPlayerId —

@@ -115,6 +115,16 @@ export class LocationTracker extends BaseScriptComponent {
             (id: number) => this.Networker.getPlayerVisualID(id)
         );
 
+        // NET-1: clientID is assigned in SessionController.notifyOnReady(), which is independent
+        // of the instantiator readiness that started this loop. If the instantiator became ready
+        // first, clientID is still undefined here — running sendData/getData/respawn now would
+        // write vec2(NaN, 0) to the cloud and select a null prefab. HUD + minimap above don't need
+        // clientID, so they keep updating; only the game-logic branch waits for it.
+        if (this.clientID == null) {
+            this.getNewPosition.reset(.10);
+            return;
+        }
+
         // While dead, run the respawn countdown instead of the normal stake/claim flow.
         if (this.Networker.gridReady && !this.Networker.isAlive){
             this.handleRespawnCountdown(gridPos, worldPosition);

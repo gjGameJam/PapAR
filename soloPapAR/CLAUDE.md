@@ -38,15 +38,15 @@ soloPapAR/
 
 ## Script Architecture
 
-Four active `BaseScriptComponent` classes. Each is attached to a scene object in the Lens Studio scene and wired together via `@input` fields.
+Three active `BaseScriptComponent` classes drive the game — `LocationTracker`, `Networker`, `PlayerVisuals` — each attached to a scene object and wired together via `@input` fields. Two more classes are documented below but inactive: `GridClaimer` (legacy, being phased out) and `UnionFindLoopDetection` (defunct stub).
 
 ### `LocationTracker.ts` — Entry point / position polling
 
 **Lifecycle**: `onAwake()` registers two independent callbacks:
-- `SessionController.notifyOnReady()` → sets `clientID` (from FNV-1a hash of display name) and calls `Networker.setPlayerID(clientID, users.length)`.
+- `SessionController.notifyOnReady()` → sets `clientID` (from FNV-1a hash of display name) and calls `Networker.setPlayerID(clientID)`.
 - `networkedInstantiator.notifyOnReady()` → starts the position loop by calling `getDeviceTrackerPosition()`.
 
-The two callbacks are independent — the position loop can start before `clientID` is set if the instantiator becomes ready before the session controller. In that case, `clientID` would be `undefined` for the first few `sendData()` calls, which is a latent race condition.
+The two callbacks are independent — the position loop can start before `clientID` is set if the instantiator becomes ready before the session controller. The loop guards against this: after updating the HUD and minimap (neither needs `clientID`), each tick early-returns (rescheduling itself) while `this.clientID == null`, so the stake/claim/respawn branch never runs — and `sendData()`/`getData()`/`handleRespawnCountdown()` are never called — until `clientID` is assigned.
 
 **Position loop**: A `DelayedCallbackEvent` that self-resets every **0.1 seconds**, continuously calling itself via `getNewPosition.reset(0.10)`. On each tick it:
 1. Reads `playerTracker.getTransform().getWorldPosition()` (AR world space, cm)
@@ -69,7 +69,7 @@ Note: `sendData()` performs its own independent read of the cell state — it do
 
 Because the countdown starts at 3.0s and decrements by `respawnTick` (0.1s) each tick, the display holds "3", "2", "1" for ~1s each (~3s total). While the timer is frozen the display switches to "Move to open ground" (on claimed/staked territory) or "Return to the play area" (outside the arena).
 
-**Player ID assignment**: On `SessionController.notifyOnReady()`, the local Snapchat display name is hashed via `getDeterministicPlayerId()` (FNV-1a) to produce `clientID`. `Networker.setPlayerID(clientID, sessionController.getUsers().length)` is called at this point — `playerNumber` is the count of users currently in the session.
+**Player ID assignment**: On `SessionController.notifyOnReady()`, the local Snapchat display name is hashed via `getDeterministicPlayerId()` (FNV-1a) to produce `clientID`, then `Networker.setPlayerID(clientID)` is called (single argument). The visual color index `playerID` is **not** derived from a user count — it's assigned separately by `Networker.assignAndWritePlayerID()` via color-slot scanning once the grid is ready.
 
 **Rotation**: `getDeviceTrackerRotation()` extracts yaw from the device quaternion using the standard formula and normalizes to `[0, 2π]`. This is called from `PlayerVisuals.onUpdate()` every frame.
 
@@ -92,7 +92,7 @@ Two additional listeners are registered in `onAwake()` unconditionally (before `
 #### Player ID fields
 
 - `clientID: number` — the FNV-1a hash of the Snapchat username (unique per player, persists across sessions)
-- `playerID: number` — visual color set index `1–5`; assigned by `assignAndWritePlayerID()` and stable for the lifetime of the cloud session
+- `playerID: number` — visual color set index `1–5`; assigned by `assignAndWritePlayerID()` and stable for the cloud session **unless the player dies, leaves, or respawns** (see Player color mapping below)
 
 #### Player color mapping
 
@@ -101,7 +101,7 @@ Five `StorageProperty<vec2>` slots (`playerColorSlot_1` through `playerColorSlot
 Assignment is handled by `assignAndWritePlayerID()`, called once `gridReady` is true and `clientID` is known (whichever happens last):
 1. **Rejoin detection**: scan all 5 slots for a matching `clientID`. If found, reuse the stored `playerID` — no cloud write needed. This guarantees a returning player always gets their original color.
 2. **New player**: scan for the first empty slot (`currentValue.x === 0`), starting from `clientID % 5` to reduce simultaneous-join collisions. Claim it with `setPendingValue(vec2(clientID, slotIdx+1))`.
-3. **All slots full** (6+ players): hash fallback `(clientID % 5) || 5`, overwrites that slot.
+3. **All slots full** (6+ players, none ours): take a **local-only** shared fallback color `(clientID % 5) || 5` and **do not write the cloud slot** — overwriting an occupied slot would corrupt that player's color mapping on every client. `getPlayerVisualID()` derives the same value for any player without a slot, so remote coloring stays consistent. Accepted tradeoff: this player shares a color with an active player, and because remote cleanup matches by the `"P{visualID}"` prefix, their death can also destroy the co-colored player's cubes on remote clients.
 
 **Slot freeing on death/leave**: `handlePlayerDeath` scans slots and writes `vec2.zero()` to the slot whose `currentValue.x` matches the dead player's clientID. This runs on all remaining clients simultaneously (idempotent). A player who fully **leaves** and rejoins later will no longer find their old slot and will be assigned a new one — intentional, since leaving is treated as permanent death. A **respawn** is different: `respawn()` immediately re-runs `assignAndWritePlayerID()`, which — because its empty-slot search is seeded from `clientID % 5` — usually re-claims the same slot (and therefore the same color) that death just freed. The color only changes if another player grabbed that slot during the dead window.
 
@@ -121,39 +121,44 @@ Called by `LocationTracker` each time the player enters a new cell. Guards: retu
 
 Decision tree (in order):
 1. **`firstClaim == true`**: Write `vec2(ID, 0)` as the home claim, spawn a claim visual, set `firstClaim = false`, return early.
-2. **`stakedBy != 0`**: The cell has someone's stake in it. Fire `playerDeathEvent` RPC with `vec2(stakedBy, clientID)` — killing whoever owns that stake.
+2. **`stakedBy != 0`**: The cell has someone's stake in it. Fire `playerDeathEvent` RPC with `vec2(stakedBy, clientID)` — killing whoever owns that stake (this fires *before* the self-check, so stepping on your own trail self-kills — see `KNOWN_ISSUES.md` NET-9). Then, **only if the stake is another player's** (`stakedBy !== clientID`), also claim the cell for yourself: push to `stakeList`, update `localCellState`, and spawn a stake visual **immediately**, but **defer the cloud write 500 ms** so it lands *after* the killed player's death-clear (otherwise their clear would erase it). That deferred write captures `conversionEpoch` and **no-ops if the epoch changed** — i.e. if you looped back to your own claim (a conversion) or died within the 500 ms — so it can't revert a just-converted claim back to a stake, nor write a stake for a dead player (fixes former defect D3).
 3. **`claimedBy == ID`**: Player stepped onto their own claimed territory. Call `addStakedRegionToClaim()` to convert the pending trail.
-4. **Else** (unclaimed or enemy-claimed): Push `vec2(xpos, zpos)` to `stakeList`, write `vec2(existingClaim, ID)` to cloud, spawn a stake visual.
+4. **Else** (unclaimed or enemy-claimed): Push `vec2(xpos, zpos)` to `stakeList`, write `vec2(existingClaim, ID)` to cloud (immediately), spawn a stake visual.
 
 #### Stake → claim conversion pipeline
 
 `addStakedRegionToClaim()` → guarded by `isPerformingBulkConversion` (boolean mutex).
 
 Steps:
-1. Set `isPerformingBulkConversion = true`
+1. Set `isPerformingBulkConversion = true`, **bump `conversionEpoch`**, and capture `const epoch = this.conversionEpoch`. (Bumping here also cancels any still-pending 500 ms enemy-stake write from this trail — every staked cell is in `stakeList` and thus in this batch, so those deferred writes must not fire.)
 2. Call `PlayerVisuals.DestroyAllStakes()` immediately
 3. Copy `stakeList` to `stakesToConvert`, then clear `stakeList`
-4. Call `convertStakesSequentially(stakesToConvert, 0, realWorldCoords, onComplete)`
-5. In `onComplete`: call `findAndFillEnclosedRegion(stakesToConvert, realWorldCoords)`, then set `isPerformingBulkConversion = false`
+4. Call `convertStakesSequentially(stakesToConvert, 0, realWorldCoords, epoch, onComplete)`
+5. In `onComplete`: call `findAndFillEnclosedRegion(stakesToConvert, realWorldCoords, epoch)`, then set `isPerformingBulkConversion = false`
 
-`convertStakesSequentially()` processes one stake per call. For each stake it:
+`convertStakesSequentially(stakes, index, realWorldCoords, epoch, onComplete)` processes one stake per call. For each stake it:
+- **Aborts (returns without calling `onComplete`) if `conversionEpoch !== epoch`** — a death or a newer batch superseded this chain; this stops it spawning claim visuals / writing cells for a dead or superseded life (fixes former defect NET-3).
 - Reads current cloud value, writes `vec2(clientID, 0)` (claim = self, stake = cleared)
 - Spawns a claim visual at that position
-- Sets a `DelayedCallbackEvent` of **40ms** before processing the next stake
+- Sets a `DelayedCallbackEvent` of **40ms** before processing the next stake (threading `epoch` through)
 - Skips ahead on failure without aborting the batch
 
-`claimInteriorCellsSequentially()` works identically but uses **50ms** delays per interior cell.
+`claimInteriorCellsSequentially()` works identically (same `epoch` param + abort guard) but uses **50ms** delays per interior cell.
+
+**`conversionEpoch`** is a monotonic counter bumped on death (`handlePlayerDeath` local phase) and at each conversion-start. Both sequential chains and the deferred enemy-stake write capture it and self-abort when it changes. Because chains tick every 40–50 ms and the death bump is immediate, an in-flight chain aborts on its very next tick — long before the 3 s respawn — so it can never interleave writes with the new life's home claim. This works even across a respawn (where `isAlive` flips back to `true`), which a plain `!isAlive` guard could not.
 
 #### Interior fill algorithm
 
-`findAndFillEnclosedRegion(loop, realWorldCoords)`:
-1. Compute bounding box `[minX, maxX] × [minZ, maxZ]` of the stake loop
-2. Early return if `maxX - minX <= 1 || maxZ - minZ <= 1` (no interior possible)
-3. Build edge list via `getLoopEdges(loop)` — consecutive `vec2` pairs wrap around (last→first)
-4. For each candidate `(x, z)` in the interior of the bounding box (exclusive), skip if it's on the loop boundary, then test with `isInLoop(x, z, edges)`
-5. Collect all interior cells, then claim them via `claimInteriorCellsSequentially()`
+`findAndFillEnclosedRegion(loop, realWorldCoords, epoch)` uses **exterior flood fill** (NET-4). Enclosure on a discrete grid is a connectivity question ("can this cell reach the outside without crossing my boundary?"), not the crossing-parity question the old point-in-polygon ray-cast (`isInLoop`/`getLoopEdges`, removed from `Networker` — they still physically exist in the legacy `GridClaimer.ts`) answered — that ray-cast treated cells as idealized points and left squares beside diagonal edges unfilled.
 
-`isInLoop()` uses ray-casting: cast a horizontal ray rightward from `(x, z)`, count edge crossings. An edge `(x1,y1)→(x2,y2)` crosses if `(y1 > z) !== (y2 > z)`, at `xCross = (x2-x1)*(z-y1)/(y2-y1) + x1 > x`. Odd count = inside.
+1. Compute the bounding box `[minX, maxX] × [minZ, maxZ]` of the stake loop; early-return if `loop.length < 4` or `maxX - minX <= 1 || maxZ - minZ <= 1` (no interior possible).
+2. **Build a barrier** `Set<number>` (key = `x * height + z`; only in-bounds cells) of cells the fill can't cross:
+   - **(a) the trail**, densified with a `bresenhamLine()` between consecutive cells so a fast/diagonal step that skips >1 cell in one 0.1 s tick can't leave a hole. Added **unconditionally** (never gated on a cell read) so the seal always holds. **No `last→first` edge** — closure comes from (b).
+   - **(b) my existing claimed cells** in the bbox (`getCellDataReadOnly(x, z).x === clientID`), which seal the gap between the trail's first and last cells through real territory. Enemy-owned cells are intentionally **not** barriers, so an enemy cell trapped inside the loop is captured and overwritten to me.
+3. **Flood the exterior** with a **4-connected** BFS over the bbox expanded by one cell (a guaranteed-outside ring). 4-connectivity is required so a diagonal (8-connected) barrier seals — the flood can't slip through the corner-touch between two diagonally adjacent barrier cells (an 8-connected flood would leak and fill nothing). Out-of-grid neighbors count as exterior, so a loop hugging the arena edge fills correctly (the edge is open, not a claimable wall — consistent with out-of-bounds = death). Seed from every in-bounds non-barrier cell on the ring or adjacent to the grid edge.
+4. **Interior** = every in-bounds cell in the full bbox that is neither barrier nor exterior. Claim them via `claimInteriorCellsSequentially()` (unchanged 50 ms async chain + `epoch` abort guard).
+
+Complexity is O(bbox area) ≤ ~42×42, run once per loop closure; the flood itself is synchronous, only the claim writes stay async.
 
 #### Death handling
 
@@ -171,15 +176,16 @@ Steps:
 
 **Phase 1 — Local-only** (`if ID === this.clientID`):
 - `isAlive = false`, `firstClaim = true`, `stakeList = []`
+- **`conversionEpoch++`** and **`isPerformingBulkConversion = false`** — invalidates any in-flight conversion/interior chain and pending deferred stake write from this now-dead life (they self-abort on their next tick), and releases the mutex so it can't linger while dead.
 - `localCellState.clear()`, `localCacheTimestamps.clear()`
 - `PlayerVisuals.DestroyAllStakes()` and `PlayerVisuals.DestroyAllClaims()` — these operate on `spawnedClaims`/`spawnedStakes`, which only contain objects spawned by this device, so they are the correct teardown path for self-death.
 
 **Phase 2 — Remote-player visual cleanup** (`else`, guarded by `gridReady`):
-- `PlayerVisuals.destroyPlayerVisuals(ID, getPlayerVisualID)` — iterates the Instantiator's internal `spawnedInstances` map (via `as any`) to find and destroy all scene objects whose `_prefab_name` store key starts with `"P" + visualID`. This covers every device: the Instantiator tracks all spawned objects locally on each client regardless of who spawned them.
+- `PlayerVisuals.destroyPlayerVisuals(ID, getPlayerVisualID)` — iterates the Instantiator's internal `spawnedInstances` map (through the encapsulated accessor trio; see `PlayerVisuals.ts` / `KNOWN_ISSUES.md` TD-3) to find and destroy all scene objects whose `_prefab_name` store key starts with `"P" + visualID`. This covers every device: the Instantiator tracks all spawned objects locally on each client regardless of who spawned them.
 
-**Phase 3 — Cloud cleanup** (all clients, guarded by `gridReady`):
-- Iterates `gridCells` — any cell whose `currentValue.x === ID` or `.y === ID` is zeroed via `updateCellValue(…, "DEATH CLEAR")`. Best-effort: only covers cells that have been `getCellProperty`'d on this device. Cells the dead player visited but no remaining client ever subscribed to will remain stale in the cloud until another player passes through them.
-- Frees the dead player's color slot: scans `playerColorSlots`, finds the slot whose `currentValue.x === ID`, writes `vec2.zero()` via `setPendingValue`. This makes the color available for the next joining player.
+**Phase 3 — Cloud cleanup** (all clients):
+- **Cell cleanup** (guarded by `gridReady`): iterates `gridCells` — for any cell whose `currentValue.x === ID` or `.y === ID`, only the **dead player's own component** is zeroed (a per-component clear, `vec2(x === ID ? 0 : x, y === ID ? 0 : y)`, so another player's claim/stake in the same cell is preserved) via `updateCellValue(…, "DEATH CLEAR")`. Best-effort: only covers cells that have been `getCellProperty`'d on this device. Cells the dead player visited but no remaining client ever subscribed to will remain stale in the cloud until another player passes through them.
+- **Color-slot free** (runs **unconditionally** — not under the `gridReady` guard; the slots array is empty before ready, so no guard is needed): scans `playerColorSlots`, finds the slot whose `currentValue.x === ID`, writes `vec2.zero()` via `setPendingValue`. This makes the color available for the next joining player.
 
 `computeClientID(displayName: string): number` — private method on `Networker`, identical FNV-1a algorithm as `LocationTracker.getDeterministicPlayerId`. Used only in the `onUserLeftSession` handler to recover a clientID from a display name. Guards against null input (returns 0) — if the result is 0, cleanup is skipped since clientID 0 collides with the "unclaimed" sentinel.
 
@@ -210,7 +216,7 @@ Respawn is entirely local — there is no cloud-side respawn state or RPC. The p
 1. Uses `setValueImmediate()` if description contains `"CONVERSION"` or `"INTERIOR"` and `canIModifyStore()` is true; otherwise uses `setPendingValue()`
 2. Always writes to `localCellState` map with current timestamp
 
-**`getData(ID, x, y)`**: read path. The `ID` parameter is accepted but **never used** inside the function body — it exists in the signature as a legacy artifact. Checks `localCellState` first (uses if cache age < **5000ms**); falls back to `cellProp.currentValue`; returns `vec2.zero()` on any error. Note: `sendData()` does NOT call `getData()` — it reads cell state directly from `localCellState`/`currentValue` internally. `getData()` is called every tick by `LocationTracker` for debug logging only.
+**`getData(ID, x, y)`**: read path. The `ID` parameter is used **only for logging** (an opening trace and a "still staked by ID" warning) — never for game logic; it's a legacy artifact and could be removed along with those log lines. Checks `localCellState` first (uses if cache age < **5000ms**); falls back to `cellProp.currentValue`; returns `vec2.zero()` on any error. Note: `sendData()` does NOT call `getData()` — it reads cell state directly from `localCellState`/`currentValue` internally. `getData()` is called every tick by `LocationTracker` for debug logging only.
 
 **`getMiniMapCells(centerX, centerY)`**: public minimap data provider. Returns early with 25 `vec2.zero()` values if `!gridReady` — this prevents `getCellProperty` (and thus `addStorageProperty`) from being called before the SyncEntity is ready, which would leave `currentValue` permanently at `vec2.zero()` since SpectaclesSyncKit only calls `silentSetCurrentValue` when the entity is ready at the time of `addStorageProperty`. Once ready, iterates the 5×5 window centred on `(centerX, centerY)`, returns `(vec2 | null)[]` in row-major order (index = `(dy+2)*5 + (dx+2)`). For each in-bounds cell: calls `getCellProperty` (creating a subscription if new), checks `localCellState` first, then reads `prop.currentValue`. Out-of-bounds cells are `null`.
 
@@ -260,7 +266,9 @@ Returns a `vec2(x, z)`. Used when spawning visuals (y is passed through from rea
 
 **Destruction — self**: `DestroyAllClaims()` and `DestroyAllStakes()` iterate their arrays, call `obj.destroy()` on each, then reset array length to 0. These arrays only contain objects spawned by this local device (populated via `onSuccess`, which fires only on the spawner), so they are the correct path for self-death teardown only.
 
-**Destruction — remote player** (`destroyPlayerVisuals(clientID, getPlayerVisualID)`): Used when a remote player dies or leaves. Resolves the dead player's visual ID, then iterates the Instantiator's `spawnedInstances` (via `(networkedInstantiator as any).spawnedInstances`) — this map is populated on every client for both local and remote spawns, so it covers all objects regardless of who created them. Finds all entries whose `dataStore.getString("_prefab_name")` starts with `"P" + visualID` (e.g., `"P2ClaimCube"`, `"P2StakeCube"`, `"P2StakePillar"`) and destroys them. Called by `Networker.handlePlayerDeath` in the remote-player path. To keep `spawnedInstances` from accumulating destroyed holders (the SDK never prunes it), two prunes run: `destroyPlayerVisuals` wraps the `getString` read in try/catch (skipping already-deleted stores) and `delete`s each matched or obviously-stale entry after destroying it; and every locally-spawned object registers a `networkRoot.onDestroyed` callback (`pruneOnDestroy`) that deletes its own entry when destroyed — which also covers the self-death teardown (`DestroyAllClaims/Stakes`), where `destroyPlayerVisuals` is never called. The `as any` reach into the SDK's private map remains a known dependency (see `KNOWN_ISSUES.md` TD-3).
+**Destruction — remote player** (`destroyPlayerVisuals(clientID, getPlayerVisualID)`): Used when a remote player dies or leaves. Resolves the dead player's visual ID, then iterates the Instantiator's `spawnedInstances` — this map is populated on every client for both local and remote spawns, so it covers all objects regardless of who created them. Finds all entries whose `dataStore.getString("_prefab_name")` starts with `"P" + visualID` (e.g., `"P2ClaimCube"`, `"P2StakeCube"`, `"P2StakePillar"`) and destroys them. Called by `Networker.handlePlayerDeath` in the remote-player path. To keep `spawnedInstances` from accumulating destroyed holders (the SDK never prunes it), two prunes run: `destroyPlayerVisuals` wraps the `getString` read in try/catch (skipping already-deleted stores) and deletes each matched or obviously-stale entry after destroying it; and every locally-spawned object registers a `networkRoot.onDestroyed` callback (`pruneOnDestroy`) that deletes its own entry when destroyed — which also covers the self-death teardown (`DestroyAllClaims/Stakes`), where `destroyPlayerVisuals` is never called.
+
+> **SDK-internals access (TD-3)**: reaching `spawnedInstances` is *irreducible* — the Instantiator has no public enumerator and fires no callback for remote spawns, and PapAR's objects are spawned unowned (identity lives only in the `_prefab_name` prefix). All access is funnelled through **one** private helper trio: `getSpawnedInstances()` (the sole `(networkedInstantiator as any).spawnedInstances` cast; warns loudly and returns `null` if the field vanishes), `forEachSpawnedInstance(cb)`, and `deleteSpawnedInstance(id)`. The iteration/deletion helpers tolerate **both** the current SDK representation (a `Map` object whose entries are stored as plain-object properties → enumerate with `for..in`) and a hypothetical future real-`Map` (`.forEach()`/`.delete()`, used only when `for..in` finds nothing). Do **not** switch on `instanceof Map`: the current map *is* a `Map` instance yet holds entries as own properties, so `.forEach()` visits zero of them. See `KNOWN_ISSUES.md` TD-3.
 
 #### 5×5 minimap
 
@@ -301,7 +309,7 @@ Material cloning: each `Image` in `miniMapCells` gets its material cloned on the
 #### Respawn countdown display
 
 A dedicated screen-space `Text` (`respawnCountdownText` `@input`, kept separate from `uiText` so the debug HUD and the timer don't fight over one component). Hidden on `onAwake()` via `hideRespawnCountdown()`; shown only during the respawn countdown, driven by `LocationTracker.handleRespawnCountdown()`.
-- `showRespawnCountdown(seconds, blocked)`: enables the Text's `SceneObject` and sets its text — `"You died!\nMove to open ground"` when `blocked` (player on claimed/staked territory, timer frozen), otherwise `"You died!\nRespawning in <seconds>"`.
+- `showRespawnCountdown(seconds, blocked, outOfBounds = false)`: enables the Text's `SceneObject` and sets its text. When `blocked` (timer frozen) it shows `"You died!\nReturn to the play area"` if `outOfBounds`, else `"You died!\nMove to open ground"` (on claimed/staked territory); otherwise `"You died!\nRespawning in <seconds>"`.
 - `hideRespawnCountdown()`: clears the text and disables the `SceneObject`.
 
 Both methods no-op safely if the input is unassigned. Requires a centered screen-space `Text` object wired into `respawnCountdownText` in the Lens Studio scene.
@@ -351,7 +359,7 @@ The `GridClaimer` component class itself still has `updatePos()`, `handlePlayerD
 
 ### `UnionFindLoopDetection.ts` — Defunct stub
 
-The `LoopDetection` class exists but its entire implementation is commented out. It was intended to detect loop closure using Union-Find (path compression + union by size), with a helper to convert a stake list to an adjacency list for 4-connected neighbors. This approach was abandoned in favor of the ray-casting fill in `Networker.findAndFillEnclosedRegion()`.
+The `LoopDetection` class exists but its entire implementation is commented out. It was intended to detect loop closure using Union-Find (path compression + union by size), with a helper to convert a stake list to an adjacency list for 4-connected neighbors. This approach was abandoned in favor of the flood-fill in `Networker.findAndFillEnclosedRegion()`.
 
 ---
 
@@ -436,7 +444,7 @@ return (hash >>> 0) % 0xFFFFFF  // clamp to 16,777,215
 
 ### Visual color set (playerID)
 
-`playerID` (1–5) is assigned by `Networker.assignAndWritePlayerID()` after the SyncEntity is ready and `clientID` is known. The assignment is stable for the cloud session **unless the player dies or leaves**: `handlePlayerDeath` zeroes the dead player's color slot on all remaining clients. On **respawn**, `respawn()` calls `assignAndWritePlayerID()` again, which — because the empty-slot search is seeded from `clientID % 5` — usually re-claims the same slot and keeps the player's color (it only changes if another player took the slot during the dead window). A player who fully **leaves** and rejoins later is treated as new and gets a fresh slot. A new player claims the first empty slot. Up to 5 unique colors are supported; a 6th player falls back to `(clientID % 5) || 5` and overwrites that slot. `playerID` drives both prefab selection for 3D volumes and minimap color lookup — the two are always consistent.
+`playerID` (1–5) is assigned by `Networker.assignAndWritePlayerID()` after the SyncEntity is ready and `clientID` is known. The assignment is stable for the cloud session **unless the player dies or leaves**: `handlePlayerDeath` zeroes the dead player's color slot on all remaining clients. On **respawn**, `respawn()` calls `assignAndWritePlayerID()` again, which — because the empty-slot search is seeded from `clientID % 5` — usually re-claims the same slot and keeps the player's color (it only changes if another player took the slot during the dead window). A player who fully **leaves** and rejoins later is treated as new and gets a fresh slot. A new player claims the first empty slot. Up to 5 unique colors are supported; a 6th concurrent player takes a **local-only** shared fallback color `(clientID % 5) || 5` **without** writing (or overwriting) any cloud slot — so it never corrupts an active player's color, at the cost of sharing a color with an active player (accepted tradeoff). `playerID` drives both prefab selection for 3D volumes and minimap color lookup — the two are always consistent.
 
 ---
 
@@ -509,7 +517,7 @@ Grid coordinates (0–39 int)
                 │         (result not used for game logic)
                 └─▶ if new cell: Networker.sendData()        [on cell change only]
                     │
-                    │ (internal read of localCellState / currentOrPendingValue)
+                    │ (internal read of localCellState / currentValue)
                     │
                     ▼ sendData() decision tree
                ┌────┴─────────────────────────────┐
@@ -588,25 +596,25 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 ### Game mechanics
 
 - **Out-of-bounds death**: Walking outside the 40×40 arena kills the local player. The alive branch of `LocationTracker`'s position loop checks `Networker.isInBounds(gridPos)` and calls `Networker.killLocalPlayer()` when off-grid; the respawn countdown then treats out-of-bounds as `blocked` (same as standing on territory) so the player must return in-bounds onto open ground before respawning. The grid write/read paths themselves still don't validate bounds — the gate lives in `LocationTracker`.
-- **Respawn edge cases**: Respawn is implemented (`Networker.respawn()` + `LocationTracker.handleRespawnCountdown()` — a 3-second countdown that resets whenever the player stands on any claimed/staked cell **or is outside the arena**, then places a fresh home claim). A few edges remain: (1) if an enemy claims the respawn cell in the 0.1s between the last countdown check and respawn, the forced home claim silently overwrites it; (2) the respawning player's color can change if another player claimed their freed slot during the dead window. (Stale `spawnedInstances` references from pre-death visuals are now pruned via each holder's `onDestroyed` — see Code quality.)
+- **Respawn edge cases**: Respawn is implemented (`Networker.respawn()` + `LocationTracker.handleRespawnCountdown()` — a 3-second countdown that resets whenever the player stands on any claimed/staked cell **or is outside the arena**, then places a fresh home claim). A few edges remain: (1) if an enemy claims the respawn cell in the 0.1s between the last countdown check and respawn, the forced home claim silently overwrites it; (2) the respawning player's color can change if another player claimed their freed slot during the dead window. (Stale `spawnedInstances` references from pre-death visuals are pruned via each holder's `onDestroyed` — see the `PlayerVisuals` destruction section / `KNOWN_ISSUES.md` TD-3.)
 - **Multiplayer kill by territory**: `sendData()` only kills the owner of a **stake trail**. Entering an enemy's **claimed** cell does not kill the entering player (the `else`-branch just stakes over the enemy claim). To implement: in the `else`-branch, check `if (claimedBy !== 0 && claimedBy !== ID)` and fire a `playerDeathEvent` for the entering player.
-- **Conversion continues after death**: `convertStakesSequentially` and `claimInteriorCellsSequentially` are `DelayedCallbackEvent` chains that do not check `isAlive`. If a death RPC arrives mid-conversion, `handlePlayerDeath` runs (clearing state and destroying visuals), but the delayed callbacks continue executing — spawning additional claim visuals and writing cells for a dead player until the chain completes. `respawn()` sets `isPerformingBulkConversion = false`, so a stale chain's completion callback (which also clears the flag) cannot wedge post-respawn stakes; but a chain still in flight when the player respawns can briefly interleave its writes with the new life's home claim.
-- **Interior fill correctness**: The ray-casting algorithm works correctly for simple convex and concave loops, but diagonal stake trails can produce ambiguous edge cases since cells are discrete units while the algorithm treats them as point coordinates.
+- **Self-collision death is undocumented (KNOWN_ISSUES NET-9)**: `sendData`'s `if (stakedBy != 0)` branch fires the death RPC *before* the `stakedBy !== clientID` guard, so stepping back onto a cell you staked earlier this life kills you (`vec2(clientID, clientID)`). This is Paper.io-correct self-collision but isn't documented as an intended mechanic, and its payload (`killerID === deadPlayerID`) is indistinguishable from a voluntary-leave / out-of-bounds death — so a future kill feed can't tell them apart. Confirm intended and document, or move the `sendEvent` inside the self-guard.
+- **Initial-spawn home claim is ungated (KNOWN_ISSUES NET-10)**: the `firstClaim` branch writes `vec2(ID, 0)` unconditionally without reading the cell. Respawn is protected by the "open ground" countdown, but the first join is not: starting co-located on an enemy's claimed/staked cell silently erases their claim and ignores their stake. Apply the same open-cell check the respawn path uses.
 
 ### Networking
 
 - **Death cloud cleanup is best-effort**: `handlePlayerDeath` (Phase 3) only zeroes cells present in the running device's `gridCells` map (cells that have been `getCellProperty`'d). Cells the dead player visited but no remaining client has subscribed to remain stale in the cloud indefinitely. They cause no visual impact on other players' minimaps until someone walks within ±2 cells, at which point `getMiniMapCells` subscribes and reads the stale claim. There is no active purge mechanism.
-- **ClientID race condition**: `SessionController.notifyOnReady()` and `networkedInstantiator.notifyOnReady()` are independent callbacks in `LocationTracker.onAwake()`. If the instantiator fires first, the position loop starts with `clientID = undefined`, and the first few `sendData()` calls pass `undefined` as the player ID.
 - **clientID 0 collides with "unclaimed"**: `getDeterministicPlayerId` returns `0` if `displayName` is null. `computeClientID` in `Networker` guards against this (skips cleanup if result is 0), but a player who actually joins with a null display name would have their claims treated as unclaimed cells in `sendData()`'s decision tree, causing them to perpetually re-stake their own territory instead of triggering loop closure.
-- **Simultaneous death-cleanup writes**: When multiple remaining clients all handle a death event (via RPC or `onUserLeftSession`), each independently writes `vec2.zero()` to the same cloud cells. These writes are idempotent but produce redundant cloud traffic proportional to `(remaining players) × (dead player's subscribed cells)`.
-- **Delayed stake write can clobber a completed claim or write for a dead player**: In `sendData()`'s enemy-stake branch (`Networker.ts`), when the local player steps onto a cell staked by someone else, the cell is pushed to `stakeList`, cached in `localCellState`, and given a stake visual **immediately**, but the cloud write is deferred by 500 ms (`DelayedCallbackEvent` with `reset(0.5)`). The delay is intentional — it makes our stake write arrive at the cloud *after* the killed player's `handlePlayerDeath` death-clear (`vec2(claimedBy, 0)`), so our stake wins the race instead of being erased. But the closure captures the cell's coords and value with no cancellation, so two windows misbehave: (1) if the player loops back to their own claim within 500 ms, `addStakedRegionToClaim` converts that cell to a claim (`vec2(clientID, 0)`) and spawns a claim visual, then the delayed callback fires and overwrites the cloud cell back to a stake — leaving a cell that should be claimed staked, with its claim visual now mismatching cloud state; (2) if the player dies within 500 ms, the delayed callback still fires and writes a stake for a now-dead player (same family as **Conversion continues after death** above). A future fix would tag/cancel the pending write on conversion or death. Not addressed yet.
-- **Player count cap**: `assignAndWritePlayerID` supports up to 5 unique colors; a 6th player falls back to a hash-derived slot, potentially overwriting another active player's color entry. No hard cap exists in code.
+- **Simultaneous death-cleanup writes**: When multiple remaining clients all handle a death event (via RPC or `onUserLeftSession`), each independently writes the same per-component clear (zeroing only the dead player's own claim/stake, preserving any other player's value in the cell) to the same cloud cells. These writes are idempotent but produce redundant cloud traffic proportional to `(remaining players) × (dead player's subscribed cells)`.
+- **Player count cap (partial)**: `assignAndWritePlayerID` supports up to 5 unique colors. A 6th concurrent, non-rejoining player finds no free slot and takes a **shared fallback color** (`playerID = (clientID % 5) || 5`) **without writing to the cloud slot table** — so an active player's slot is never corrupted (former defect NET-7). The residual tradeoff (documented, accepted): the 6th player shares a color with an active player on the minimap, and because `destroyPlayerVisuals` matches by the `"P{visualID}"` prefix, that 6th player's death can also destroy the co-colored player's cubes on remote clients. There is still no hard cap enforcing ≤5; a full cap + spectator/queue was deferred.
 
 ### Code quality
 
-- **`getData()` unused ID parameter**: `getData(ID, xpos, zpos)` accepts an `ID` parameter that is never referenced inside the function body. The parameter exists as a legacy artifact and should be removed.
-- **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach was abandoned in favor of the ray-cast fill in `Networker.findAndFillEnclosedRegion()`.
+- **`getData()` ID parameter used only for logging**: `getData(ID, xpos, zpos)` references `ID` only in log statements (an opening trace and a "still staked by ID" warning), never for game logic. It's a legacy artifact; removing it means dropping those log lines too (see KNOWN_ISSUES TD-1).
+- **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach was abandoned in favor of the flood-fill in `Networker.findAndFillEnclosedRegion()`.
 - **`computeClientID` duplicated**: The FNV-1a hash exists in both `LocationTracker.getDeterministicPlayerId` and `Networker.computeClientID`. If the hash algorithm ever changes, both must be updated. Could be extracted to a shared utility module.
+- **Gated logging still builds the string every call (KNOWN_ISSUES TD-9)**: `log()` checks `showLogs` *inside* the method, so every `this.log("…" + a + …)` concatenates its argument before the call even when logging is off. In the 10 Hz loop this is real per-tick allocation on device — worst in `getData()` (~10 concatenations/tick), `sendData()`, and the `onAnyChange` cell listener. Guard hot call sites with `if (this.showLogs)`, or delete the per-tick `getData()` call (also TD-1).
+- **Unbounded `gridCells` subscription growth (KNOWN_ISSUES TD-10)**: `getMiniMapCells` calls `getCellProperty` for every ±2 cell each tick, and each new cell permanently adds a `StorageProperty` + cloud subscription + `onAnyChange` listener that is never removed. Over a long traversal this accretes toward the 1600-cell ceiling. Distinct from the best-effort cloud-cleanup item above (that's about stale *values*; this is about local subscription/listener cost).
 
 ### Stretch features
 
@@ -623,4 +631,4 @@ A submission to Snap's Lens Explorer was rejected with the generic "Invalid Lens
 1. **Trademark / IP** — the lens name `PapAR` and the "Paper.io-inspired" framing trade on Paper.io, a trademarked game by Voodoo. IP issues almost always trigger the generic boilerplate rejection rather than specific feedback. **Fix**: rename the lens to something non-derivative (e.g. "Territory AR", "Claim Trails") and scrub references to Paper.io from the lens name, description, release notes, and any in-game text.
 2. **Encouragement of real-world risky behavior** — the core loop has players physically racing across an ~80m × 80m area in AR glasses. Snap explicitly bans content that encourages risky real-life behavior. **Fix**: add an onboarding screen warning players to play in a safe, open area clear of obstacles and traffic, and consider shrinking the play area.
 3. **Missing required submission metadata** — eligibility requires all of: custom icon, 3×4 preview image, concise description, release notes, reviewer test notes, version number displayed at launch, and on-activation visuals communicating the objective. None of these are currently wired into the scene.
-4. **Quality / stability flags for solo reviewers** — the multiplayer-only experience feels empty when tested solo, and the "conversion continues after death" behavior ([Known Incomplete Areas](#game-mechanics)) spawns visuals for a dead player which reads as broken. (The former permadeath blocker is resolved — players now respawn after a 3-second countdown, so a reviewer who dies early is no longer stuck.)
+4. **Quality / stability flags for solo reviewers** — the multiplayer-only experience feels empty when tested solo. (Two former stability blockers are resolved: permadeath — players now respawn after a 3-second countdown, so a reviewer who dies early is no longer stuck; and the "conversion continues after death" glitch — conversion/interior chains now abort immediately on death via `conversionEpoch`, so a dead player no longer spawns stray claim visuals.)
