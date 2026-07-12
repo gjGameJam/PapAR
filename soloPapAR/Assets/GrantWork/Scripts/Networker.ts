@@ -58,6 +58,14 @@ export class Networker extends BaseScriptComponent {
     private pendingColorWrite: boolean = false;
 
     deathEventString = 'playerDeathEvent';
+
+    // Event-driven minimap: track the current 5x5 window center and a dirty flag so the minimap
+    // only redraws when the player crosses a cell boundary (window shifts) OR a cell inside the
+    // window changes value (local write or remote cloud update) — instead of re-reading and
+    // re-coloring 25 cells on every 0.1s tick.
+    private miniMapCenterX = NaN; // NaN = uninitialized -> forces the first redraw once ready
+    private miniMapCenterY = NaN;
+    private miniMapDirty = false;
     
     //script to manager the grid claim modification permissions
     onAwake() {
@@ -177,6 +185,12 @@ export class Networker extends BaseScriptComponent {
             if (oldStaked !== 0 && newStaked === 0 && newClaimed !== 0) {
                 this.log("  ✓✓✓ STAKE SUCCESSFULLY CONVERTED TO CLAIM ✓✓✓");
             }
+
+            // Event-driven minimap: a cloud update to a cell inside the current window dirties the
+            // map so the next tick redraws it (covers REMOTE players' stakes/claims/conversions).
+            if (this.isWithinMiniMapWindow(x, y)) {
+                this.miniMapDirty = true;
+            }
         });
         
         if (this.showLogs) this.log("NetworkerV2: Total cells in map: " + this.gridCells.size);
@@ -214,7 +228,14 @@ export class Networker extends BaseScriptComponent {
         this.localCellState.set(cellKey, newValue);
         this.localCacheTimestamps.set(cellKey, Date.now()); // Track when we cached this
         this.log("NetworkerV2: LOCAL CACHED - Cell (" + x + ", " + y + ") for immediate reads");
-        
+
+        // Event-driven minimap: a LOCAL write to a cell inside the current window dirties the map
+        // immediately, so our own stakes/claims/interior fills show without waiting for the cloud
+        // round-trip (onAnyChange) to fire.
+        if (this.isWithinMiniMapWindow(x, y)) {
+            this.miniMapDirty = true;
+        }
+
         return true;
     }
     
@@ -282,11 +303,29 @@ export class Networker extends BaseScriptComponent {
         return vec2.zero();
     }
 
+    // True when (x, y) is inside the current 5x5 minimap window. Returns false until the window
+    // has been established (center is NaN before the first getMiniMapCells snapshot).
+    private isWithinMiniMapWindow(x: number, y: number): boolean {
+        if (isNaN(this.miniMapCenterX)) return false;
+        return Math.abs(x - this.miniMapCenterX) <= 2 && Math.abs(y - this.miniMapCenterY) <= 2;
+    }
+
+    // Cheap per-tick guard for LocationTracker: redraw only when the window has never been drawn,
+    // the player crossed into a new cell (window shifts), or a windowed cell changed value.
+    shouldRedrawMiniMap(centerX: number, centerY: number): boolean {
+        return isNaN(this.miniMapCenterX)
+            || centerX !== this.miniMapCenterX
+            || centerY !== this.miniMapCenterY
+            || this.miniMapDirty;
+    }
+
     getMiniMapCells(centerX: number, centerY: number): (vec2 | null)[] {
         // Guard: only subscribe to cells once the SyncEntity is ready.
         // addStorageProperty must be called on a ready entity for silentSetCurrentValue
         // to load existing cloud values into currentValue. Properties subscribed before
         // ready stay at vec2.zero() permanently (not retroactively initialized).
+        // Leaves the window center uninitialized so shouldRedrawMiniMap keeps returning true
+        // (retrying every tick) until the grid is ready.
         if (!this.gridReady) return new Array(25).fill(vec2.zero());
         const result: (vec2 | null)[] = [];
         const radius = 2;
@@ -318,6 +357,12 @@ export class Networker extends BaseScriptComponent {
                 }
             }
         }
+        // Record the window we just snapshotted and clear the dirty flag. Set at the END so any
+        // onAnyChange that fired while subscribing new cells above is already captured in `result`;
+        // the next redraw is then driven purely by a center change or a fresh windowed-cell change.
+        this.miniMapCenterX = centerX;
+        this.miniMapCenterY = centerY;
+        this.miniMapDirty = false;
         return result;
     }
 

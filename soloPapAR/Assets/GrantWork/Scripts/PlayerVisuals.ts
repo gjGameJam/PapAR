@@ -601,7 +601,13 @@ export class PlayerVisuals extends BaseScriptComponent {
                     img.mainMaterial = img.mainMaterial.clone();
                     img.__hasUniqueMaterial = true;
                 }
-                img.mainPass.baseColor = color;
+                // Skip the material write when this cell's color is unchanged (e.g. only one windowed
+                // cell changed but we redraw all 25). Compare component-wise; colors are fresh vec4s.
+                const last = img.__lastColor;
+                if (!last || last.x !== color.x || last.y !== color.y || last.z !== color.z || last.w !== color.w) {
+                    img.mainPass.baseColor = color;
+                    img.__lastColor = color;
+                }
             }
         }
     }

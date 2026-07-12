@@ -52,7 +52,7 @@
 | TD-7 | Magic numbers (delays, TTL, `scale/6`) uncentralized | 🟡 | ⬜ Open |
 | TD-8 | Non-strict TS: `map.has()`→`map.get()` deref without narrowing | 🟡 | ⬜ Open |
 | TD-9 | Gated logging still builds the log string on every call (hot-path perf) | 🟡 | ⬜ Open |
-| TD-10 | Unbounded `gridCells` subscription + listener growth | 🟡 | ⬜ Open |
+| TD-10 | Unbounded `gridCells` subscription growth (churn fixed; 1600 ceiling remains) | 🟡 | ⬜ Open |
 | FEAT-1 | No kill on entering enemy **claimed** territory | — | ⬛ Missing |
 | FEAT-2 | No score / leaderboard | — | ⬛ Missing |
 | FEAT-3 | No kill feed / death announcement | — | ⬛ Missing |
@@ -276,29 +276,29 @@
   offenders: `getData()` (~10 concatenations, called *every* tick — see TD-1);
   `sendData()`; and the per-cell `onAnyChange` listener registered in `getCellProperty`
   (~lines 146–156), which builds several strings on **every** cloud cell change and fires
-  heavily during bulk conversion and remote updates. `getMiniMapCells` touches 25 cells/tick.
+  heavily during bulk conversion and remote updates. (`getMiniMapCells` now touches its 25
+  cells only on a redraw, not every tick — see TD-10 — so it is no longer a per-tick offender.)
   Compounds with TD-10 (more subscribed cells → more `onAnyChange` string-building).
 - **Fix hint:** Guard hot call sites with `if (this.showLogs) this.log(...)`, or change
   `log()` to accept a thunk (`log(() => "…")`) invoked only when enabled. The single biggest
   win is deleting the per-tick `getData()` call outright (TD-1), which removes both the
   useless read and its ~10 concatenations. Broader form of TD-1.
 
-### TD-10 — Unbounded `gridCells` subscription + listener growth
-- **Sev:** 🟡 Low · **Location:** `Networker.getCellProperty()` (~line 125), driven by
-  `getMiniMapCells()` (~line 275) every tick.
-- **Risk / impact:** Each tick the minimap calls `getCellProperty` for every in-bounds cell
-  in the ±2 window. The first touch of a cell creates a `StorageProperty`, calls
-  `addStorageProperty` (a cloud subscription), attaches an `onAnyChange` listener, and stores
-  it in `gridCells` — and **nothing is ever removed**. A player who traverses much of the
-  40×40 arena accretes toward the ~1600-cell ceiling of permanent properties + listeners +
-  cloud subscriptions over a long session. Cost compounds with TD-9 (every `onAnyChange`
-  builds log strings). Distinct from NET-5: that item is about stale *cloud values*; this is
-  about local subscription/listener cost and the `onAnyChange` fan-out.
-- **Fix hint:** No supported un-subscribe exists in the current usage pattern, so options
-  are: subscribe only on actual cell *entry* rather than for every ±2 look; reuse a fixed
-  pool of 25 properties keyed to the visible window; or accept the finite 1600 ceiling and
-  instead attack the per-listener cost (TD-9). Measure on-device (frame time, memory) before
-  investing — this may be acceptable in practice.
+### TD-10 — Unbounded `gridCells` subscription + listener growth (churn fixed; ceiling remains)
+- **Sev:** 🟡 Low · **Location:** `Networker.getCellProperty()` (~line 131), driven by
+  `getMiniMapCells()`.
+- **Churn now fixed:** the minimap is event-driven (`shouldRedrawMiniMap` gate in
+  `LocationTracker`), so `getMiniMapCells` → `getCellProperty` no longer runs every tick — it
+  runs only on a redraw (window shift or a windowed cell change). New cells are therefore
+  subscribed at most once per cell-*entry*, not 10×/second. This was the item's own recommended
+  fix ("subscribe only on actual cell entry rather than for every ±2 look").
+- **Residual (ceiling unchanged):** the first touch of a cell still creates a `StorageProperty`
+  + cloud subscription + `onAnyChange` listener that is **never removed** (no supported
+  un-subscribe in SyncKit), so a player traversing much of the 40×40 arena still accretes
+  toward the ~1600-cell ceiling over a long session — just far more slowly. Distinct from NET-5
+  (stale *cloud values*); this is about local subscription/listener cost.
+- **Fix hint (residual only):** reuse a fixed pool of 25 properties keyed to the visible window,
+  or accept the finite 1600 ceiling. Measure on-device (frame time, memory) before investing.
 
 ---
 

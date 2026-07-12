@@ -108,12 +108,19 @@ export class LocationTracker extends BaseScriptComponent {
         //update the hud with location data
         this.PlayerVisuals.updateHUDText(gridPos.x, gridPos.y, worldPosition.x, worldPosition.z, 0, 0);
 
-        // Update minimap from networked cell state every tick
-        const miniMapCells = this.Networker.getMiniMapCells(gridPos.x, gridPos.y);
-        this.PlayerVisuals.updateMiniMapNetworked(
-            miniMapCells,
-            (id: number) => this.Networker.getPlayerVisualID(id)
-        );
+        // Event-driven minimap: only redraw when the player crosses into a new cell (window shifts)
+        // or a cell inside the current window changed value (Networker.miniMapDirty). Replaces the
+        // previous unconditional 25-cell read + recolor on every 0.1s tick.
+        // NOTE: keep this block ABOVE the alive/dead branch below — handleRespawnCountdown reads the
+        // current cell via getCellDataReadOnly, which does NOT subscribe; getMiniMapCells guarantees
+        // the window (incl. the player's cell) is subscribed whenever the center changes.
+        if (this.Networker.shouldRedrawMiniMap(gridPos.x, gridPos.y)) {
+            const miniMapCells = this.Networker.getMiniMapCells(gridPos.x, gridPos.y);
+            this.PlayerVisuals.updateMiniMapNetworked(
+                miniMapCells,
+                (id: number) => this.Networker.getPlayerVisualID(id)
+            );
+        }
 
         // NET-1: clientID is assigned in SessionController.notifyOnReady(), which is independent
         // of the instantiator readiness that started this loop. If the instantiator became ready
