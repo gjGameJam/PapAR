@@ -103,8 +103,27 @@ export class PlayerVisuals extends BaseScriptComponent {
     spawnedStakes: SceneObject[] = [];
     
     private previousRotation: number = 0;
-    
-    
+
+    private previousArrowOffset: vec2 | null = null; // exact-compare memo, like previousRotation
+
+    private arrowScale = 0.6; // render the arrow at 60% of its authored size
+
+    // Geometry captured once by alignMiniMapCells — everything pre-converted into the arrow
+    // parent's normalized ANCHOR space, so the per-frame update is pure arithmetic with no
+    // world-space conversions. The world<->screen mapping can change after onAwake (render
+    // target / ortho camera initialization), so converting capture-time world coords per
+    // frame drifts the arrow off the map; capture-time anchors share the cells' guarantee.
+    // null = minimap misaligned/unassigned -> arrow slide disabled
+    private arrowGeom: {
+        centerX: number;  // map center-cell center (anchor space)
+        centerY: number;
+        cellW: number;    // one minimap cell (anchor units, X)
+        cellH: number;    // one minimap cell (anchor units, Y)
+        halfW: number;    // arrow's authored half-size (anchor units)
+        halfH: number;
+    } | null = null;
+
+
     //returns true if new worldPos == previous position
     isInSameCell(gridPos: vec2): boolean{
         if (gridPos.equal(this.prevGridPos)){
@@ -439,8 +458,42 @@ export class PlayerVisuals extends BaseScriptComponent {
                 st.offsets.bottom = 0;
             }
         }
+
+        this.captureArrowGeometry(wCenter, cellPix);
     }
-    
+
+    // Captures everything positionPlayerArrow needs, while the arrow still sits at its
+    // scene-authored rect (the size read is position-independent). All values are converted
+    // into the parent's anchor space HERE, at one consistent instant — the same space and
+    // world mapping the cell anchors were just written with — so the arrow's per-frame math
+    // stays valid even if the screen/camera mapping changes after onAwake.
+    private captureArrowGeometry(wCenter: vec3, cellPix: number): void {
+        if (!this.playerArrow) { this.log("playerArrow not assigned — arrow slide disabled"); return; }
+        const parentObj = this.playerArrow.getSceneObject().getParent();
+        const parentST = parentObj
+            ? parentObj.getComponent("Component.ScreenTransform") as ScreenTransform : null;
+        if (!parentST) { this.log("playerArrow parent has no ScreenTransform — arrow slide disabled"); return; }
+        const centerL = parentST.worldPointToLocalPoint(new vec3(wCenter.x, wCenter.y, 0));
+        const cellL   = parentST.worldPointToLocalPoint(new vec3(wCenter.x + cellPix, wCenter.y - cellPix, 0));
+        const aCL  = parentST.worldPointToLocalPoint(this.playerArrow.localPointToWorldPoint(new vec2(0, 0)));
+        const aTRL = parentST.worldPointToLocalPoint(this.playerArrow.localPointToWorldPoint(new vec2(1, 1)));
+        this.arrowGeom = {
+            centerX: centerL.x,
+            centerY: centerL.y,
+            cellW: Math.abs(cellL.x - centerL.x),
+            cellH: Math.abs(cellL.y - centerL.y),
+            halfW: Math.abs(aTRL.x - aCL.x) * this.arrowScale,
+            halfH: Math.abs(aTRL.y - aCL.y) * this.arrowScale,
+        };
+        this.log("arrowGeom captured: center(" + centerL.x + ", " + centerL.y + ") cell("
+            + this.arrowGeom.cellW + ", " + this.arrowGeom.cellH + ") half("
+            + this.arrowGeom.halfW + ", " + this.arrowGeom.halfH + ")");
+        // offsets are authored zero; assert once so the per-frame writes touch anchors only
+        const st = this.playerArrow;
+        st.offsets.left = 0; st.offsets.right = 0; st.offsets.top = 0; st.offsets.bottom = 0;
+        this.positionPlayerArrow(new vec2(0, 0)); // snap onto the true map center immediately
+    }
+
     onUpdate() {
         // get radians rotation in z
         const yawRadians = this.deviceTracker.getDeviceTrackerRotation();
@@ -451,8 +504,17 @@ export class PlayerVisuals extends BaseScriptComponent {
             this.previousRotation = yawRadians; // remember this heading so a still head skips the rebuild
         }
 
+        // slide the arrow within (and briefly past) the center minimap cell — sub-cell position
+        if (this.arrowGeom) {
+            const off = this.deviceTracker.getMiniMapArrowOffset();
+            const prev = this.previousArrowOffset;
+            if (!prev || prev.x !== off.x || prev.y !== off.y) {
+                this.positionPlayerArrow(off);
+                this.previousArrowOffset = off;
+            }
+        }
     }
-    
+
     //main function to adjust player direction facing arrow given rotation
     rotatePlayerArrow(yawRads: number){
         // Access the transform component of the playerArrow img
@@ -461,6 +523,23 @@ export class PlayerVisuals extends BaseScriptComponent {
 
         // Set the rotation of the transform component
         arrowTransform.setLocalRotation(rotationQuat);
+    }
+
+    // Rebuilds the arrow's anchor rect centered at (map center + off cells), size-preserving.
+    // Pure anchor-space arithmetic — no world conversions (see arrowGeom). Anchors-only: the
+    // layout derives the Transform's POSITION from anchors while rotatePlayerArrow's
+    // setLocalRotation stays untouched (layout never derives rotation), so slide and spin
+    // compose without fighting.
+    private positionPlayerArrow(off: vec2): void {
+        const g = this.arrowGeom;
+        if (!g) return;
+        const cx = g.centerX + off.x * g.cellW;  // grid +X → screen right
+        const cy = g.centerY - off.y * g.cellH;  // grid +Z (row+) → screen DOWN (+y is up in anchor space)
+        const st = this.playerArrow;
+        st.anchors.left   = cx - g.halfW;
+        st.anchors.right  = cx + g.halfW;
+        st.anchors.top    = cy + g.halfH;
+        st.anchors.bottom = cy - g.halfH;
     }
     
     //Renders all minimap cells based on inidividual states (e.g., empty, stake, claim)

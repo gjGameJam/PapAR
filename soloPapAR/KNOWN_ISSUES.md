@@ -39,6 +39,11 @@
 | NET-8 | Respawn cell can be stolen in the last 0.1 s window | 🟡 | ⬜ Open |
 | NET-9 | Stepping on your own stake trail kills you (undocumented self-collision) | 🟡 | ⬜ Open |
 | NET-10 | Initial-spawn home claim overwrites an occupied cell (ungated, unlike respawn) | 🟡 | ⬜ Open |
+| NET-11 | In-flight instantiate race: volumes spawned around the death moment orphan on all clients | 🟠 | ⬜ Open |
+| NET-12 | Death-clear sweep is blind to the dead player's pending writes (stale cells → minimap ghosts, phantom kills) | 🟠 | ⬜ Open |
+| NET-13 | Synchronous death echo + cross-channel ordering can abort victim teardown and poison the visual arrays | 🟠 | ⬜ Open |
+| NET-14 | Color-slot zero can outrace the death event → remote sweep resolves the wrong prefab prefix | 🟡 | ⬜ Open |
+| NET-15 | `gridReady` guard silently skips remote visual cleanup for a leave during the join window | 🟡 | ⬜ Open |
 | DEAD-1 | `GridClaimer` single-player pipeline dead; `updateMiniMap` colors latently broken | 🟡 | ⬜ Open |
 | DEAD-2 | `UnionFindLoopDetection` empty stub component | 🟡 | ⬜ Open |
 | DEAD-3 | Dead legacy GPS fields in `LocationTracker` | 🟡 | ⬜ Open |
@@ -56,7 +61,6 @@
 | FEAT-1 | No kill on entering enemy **claimed** territory | — | ⬛ Missing |
 | FEAT-2 | No score / leaderboard | — | ⬛ Missing |
 | FEAT-3 | No kill feed / death announcement | — | ⬛ Missing |
-| FEAT-4 | Minimap snaps per-cell (no sub-cell indicator) | — | ⬛ Missing |
 
 ---
 
@@ -145,6 +149,123 @@
   player reaches an open cell — mirroring the respawn "open ground" rule. Best done by
   extracting the shared "is this a legal spawn cell?" predicate that
   `handleRespawnCountdown` already applies, so join and respawn agree.
+
+---
+
+## Grid functionality — death/visual cleanup races (2026-07-12 investigation)
+
+> Root-cause findings for the field report "in rare instances, 3D volumes don't clear when a
+> player dies; even more rarely, stale cells appear on the minimap." NET-11 and NET-12 are the
+> primary causes (volumes and minimap respectively); NET-13 amplifies both; NET-14/NET-15 are
+> edge-case contributors. Three SDK facts underpin all five (verified in the SyncKit sources,
+> `Cache/TypeScript/Src/Packages/SpectaclesSyncKit.lspkg/`):
+> 1. `Instantiator.instantiate()` is **async** — the visible prefab instantiates, and the object
+>    enters `spawnedInstances` / fires `onSuccess`, only after a `createRealtimeStore` network
+>    round-trip (`Instantiator.instantiateNewPrefab`). Until then it exists only in the private
+>    `spawningInstances` map as an empty holder.
+> 2. `StorageProperty.setPendingValue()` updates `pendingValue`/`currentOrPendingValue` but
+>    **not `currentValue`** — `currentValue` changes only on the server echo
+>    (`applyRemoteValue`) or via `setValueImmediate` (used only for CONVERSION/INTERIOR writes).
+> 3. `SyncEntity.sendEvent`'s local echo is **synchronous** (`NetworkMessageWrapper.sendMessage`
+>    dispatches local listeners in the same call stack), and destroying a spawned holder calls
+>    `deleteRealtimeStore` (`NetworkRootInfo._onLocalDestroy`), which propagates destruction to
+>    every client. RPC messages and realtime-store operations travel **different channels**, so
+>    cross-channel arrival order is not guaranteed.
+
+### NET-11 — In-flight instantiate race: volumes spawned around the death moment orphan on all clients
+- **Sev:** 🟠 Medium · **Location:** `PlayerVisuals.createWorldClaimVolume()` /
+  `createWorldStakeVolume()` (async `onSuccess` → array push) vs.
+  `Networker.handlePlayerDeath()` (both teardown paths).
+- **What/why:** Both cleanup layers only see *completed* spawns. The victim's
+  `DestroyAllStakes/DestroyAllClaims` iterate `spawnedStakes`/`spawnedClaims`, populated only in
+  `onSuccess`; remote sweeps (`destroyPlayerVisuals`) iterate the Instantiator's
+  `spawnedInstances`, populated only after the store is created/arrives. Any volume whose
+  `createRealtimeStore` round-trip spans the death moment is missed by **both**, then
+  materializes on every client after cleanup already ran. Nothing ever re-sweeps: the orphan
+  lives until the next incidental `DestroyAllStakes` (next loop conversion) or next self-death
+  (`DestroyAllClaims`) — for claims, potentially the rest of the session.
+- **Exposure windows / repro:** (1) killed **mid-conversion** — claim volumes spawn every
+  40–50 ms, so at typical RTT several are in flight at any instant → multiple orphans;
+  (2) **out-of-bounds death** just after entering an edge cell — as little as one 0.1 s tick
+  between the stake spawn and `killLocalPlayer()`; (3) any kill landing within ~RTT of the
+  victim's latest cell entry. A **lone orphan pillar or lone cube** (the pair splits across the
+  window) is this race's fingerprint.
+- **Fix hint:** In each `onSuccess`, if the spawning life is no longer valid
+  (`!isAlive` or a captured `conversionEpoch` changed), destroy the object immediately instead
+  of pushing it — the store deletion then propagates cleanup to every client. Cheapest correct
+  fix; closes the race at its source on the spawner's device.
+
+### NET-12 — Death-clear sweep is blind to the dead player's pending writes
+- **Sev:** 🟠 Medium · **Location:** `Networker.handlePlayerDeath()` Phase 3 (filters on
+  `cellProp.currentValue`); Phase 1 (`localCellState.clear()` runs *before* Phase 3);
+  `updateCellValue` (STAKE / HOME CLAIM writes use `setPendingValue`).
+- **What/why:** Cells the victim staked (or home-claimed) within ~RTT before dying are written
+  via `setPendingValue`, so `currentValue` on the victim's own device still holds the old value
+  (SDK fact 2) — the Phase 3 sweep skips them. Remote devices haven't received those writes yet
+  either. Phase 1 wipes `localCellState` — the one cache that *does* hold the fresh values —
+  before Phase 3 could consult it. The pending write still flushes to the cloud after death,
+  leaving a permanently stale `stakedBy=deadID` (or `claimedBy=deadID`) cell that **no client
+  ever clears**. Conversion/interior cells are exempt (`setValueImmediate` sets `currentValue`
+  synchronously).
+- **Impact:** (1) minimap shows a dead player's stake/claim color when a window covers the
+  stale cell (the rarer half of the field report — and the OOB corner-cut death triggers NET-11
+  and NET-12 on the *same* cell, matching the observed co-occurrence); (2) **landmine**: any
+  player stepping on a stale stake fires `playerDeathEvent(deadID, …)` — if that player has
+  respawned, their new life is killed by a ghost trail.
+- **Fix hint:** In Phase 3, match `currentValue` **or** `currentOrPendingValue` (safe — zero
+  never equals a clientID; for lazily-subscribed cells `currentOrPendingValue` reads
+  `vec2.zero()`, which matches nothing), and move `localCellState.clear()` to after the sweep.
+
+### NET-13 — Synchronous death echo + cross-channel ordering can abort victim teardown and poison the arrays
+- **Sev:** 🟠 Medium · **Location:** `Networker.sendData()` stake branch (`sendEvent` with no
+  `onlySendRemote`); `PlayerVisuals.DestroyAllStakes()` / `DestroyAllClaims()`
+  (`if (obj && obj.destroy)` guards).
+- **What/why:** The killer's `sendEvent` echo runs `handlePlayerDeath(victim)` **synchronously
+  inside its own `sendData`** (SDK fact 3): the killer destroys every victim holder it knows and
+  issues `deleteRealtimeStore` for each, in the same frame the death RPC is sent. RPC and store
+  deletions travel different channels, so a deletion can reach the victim **before** the RPC.
+  The victim's `DestroyAllStakes/Claims` then hits an already-network-destroyed SceneObject;
+  `if (obj && obj.destroy)` does not protect against Lens Studio's destroyed-native semantics
+  (needs `isNull()`), so `obj.destroy()` throws, which (a) aborts `handlePlayerDeath` mid-Phase-1
+  — Phase 3 never runs on the victim, so **none** of its cells are cleared (large stale regions,
+  compounding NET-12), and (b) leaves the array un-reset (`length = 0` unreached), so the dead
+  refs make **every subsequent self-death teardown throw at index 0** on that device. Visually
+  masked in multiplayer by the killer's sweep + store-deletion propagation; the backend damage
+  and the array poisoning persist.
+- **Fix hint:** `isNull(obj)` + per-object try/catch in both destroy loops, reset `length = 0`
+  in a `finally`; optionally wrap the `handlePlayerDeath` phases so one phase's failure can't
+  cancel the rest.
+
+### NET-14 — Color-slot zero can outrace the death event → wrong prefab prefix in the remote sweep
+- **Sev:** 🟡 Low · **Location:** `Networker.handlePlayerDeath()` Phase 3 slot-free
+  (`setPendingValue(vec2.zero())`) vs. Phase 2's `getPlayerVisualID()` resolution on *other*
+  clients.
+- **What/why:** Every client (including the victim) zeroes the dead player's color slot. A
+  slot-zero storage update from a faster client can arrive at a slower client **before** that
+  client processes the death RPC / leave event (cross-channel ordering, SDK fact 3). Its
+  `getPlayerVisualID(deadID)` then finds no slot and falls back to `(clientID % 5) || 5` —
+  usually the wrong visualID — so its `destroyPlayerVisuals` sweep matches nothing (or the
+  wrong player's objects). Mostly masked: any one successful destroy deletes the store
+  network-wide. Becomes load-bearing when the mis-resolving client is the only remaining one
+  (see NET-15).
+- **Fix hint:** Carry the victim's `visualID` in the death RPC payload (e.g. widen to a vec3 or
+  a second event field) so the sweep never depends on slot state; the leave path can resolve
+  the slot *before* zeroing it and pass the value through.
+
+### NET-15 — `gridReady` guard silently skips remote visual cleanup during the join window
+- **Sev:** 🟡 Low · **Location:** `Networker.handlePlayerDeath()` Phase 2
+  (`if (this.gridReady)`), `onUserLeftSession` handler (registered unconditionally in
+  `onAwake`).
+- **What/why:** The Instantiator's SyncEntity and the Networker's `gridSyncEntity` become ready
+  independently. A just-joined client can have spawned every existing volume (Instantiator
+  ready → `spawnInitialInstances`) while `gridReady` is still false. If a player leaves (or a
+  death event lands) in that window, Phase 2 is skipped and `playerColorSlots` is still empty —
+  the client destroys nothing and clears nothing. Other established clients normally cover it
+  via store deletion; **permanent orphans** result when there is no other client (2-player
+  session: leaver + still-initializing joiner).
+- **Fix hint:** The sweep itself doesn't need the grid — only the visualID does. With NET-14's
+  payload fix the `gridReady` guard on Phase 2 can be dropped; otherwise queue the death for
+  replay in `notifyOnReady`.
 
 ---
 
@@ -313,8 +434,6 @@
 - **FEAT-3 — Kill feed / death announcement:** deaths only `this.log`. The
   `playerDeathEvent` payload already carries `vec2(deadPlayerID, killerID)`
   (`killerID === deadPlayerID` ⇒ voluntary leave or out-of-bounds death).
-- **FEAT-4 — Sub-cell minimap indicator:** the minimap snaps on cell-boundary crossings; a
-  fractional-position marker would smooth it.
 
 ---
 

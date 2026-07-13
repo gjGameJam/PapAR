@@ -90,8 +90,27 @@ export class LocationTracker extends BaseScriptComponent {
     
         // Normalize yaw to 0 - 2π
         if (yaw < 0) yaw += 2 * Math.PI;
-    
+
         return yaw
+    }
+
+    // Sub-cell offset from the minimap window's center-cell center, in cell units.
+    // x: grid +X (screen right), y: grid +Z / row (screen DOWN). Normally in [-0.5, 0.5);
+    // briefly exceeds it between a boundary crossing and the next 10 Hz window re-center.
+    // Called every frame from PlayerVisuals.onUpdate (like getDeviceTrackerRotation).
+    getMiniMapArrowOffset(): vec2 {
+        const wp = this.playerTracker.getTransform().getWorldPosition();
+        const offset = this.gridRadius + 0.5;
+        const gx = wp.x / this.unitsPerCell + offset;   // continuous grid coords (no floor)
+        const gz = wp.z / this.unitsPerCell + offset;
+        const center = this.Networker.getMiniMapWindowCenter();
+        const cx = center ? center.x : Math.floor(gx);  // pre-first-draw fallback: own cell
+        const cy = center ? center.y : Math.floor(gz);
+        let ox = gx - (cx + 0.5);                       // 0 = center of center cell
+        let oy = gz - (cy + 0.5);
+        ox = Math.max(-2.5, Math.min(2.5, ox));         // never leave the 5x5 map frame
+        oy = Math.max(-2.5, Math.min(2.5, oy));
+        return new vec2(ox, oy);
     }
 
   

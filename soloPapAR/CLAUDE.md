@@ -71,7 +71,7 @@ Because the countdown starts at 3.0s and decrements by `respawnTick` (0.1s) each
 
 **Player ID assignment**: On `SessionController.notifyOnReady()`, the local Snapchat display name is hashed via `getDeterministicPlayerId()` (FNV-1a) to produce `clientID`, then `Networker.setPlayerID(clientID)` is called (single argument). The visual color index `playerID` is **not** derived from a user count — it's assigned separately by `Networker.assignAndWritePlayerID()` via color-slot scanning once the grid is ready.
 
-**Rotation**: `getDeviceTrackerRotation()` extracts yaw from the device quaternion using the standard formula and normalizes to `[0, 2π]`. This is called from `PlayerVisuals.onUpdate()` every frame.
+**Per-frame helpers** (both called from `PlayerVisuals.onUpdate()` every frame, independent of the 0.1s tick): `getDeviceTrackerRotation()` extracts yaw from the device quaternion using the standard formula and normalizes to `[0, 2π]`. `getMiniMapArrowOffset()` returns the player's sub-cell offset from the minimap window's center-cell center, in cell units — continuous grid coordinates (the `worldCoordsToGridPos` formula without the `floor`) minus `Networker.getMiniMapWindowCenter()`; before the first minimap draw it falls back to `floor()` of the player's own position, and the result is clamped to ±2.5 per axis so the arrow can never leave the 5×5 map frame. Drives the arrow's smooth slide (see PlayerVisuals "Direction arrow").
 
 **Key `@input` fields**: `playerTracker: DeviceTracking`, `Networker`, `networkedInstantiator: Instantiator`, `PlayerVisuals`
 
@@ -223,6 +223,8 @@ Respawn is entirely local — there is no cloud-side respawn state or RPC. The p
 
 **`shouldRedrawMiniMap(cx, cy)` / `isWithinMiniMapWindow(x, y)`**: the event-driven minimap pair. `shouldRedrawMiniMap` (public, called by `LocationTracker` every tick) returns true if the window is uninitialized (`NaN` center), the center cell changed, or `miniMapDirty` is set. `isWithinMiniMapWindow` (private) is the `|Δ| <= 2` membership test used by the two dirty-setters — the `onAnyChange` listener (remote updates) and `updateCellValue` (local writes) — so only changes to cells actually on-screen mark the map dirty.
 
+**`getMiniMapWindowCenter()`**: public; returns the center cell of the last-*drawn* window as a `vec2`, or `null` before the first draw (`NaN` center). Consumed every frame by `LocationTracker.getMiniMapArrowOffset()` so the player arrow's sub-cell offset is measured against the window the map actually drew — the offset drops by exactly one cell in the same tick `getMiniMapCells` commits a new center, keeping the sliding arrow glued to the map content across cell-boundary crossings.
+
 > **Critical**: always use `prop.currentValue`, not `prop.currentOrPendingValue`, when reading lazily-subscribed properties. `SyncEntity.addStorageProperty` reads an existing store key via `silentSetCurrentValue`, which sets `currentValue` and `pendingValue` but deliberately skips `currentOrPendingValue`. So `currentOrPendingValue` stays at the constructor default (`vec2.zero()`) for any cell that existed in the cloud before the local client subscribed. `currentValue` is set correctly by both `silentSetCurrentValue` (initial load) and `applyRemoteValue` (all ongoing remote updates).
 
 **`getCellDataReadOnly(x, y)`**: read helper that does NOT call `getCellProperty` — it only reads from `localCellState` and the existing `gridCells` Map via `prop.currentValue`. Useful when you need a value without side-effecting the subscription set. Not used by `getMiniMapCells`.
@@ -301,9 +303,11 @@ Material cloning: each `Image` in `miniMapCells` gets its material cloned on the
 
 **Legacy path — `updateMiniMap(gridPos, grid)`**: Reads from a local `SparseGrid` — not the cloud. This path is dead code; `GridClaimer.updatePos()` (its only caller) has been commented out. Do not call it. Use `updateMiniMapNetworked` instead.
 
-#### Direction arrow
+#### Direction arrow (rotation + sub-cell slide)
 
 `onUpdate()` reads `deviceTracker.getDeviceTrackerRotation()` every frame. If the yaw actually changed since the last frame, `rotatePlayerArrow(yawRads)` applies `quat.fromEulerAngles(0, 0, yawRads)` to the arrow's 3D `Transform` (via `playerArrow.getTransform().setLocalRotation()` — note `playerArrow` is typed `ScreenTransform`, but `getTransform()` returns the underlying 3D Transform, which is what gets rotated). The "changed since last frame" guard is memoized in `previousRotation`, which `onUpdate()` updates after each rotate — so a perfectly still head skips the quaternion rebuild. Because `getDeviceTrackerRotation()` returns a continuous `atan2` value, the arrow still updates on nearly every frame while the head is turning.
+
+**Sub-cell slide**: `onUpdate()` also calls `deviceTracker.getMiniMapArrowOffset()` every frame — the player's offset from the minimap window's center-cell center, in cell units (normally within `[-0.5, 0.5)` per axis). When the offset changed since last frame (memoized in `previousArrowOffset`, exact component compare like `previousRotation`), `positionPlayerArrow(off)` rebuilds the arrow's ScreenTransform **anchors** around `map center + off × cell size` with **pure anchor-space arithmetic** (offsets stay zero), sizing the arrow at 60% of its authored size (`arrowScale = 0.6`, applied to the captured half-size). Grid +X maps to screen right, grid +Z to screen **down** (matching the cell layout). Anchors-only positioning composes cleanly with rotation: the layout derives the Transform's *position* from anchors but never its *rotation*. The needed geometry (`arrowGeom`: map-center position, cell size, and arrow half-size — **all pre-converted into the parent's normalized anchor space**) is captured once by `captureArrowGeometry()` at the end of `alignMiniMapCells()`, using the same `worldPointToLocalPoint` conversion (and the same instant) the cell anchors were just written with. Nothing world-space is kept: the world↔screen mapping can change after `onAwake` (render target / ortho camera initialization), so converting capture-time *world* coordinates per frame drifts the arrow off the map — capture-time-converted anchors instead share the cells' guarantee (a later rescale moves map and arrow together). The arrow's center is re-derived from the captured map center every frame, so at runtime it snaps exactly onto the map center even though its authored anchors sit slightly off. If capture fails (unassigned arrow, missing parent ST, misaligned minimap), `arrowGeom` stays `null` — the slide is disabled with a log and rotation keeps working. **Boundary continuity**: because the offset is measured from `Networker.getMiniMapWindowCenter()` (the last-*drawn* window) rather than `floor()` of the player's own position, the arrow slides marginally past the cell edge for ≤1 tick after a boundary crossing, then drops back one cell in the same instant the 25 tiles recolor — visually continuous against the map content (a floor-based fraction would flick the arrow a full cell up to ~100 ms before the content shifts).
 
 #### HUD text
 
@@ -541,6 +545,14 @@ Grid coordinates (0–39 int)
                                                 createWorldClaimVolume() × M
 ```
 
+```
+Device pose   [every frame — PlayerVisuals.onUpdate]
+        ├─▶ LocationTracker.getDeviceTrackerRotation() → rotatePlayerArrow()    (heading; memoized in previousRotation)
+        └─▶ LocationTracker.getMiniMapArrowOffset()    → positionPlayerArrow()  (sub-cell slide; memoized in previousArrowOffset;
+                offset measured from Networker.getMiniMapWindowCenter() → wraps exactly when
+                getMiniMapCells re-centers the window, so the arrow stays glued to map content)
+```
+
 ---
 
 ## Key Constants Reference
@@ -607,6 +619,23 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ### Networking
 
+- **Death/visual cleanup races (KNOWN_ISSUES NET-11 … NET-15)**: a 2026-07-12 investigation into
+  "3D volumes rarely don't clear on death (and, rarer, stale cells on the minimap)" found five
+  root causes, detailed in the register's "Grid functionality" section. Headlines: (NET-11)
+  `Instantiator.instantiate()` is async — a volume whose `createRealtimeStore` round-trip spans
+  the death moment is missed by *both* cleanup layers (victim arrays + remote `spawnedInstances`
+  sweep) and orphans on every client; worst when killed mid-conversion (spawns every 40–50 ms) or
+  dying out-of-bounds right after staking an edge cell. (NET-12) `handlePlayerDeath` Phase 3
+  filters on `currentValue`, which `setPendingValue` never sets — the victim's freshest stake/home
+  -claim writes are invisible to the sweep (and Phase 1 clears `localCellState` first), so they
+  flush to the cloud after death and stay stale forever: minimap ghosts + a landmine that kills
+  the respawned player if anyone steps on the ghost stake. (NET-13) `sendEvent`'s local echo is
+  synchronous, so the killer's teardown + `deleteRealtimeStore` calls race the death RPC on
+  different channels; a deletion arriving first makes the victim's `DestroyAll*` loop throw on a
+  destroyed object (guards need `isNull()`), aborting Phase 3 and poisoning the arrays for every
+  later death. (NET-14/15) the remote sweep's prefab prefix depends on a color slot every client
+  is simultaneously zeroing, and Phase 2 is skipped entirely when `gridReady` is false during the
+  join window.
 - **Death cloud cleanup is best-effort**: `handlePlayerDeath` (Phase 3) only zeroes cells present in the running device's `gridCells` map (cells that have been `getCellProperty`'d). Cells the dead player visited but no remaining client has subscribed to remain stale in the cloud indefinitely. They cause no visual impact on other players' minimaps until someone walks within ±2 cells, at which point `getMiniMapCells` subscribes and reads the stale claim. There is no active purge mechanism.
 - **clientID 0 collides with "unclaimed"**: `getDeterministicPlayerId` returns `0` if `displayName` is null. `computeClientID` in `Networker` guards against this (skips cleanup if result is 0), but a player who actually joins with a null display name would have their claims treated as unclaimed cells in `sendData()`'s decision tree, causing them to perpetually re-stake their own territory instead of triggering loop closure.
 - **Simultaneous death-cleanup writes**: When multiple remaining clients all handle a death event (via RPC or `onUserLeftSession`), each independently writes the same per-component clear (zeroing only the dead player's own claim/stake, preserving any other player's value in the cell) to the same cloud cells. These writes are idempotent but produce redundant cloud traffic proportional to `(remaining players) × (dead player's subscribed cells)`.
@@ -622,7 +651,6 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ### Stretch features
 
-- **Sub-cell position indicator on minimap**: The minimap jumps when the player crosses a cell boundary rather than moving smoothly. A fractional position indicator would require computing `fracX = ((worldX % unitsPerCell) + unitsPerCell) % unitsPerCell / unitsPerCell` and `fracZ` similarly, then translating a `ScreenTransform` UI element within the bounds of the center minimap cell. Needs a new `Image` scene object wired into `PlayerVisuals`, updated every 0.1s tick.
 - **Score / leaderboard**: No tracking of how many cells each player owns. Could be derived by iterating all subscribed `gridCells` and counting `currentValue.x === clientID`, but this is O(n) per tick and only covers subscribed cells. A dedicated `StorageProperty<number>` per player tracking claim count would be more efficient.
 - **Kill feed / death announcement**: Death events are logged to `print()` only. A UI overlay showing who killed whom would use the `killerID` field already present in `playerDeathEvent`'s `vec2(deadPlayerID, killerID)` payload — `killerID === deadPlayerID` means the player left voluntarily.
 

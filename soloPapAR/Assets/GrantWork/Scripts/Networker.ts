@@ -310,6 +310,14 @@ export class Networker extends BaseScriptComponent {
         return Math.abs(x - this.miniMapCenterX) <= 2 && Math.abs(y - this.miniMapCenterY) <= 2;
     }
 
+    // Center cell of the last-drawn 5x5 window (grid coords), or null before the first draw.
+    // Lets the arrow's sub-cell offset wrap at the exact tick the window re-centers, so the
+    // arrow stays glued to the map content instead of flicking a cell ahead of the redraw.
+    getMiniMapWindowCenter(): vec2 | null {
+        if (isNaN(this.miniMapCenterX)) return null;
+        return new vec2(this.miniMapCenterX, this.miniMapCenterY);
+    }
+
     // Cheap per-tick guard for LocationTracker: redraw only when the window has never been drawn,
     // the player crossed into a new cell (window shifts), or a windowed cell changed value.
     shouldRedrawMiniMap(centerX: number, centerY: number): boolean {
