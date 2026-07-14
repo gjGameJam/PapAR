@@ -1,5 +1,5 @@
 //import { GridClaimer } from './GridClaimer';
-import { Networker } from './Networker';
+import { Networker, RESPAWN_FLOOR_S } from './Networker';
 import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
 import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';
 import { PlayerVisuals } from './PlayerVisuals';
@@ -43,7 +43,9 @@ export class LocationTracker extends BaseScriptComponent {
 
   //respawn countdown state
   private respawnCountdown: number = -1;      // seconds remaining; -1 = inactive
-  private readonly respawnDuration: number = 3.0;
+  // TD-14: derived from the shared floor so the RECENTLY_DEAD_TTL_MS < respawn invariant is
+  // enforced in one place (Networker.onAwake asserts against RESPAWN_FLOOR_S).
+  private readonly respawnDuration: number = RESPAWN_FLOOR_S;
   private readonly respawnTick: number = 0.10; // must match getNewPosition.reset() interval
 
 
@@ -189,13 +191,12 @@ export class LocationTracker extends BaseScriptComponent {
     // duration whenever the player stands on a claimed or staked cell (so they can't
     // respawn in an OP position), and respawns them once the timer runs out on open ground.
     private handleRespawnCountdown(gridPos: vec2, worldPosition: vec3): void {
-        // Off-grid cells read as vec2.zero() (open), so without this check a player who died
-        // by leaving the arena would respawn off-grid. Treat out-of-bounds as blocked too.
+        // outOfBounds computed separately only for the display message split below.
         const outOfBounds = !this.Networker.isInBounds(gridPos.x, gridPos.y);
-        // Pure, side-effect-free read: .x = claimedBy, .y = stakedBy (0 = none)
-        const cell = this.Networker.getCellDataReadOnly(gridPos.x, gridPos.y);
-        const inTerritory = cell.x !== 0 || cell.y !== 0;
-        const blocked = inTerritory || outOfBounds;
+        // NET-10/NET-8: the shared spawn-legality rule — open + in-bounds (off-grid cells read
+        // as open, so bounds must be part of the rule). The same predicate gates sendData's
+        // firstClaim write, so the countdown and the actual claim can never disagree.
+        const blocked = !this.Networker.isLegalSpawnCell(gridPos.x, gridPos.y);
 
         if (this.respawnCountdown < 0 || blocked) {
             this.respawnCountdown = this.respawnDuration;   // start / reset to full 3s

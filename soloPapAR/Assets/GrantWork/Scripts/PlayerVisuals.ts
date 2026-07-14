@@ -3,6 +3,11 @@ import { CellState } from './GridClaimer';
 import { LocationTracker } from './LocationTracker';
 import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';
 
+// F3/NET-14: every spawned volume's realtime store is stamped with its owner's clientID under
+// this key, so death sweeps can match objects by owner instead of by the "P{visualID}" prefab
+// prefix (which depends on a color slot every client is simultaneously zeroing during a death).
+const OWNER_KEY = "_papar_owner";
+
 @component
 export class PlayerVisuals extends BaseScriptComponent {
     
@@ -96,10 +101,13 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
    
-    // Global array to hold all instances of claims
+    // Global array to hold all instances of claims spawned by THIS device. Entries may be
+    // destroyed natives (a remote deleteRealtimeStore destroys the object without splicing this
+    // array) — consume them only via safeDestroy (NET-13).
     spawnedClaims: SceneObject[] = [];
-    
-    // Global array to hold all instances of stakes 
+
+    // Global array to hold all instances of stakes spawned by THIS device. Same destroyed-native
+    // caveat as spawnedClaims — consume only via safeDestroy (NET-13).
     spawnedStakes: SceneObject[] = [];
     
     private previousRotation: number = 0;
@@ -205,8 +213,24 @@ export class PlayerVisuals extends BaseScriptComponent {
         
     }
     
+    // F3: builds the customDataStore for one instantiate call, stamping the spawn's owner. A
+    // FRESH store per call — the stake cube + pillar are two instantiate calls; sharing one
+    // store would cross-contaminate the SDK's per-object keys (_network_id/_prefab_name/_init_*),
+    // which the Instantiator writes on top of the custom data.
+    private makeOwnerStore(ownerClientID: number): GeneralDataStore {
+        const store = GeneralDataStore.create();
+        store.putInt(OWNER_KEY, ownerClientID);
+        return store;
+    }
+
     //creates a cell cube visual for claimed cell via instantiator.instantiate
-    createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number){
+    // ownerClientID (F3): stamped into the spawn's realtime store so death sweeps match by owner.
+    // isStillValid (F1/NET-11): instantiate() completes only after a createRealtimeStore network
+    // round-trip, so a spawn requested by a life/batch that has since ended can materialize AFTER
+    // cleanup already ran — orphaning it on every client. onSuccess re-checks the closure and
+    // destroys the object at the source instead of tracking it (the store deletion then
+    // propagates the cleanup to every client).
+    createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number, ownerClientID: number = 0, isStillValid?: () => boolean){
         if (!this.networkedInstantiator.isReady()){
             this.log('instantiator not ready:(');
             return;
@@ -216,16 +240,26 @@ export class PlayerVisuals extends BaseScriptComponent {
         this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), {
             localPosition: newPosition,
             localScale: cellScale,
+            customDataStore: this.makeOwnerStore(ownerClientID),
             onSuccess: (networkRoot) => {
-                this.spawnedClaims.push(networkRoot.sceneObject);
+                // prune FIRST so even a spawn we immediately destroy drops its map entry
                 this.pruneOnDestroy(networkRoot);
-            }
+                if (isStillValid && !isStillValid()) {
+                    this.safeDestroy(networkRoot.sceneObject);
+                    return;
+                }
+                this.spawnedClaims.push(networkRoot.sceneObject);
+            },
+            // The SDK failure path calls onError unguarded — always pass one.
+            onError: (message) => this.log("createWorldClaimVolume failed: " + message)
         });
     }
 
 
     //creates cube visuals for staked cell via instantiator.instantiate
-    createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number){
+    // ownerClientID / isStillValid: see createWorldClaimVolume — same F3 owner stamp (a fresh
+    // store per instantiate call) and same F1 in-flight-spawn gating in each onSuccess.
+    createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number, ownerClientID: number = 0, isStillValid?: () => boolean){
         if (!this.networkedInstantiator.isReady()){
             this.log('instantiator not ready:(');
             return;
@@ -234,18 +268,30 @@ export class PlayerVisuals extends BaseScriptComponent {
         this.networkedInstantiator.instantiate(this.getStakeVolumeFromPlayerID(ID), {
             localPosition: newPosition,
             localScale: new vec3(scale, scale, scale),
+            customDataStore: this.makeOwnerStore(ownerClientID),
             onSuccess: (networkRoot) => {
-                this.spawnedStakes.push(networkRoot.sceneObject);
                 this.pruneOnDestroy(networkRoot);
-            }
+                if (isStillValid && !isStillValid()) {
+                    this.safeDestroy(networkRoot.sceneObject);
+                    return;
+                }
+                this.spawnedStakes.push(networkRoot.sceneObject);
+            },
+            onError: (message) => this.log("createWorldStakeVolume (cube) failed: " + message)
         });
         this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), {
             localPosition: newPosition,
             localScale: new vec3(1, scale, 1),
+            customDataStore: this.makeOwnerStore(ownerClientID),
             onSuccess: (networkRoot) => {
-                this.spawnedStakes.push(networkRoot.sceneObject);
                 this.pruneOnDestroy(networkRoot);
-            }
+                if (isStillValid && !isStillValid()) {
+                    this.safeDestroy(networkRoot.sceneObject);
+                    return;
+                }
+                this.spawnedStakes.push(networkRoot.sceneObject);
+            },
+            onError: (message) => this.log("createWorldStakeVolume (pillar) failed: " + message)
         });
     }
     
@@ -312,12 +358,19 @@ export class PlayerVisuals extends BaseScriptComponent {
     // Destroy all visual objects (claims + stakes + pillars) spawned by a specific player.
     // Works on every device: iterates the Instantiator's internal spawnedInstances map,
     // which holds all objects created during the session (both local and remote spawns).
-    // Prefab names are in the form "P{visualID}ClaimCube", "P{visualID}StakeCube", etc.,
-    // so matching the "P{N}" prefix is sufficient to find all objects for that player.
+    // Matching is primarily by the "_papar_owner" clientID stamped into each spawn's store
+    // (F3/NET-14) — independent of the color slots, which every client is simultaneously
+    // zeroing during a death. The "P{visualID}" prefab-name prefix is only a FALLBACK for
+    // objects with no owner stamp, resolved from visualIDHint (the victim's color index
+    // carried in the death payload) when valid, else the getPlayerVisualID resolver.
+    // ownerKeyOnly disables the prefix fallback entirely — used by the leave re-sweeps, where
+    // a prefix match could hit a rejoined player's NEW visuals.
     // The SDK never prunes spawnedInstances, so we prune matched (and stale) entries here to
     // stop re-scanning destroyed holders and reading from their deleted realtime stores.
-    destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number): void {
-        const visualID = getPlayerVisualID(clientID);
+    destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number, visualIDHint?: number, ownerKeyOnly: boolean = false): void {
+        const visualID = (Number.isFinite(visualIDHint) && visualIDHint >= 1 && visualIDHint <= 5)
+            ? visualIDHint
+            : getPlayerVisualID(clientID);
         const prefix = "P" + visualID;
         const toDestroy: { id: string; obj: SceneObject }[] = [];
         this.forEachSpawnedInstance((networkId, networkRoot) => {
@@ -326,48 +379,78 @@ export class PlayerVisuals extends BaseScriptComponent {
                 this.deleteSpawnedInstance(networkId);
                 return;
             }
+            // Read owner + prefab name inside ONE try/catch: a throw means the realtime store
+            // was deleted — the entry is stale; prune and skip. Never route a throw to the
+            // prefix fallback (a half-read entry must not be matched by guesswork).
+            let owner = 0;
             let prefabName = "";
             try {
-                prefabName = networkRoot.dataStore.getString("_prefab_name");
+                const store = networkRoot.dataStore;
+                if (store.has(OWNER_KEY)) {
+                    owner = store.getInt(OWNER_KEY);
+                }
+                prefabName = store.getString("_prefab_name");
             } catch (e) {
-                // Reading a deleted realtime store — the entry is stale; prune and skip.
                 this.deleteSpawnedInstance(networkId);
                 return;
             }
-            if (prefabName && prefabName.startsWith(prefix)) {
+            let matches = false;
+            if (owner !== 0) {
+                matches = owner === clientID; // stamped: the owner key is authoritative
+            } else if (!ownerKeyOnly) {
+                matches = !!prefabName && prefabName.startsWith(prefix);
+            }
+            if (matches) {
                 toDestroy.push({ id: networkId, obj: networkRoot.sceneObject });
             }
         });
         for (const entry of toDestroy) {
-            if (entry.obj) entry.obj.destroy();
+            this.safeDestroy(entry.obj);
             this.deleteSpawnedInstance(entry.id); // prune so this entry is never re-scanned on a later death
         }
-        this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + ")");
+        this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + (ownerKeyOnly ? ", owner-key only" : "") + ")");
+    }
+
+    // NET-13: destroy that can never throw or abort a teardown loop. A remote deleteRealtimeStore
+    // can destroy the native object under us without splicing our arrays, and calling destroy()
+    // on a destroyed native throws — `obj && obj.destroy` does not detect that (needs isNull).
+    // The catch must never be empty: silent catches would make NET-13-class races undiagnosable
+    // on device.
+    private safeDestroy(obj: SceneObject): void {
+        if (!obj || isNull(obj)) return;
+        try {
+            obj.destroy();
+        } catch (e) {
+            this.log("safeDestroy: " + e);
+        }
     }
 
     //destroy all visible color volumes representing home claims
+    //entries may be destroyed natives — consume only via safeDestroy; the length reset lives in
+    //a finally so one bad entry can't leave dead refs poisoning every later teardown (NET-13)
     DestroyAllClaims(){
-        //destroyall claims
-        for (let obj of this.spawnedClaims) {
-            if (obj && obj.destroy) {
-                obj.destroy();
+        try {
+            for (let obj of this.spawnedClaims) {
+                this.safeDestroy(obj);
             }
+        } finally {
+            //set length to 0 to be reused
+            this.spawnedClaims.length = 0;
         }
-        //set length to 0 to be reused
-        this.spawnedClaims.length = 0;
         this.log('removed all home claims');
     }
-    
+
     //destroy all visible color volumes representing staked cells
+    //same safeDestroy + finally hardening as DestroyAllClaims (NET-13)
     DestroyAllStakes(){
-        //destroy all stakes
-        for (let obj of this.spawnedStakes) {
-            if (obj && obj.destroy) {
-                obj.destroy();
+        try {
+            for (let obj of this.spawnedStakes) {
+                this.safeDestroy(obj);
             }
+        } finally {
+            //set length to 0 to be reused
+            this.spawnedStakes.length = 0;
         }
-        //set length to 0 to be reused
-        this.spawnedStakes.length = 0;
         this.log('removed all stakes');
     }
    
