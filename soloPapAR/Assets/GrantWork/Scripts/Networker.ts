@@ -633,11 +633,27 @@ export class Networker extends BaseScriptComponent {
 
         //if staked by a player (will be 0 if not staked)
         if (stakedBy != 0){
+            const onOwnClaim   = (claimedBy == ID);              // stepping back onto our own claimed cell
+            const stakerIsSelf = (stakedBy === this.clientID);   // the stake is our own open trail
+
             // Broadcast kill to all clients — every client runs the victim's cleanup.
             // F3/NET-14: vec3 payload carries the victim's visualID so remote sweeps' prefix
             // fallback doesn't depend on a color slot every client is about to zero.
-            this.gridSyncEntity.sendEvent(this.deathEventString, new vec3(stakedBy, this.clientID, this.getPlayerVisualID(stakedBy)));
+            // Suppress ONLY on the degenerate (A,A) self-claim+self-stake cell: a cell we OWN must
+            // never self-kill us (such cells only ever arose from the pre-fix re-stake below).
+            if (!(onOwnClaim && stakerIsSelf)) {
+                this.gridSyncEntity.sendEvent(this.deathEventString, new vec3(stakedBy, this.clientID, this.getPlayerVisualID(stakedBy)));
+            }
 
+            if (onOwnClaim) {
+                // Returned to our OWN claimed territory that a live enemy had staked (killed above).
+                // Close the loop instead of re-staking: this cell is already ours, it seals the loop,
+                // and the enemy's death-clear zeroes their stake component back to (A,0). We don't
+                // push to stakeList or write the cell — mirroring the normal claimedBy==ID closure
+                // below, which also never re-stakes the returning cell. If there's no open trail,
+                // addStakedRegionToClaim no-ops (empty stakeList), so this just kills the enemy.
+                this.addStakedRegionToClaim(realWorldCoords);
+            }
             // If the stake belongs to a different player (not our own trail), stake the cell ourselves.
             // We don't call updateCellValue immediately here because the dead player's handlePlayerDeath
             // writes a cloud-clear (vec2(claimedBy, 0)) for all their staked cells. That clear travels
@@ -646,7 +662,7 @@ export class Networker extends BaseScriptComponent {
             // Fix: write to localCellState and spawn the visual immediately (so the player sees it
             // and the minimap shows it), then delay the cloud write by 500ms so our write arrives
             // last and wins the race against the dead player's clear.
-            if (stakedBy !== this.clientID) {
+            else if (stakedBy !== this.clientID) {
                 const newCellValue = new vec2(claimedBy, ID);
                 const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
 

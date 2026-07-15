@@ -131,6 +131,16 @@ export class PlayerVisuals extends BaseScriptComponent {
         halfH: number;
     } | null = null;
 
+    // Per-cell stake "dot" overlay: a small centered Image aligned to its minimap cell the SAME
+    // way the claim cells are (same parent, same world→anchor conversion, same render layer),
+    // shown only when that cell is staked. Index-aligned to miniMapCells; created + positioned
+    // lazily in positionStakeDot (driven by alignMiniMapCells). Lets a cell show BOTH its
+    // background (claim color / white) AND its stake (the dot) at once.
+    private stakeDots: (Image | null)[] = [];
+
+    // The stake dot spans this fraction of the cell (centered). Tunable; ~0.4 = small dot.
+    private readonly stakeDotScale = 0.4;
+
 
     //returns true if new worldPos == previous position
     isInSameCell(gridPos: vec2): boolean{
@@ -515,6 +525,8 @@ export class PlayerVisuals extends BaseScriptComponent {
         const gridLeft = wCenter.x - 2.5 * cellPix;
         const gridTop  = wCenter.y + 2.5 * cellPix;
 
+        if (this.stakeDots.length !== 25) this.stakeDots = new Array(25).fill(null);
+
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
                 const idx = row * 5 + col;
@@ -539,10 +551,56 @@ export class PlayerVisuals extends BaseScriptComponent {
                 st.offsets.right  = 0;
                 st.offsets.top    = 0;
                 st.offsets.bottom = 0;
+
+                // Stake dot overlay for this cell: a smaller centered square, positioned in the
+                // SAME parent + world→anchor space as the cell above, so it aligns exactly like the
+                // claim (just inset by stakeDotScale). wT > wB (top has the larger world Y).
+                const s = this.stakeDotScale;
+                const cxw = (wL + wR) / 2;
+                const cyw = (wT + wB) / 2;
+                const halfW = ((wR - wL) / 2) * s;
+                const halfH = ((wT - wB) / 2) * s;
+                const dtl = parentST.worldPointToLocalPoint(new vec3(cxw - halfW, cyw + halfH, 0));
+                const dbr = parentST.worldPointToLocalPoint(new vec3(cxw + halfW, cyw - halfH, 0));
+                this.positionStakeDot(idx, parentObj, this.miniMapCells[idx].getSceneObject(), dtl, dbr);
             }
         }
 
         this.captureArrowGeometry(wCenter, cellPix);
+    }
+
+    // Creates (once, lazily) and positions cell idx's stake-dot overlay Image. The dot is a child
+    // of the cells' SHARED parent (Full Frame Region) — the same parent the claim cells live under —
+    // and its anchor rect is supplied by alignMiniMapCells using the identical world→anchor
+    // conversion used for the cells, so the dot lines up exactly inside its cell. It copies the
+    // cell's render layer so the same UI camera draws it, gets its own cloned flat material
+    // (independent color) + the white cell texture, and starts disabled (applyStakeDot toggles/
+    // colors it per state). Created after the cells in hierarchy order, so it renders on top.
+    private positionStakeDot(idx: number, parentObj: SceneObject, cellObj: SceneObject, tl: vec2, br: vec2): void {
+        if (!this.stakeDots[idx]) {
+            if (!this.cellMaterial || !this.whiteCell) {
+                this.log("positionStakeDot: cellMaterial/whiteCell unassigned — stake dot " + idx + " skipped");
+                return;
+            }
+            const dotObj = global.scene.createSceneObject("StakeDot" + idx);
+            dotObj.setParent(parentObj);
+            dotObj.layer = cellObj.layer; // draw on the same UI camera/layer as the cells
+            dotObj.createComponent("Component.ScreenTransform");
+            const dotImg = dotObj.createComponent("Component.Image") as Image;
+            dotImg.mainMaterial = this.cellMaterial.clone();
+            dotImg.mainPass.baseTex = this.whiteCell;
+            dotObj.enabled = false; // shown only when the cell is staked
+            this.stakeDots[idx] = dotImg;
+        }
+        const dot = this.stakeDots[idx];
+        if (!dot) return;
+        const st = dot.getSceneObject().getComponent("Component.ScreenTransform") as ScreenTransform;
+        if (!st) return;
+        st.anchors.left   = tl.x;
+        st.anchors.right  = br.x;
+        st.anchors.top    = tl.y;
+        st.anchors.bottom = br.y;
+        st.offsets.left = 0; st.offsets.right = 0; st.offsets.top = 0; st.offsets.bottom = 0;
     }
 
     // Captures everything positionPlayerArrow needs, while the arrow still sits at its
@@ -754,10 +812,12 @@ export class PlayerVisuals extends BaseScriptComponent {
     //renders the 5x5 minimap from networked cloud data; called every 0.1s tick by LocationTracker
     updateMiniMapNetworked(cells: (vec2 | null)[], getPlayerVisualID: (id: number) => number): void {
         for (let i = 0; i < 25; i++) {
-            const miniMapX = i % 5;
-            const miniMapY = Math.floor(i / 5);
-            const color = this.getCellColorFromData(cells[i], getPlayerVisualID);
-            const img = this.miniMapCells[miniMapY * 5 + miniMapX] as any;
+            const cell = cells[i];
+            // Background square: claim color if claimed, white if unclaimed, gray if OOB. Stake is
+            // NOT drawn here — it's the dot overlay — so a staked cell keeps its underlying claim
+            // (or white) background visible in the space AROUND the dot.
+            const bgColor = this.getCellBackgroundColor(cell, getPlayerVisualID);
+            const img = this.miniMapCells[i] as any;
             if (img && img.mainPass) {
                 if (!img.__hasUniqueMaterial) {
                     img.mainMaterial = img.mainMaterial.clone();
@@ -766,19 +826,47 @@ export class PlayerVisuals extends BaseScriptComponent {
                 // Skip the material write when this cell's color is unchanged (e.g. only one windowed
                 // cell changed but we redraw all 25). Compare component-wise; colors are fresh vec4s.
                 const last = img.__lastColor;
-                if (!last || last.x !== color.x || last.y !== color.y || last.z !== color.z || last.w !== color.w) {
-                    img.mainPass.baseColor = color;
-                    img.__lastColor = color;
+                if (!last || last.x !== bgColor.x || last.y !== bgColor.y || last.z !== bgColor.z || last.w !== bgColor.w) {
+                    img.mainPass.baseColor = bgColor;
+                    img.__lastColor = bgColor;
                 }
             }
+
+            // Stake dot overlay: shown in the staker's color when the cell is staked, else hidden.
+            const stakedBy = cell !== null ? cell.y : 0; // cell.y = stakedBy
+            this.applyStakeDot(
+                i,
+                stakedBy !== 0 ? this.getPlayerStakeColor(getPlayerVisualID(stakedBy)) : null
+            );
         }
     }
 
-    private getCellColorFromData(cellData: vec2 | null, getPlayerVisualID: (id: number) => number): vec4 {
+    // Toggles/colors cell i's stake dot. color === null hides the dot (cell not staked); a color
+    // enables it and tints it. Memoized on the dot's own __lastColor (like the background cells)
+    // so a redraw only touches the material / enabled state on an actual change.
+    private applyStakeDot(i: number, color: vec4 | null): void {
+        const dot = this.stakeDots[i];
+        if (!dot) return;
+        const obj = dot.getSceneObject();
+        const dotAny = dot as any;
+        if (color === null) {
+            if (obj.enabled) obj.enabled = false;
+            return;
+        }
+        if (!obj.enabled) obj.enabled = true;
+        const last = dotAny.__lastColor;
+        if (!last || last.x !== color.x || last.y !== color.y || last.z !== color.z || last.w !== color.w) {
+            dot.mainPass.baseColor = color;
+            dotAny.__lastColor = color;
+        }
+    }
+
+    // Background color for a cell's full square. Stake is drawn separately as the dot overlay, so
+    // the background reflects only claim state: a claimed cell keeps its claim color (visible
+    // around any stake dot on top), an unclaimed cell is white, and OOB is gray.
+    private getCellBackgroundColor(cellData: vec2 | null, getPlayerVisualID: (id: number) => number): vec4 {
         if (cellData === null) return new vec4(0.75, 0.75, 0.75, 1); // out of bounds = light gray
-        const stakedBy = cellData.y;
         const claimedBy = cellData.x;
-        if (stakedBy !== 0) return this.getPlayerStakeColor(getPlayerVisualID(stakedBy));
         if (claimedBy !== 0) return this.getPlayerClaimColor(getPlayerVisualID(claimedBy));
         return new vec4(1, 1, 1, 0.2); // unclaimed = white, 80% transparent
     }
