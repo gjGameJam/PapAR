@@ -6,7 +6,8 @@
   RetainAssets: true
 - !<SceneObject/3c5043d1-7b23-4136-a743-546e84d141b6>
   PrefabRemaps:
-    []
+    - 3c5043d1-7b23-4136-a743-546e84d141b6: 3c5043d1-7b23-4136-58bc-ab917b2ebe49
+    - d96ef437-0c60-44a3-b28c-fc363d48816e: d96ef437-0c60-44a3-4d73-03c9c2b77e91
   Name: Root
   Enabled: true
   Layers: 1

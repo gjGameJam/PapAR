@@ -26,7 +26,8 @@
     {}
 - !<SceneObject/3fe31b15-51f1-4484-affc-b130ab4e67f6>
   PrefabRemaps:
-    []
+    - 210968cd-fc47-4d2b-8e5d-8bdd8fb5001e: 210968cd-fc47-4d2b-71a2-7422704affe1
+    - 3fe31b15-51f1-4484-affc-b130ab4e67f6: 3fe31b15-51f1-4484-5003-4ecf54b19809
   Name: Root
   Enabled: true
   Layers: 1

@@ -26,7 +26,8 @@
     {}
 - !<SceneObject/45255640-aab9-42a3-aa3e-4872f23c6278>
   PrefabRemaps:
-    []
+    - 03449a56-7250-4c44-a870-32e5c414c7f5: 03449a56-7250-4c44-578f-cd1a3beb380a
+    - 45255640-aab9-42a3-aa3e-4872f23c6278: 45255640-aab9-42a3-55c1-b78d0dc39d87
   Name: Object Prefab
   Enabled: true
   Layers: 1

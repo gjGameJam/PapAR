@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> e060792c-b2db-4b6f-a56c-624b0b791316
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,34 +14,7 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<ObjectPrefab/02b358dd-e703-4893-bfd6-3bfb5bf0a104>
-  PackagePath: ""
-  objects:
-    - !<own> 56061ba7-fc5d-4635-841c-f53030a8e6f7
-  LazyLoading: false
-  RetainAssets: true
-- !<ObjectPrefabAssetData/47b70cf8-583a-4f7b-bc14-778820723233>
-  SourceRemaps:
-    - 210968cd-fc47-4d2b-8e5d-8bdd8fb5001e: f79a713f-5ece-4a4b-8db1-15fa0ea58c88
-    - 3fe31b15-51f1-4484-affc-b130ab4e67f6: 56061ba7-fc5d-4635-841c-f53030a8e6f7
-    - e060792c-b2db-4b6f-a56c-624b0b791316: 02b358dd-e703-4893-bfd6-3bfb5bf0a104
-  SourceState: !<own> 02b358dd-e703-4893-bfd6-3bfb5bf0a104
-- !<SceneObject/56061ba7-fc5d-4635-841c-f53030a8e6f7>
-  PrefabRemaps:
-    []
-  Name: Root
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> f79a713f-5ece-4a4b-8db1-15fa0ea58c88
-- !<RenderMeshVisual/f79a713f-5ece-4a4b-8db1-15fa0ea58c88>
+- !<RenderMeshVisual/210968cd-fc47-4d2b-71a2-7422704affe1>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -61,3 +34,23 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<SceneObject/3fe31b15-51f1-4484-5003-4ecf54b19809>
+  PrefabRemaps:
+    []
+  Name: Root
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 210968cd-fc47-4d2b-71a2-7422704affe1
+- !<ObjectPrefabAssetData/47b70cf8-583a-4f7b-bc14-778820723233>
+  Prototype: !<ObjectOwner/59d573d6-6ef4-4d4b-90ca-2886bf8999f9>
+    PackagePath: ""
+    objects:
+      - !<own> 3fe31b15-51f1-4484-5003-4ecf54b19809

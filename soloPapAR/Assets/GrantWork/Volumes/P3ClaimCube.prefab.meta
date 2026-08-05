@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> db5599e8-7c42-4c7b-a6bd-58d947481dac
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,13 +14,22 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<ObjectPrefab/4805efa9-56bb-47db-8a87-ecba901a6bc4>
-  PackagePath: ""
-  objects:
-    - !<own> 59d901f4-4b64-44b7-bfee-3c6e744f52c3
-  LazyLoading: false
-  RetainAssets: true
-- !<RenderMeshVisual/576b2360-0ec3-4695-b9e4-2f0e19f93d03>
+- !<SceneObject/25bbfa9d-d544-49e6-755c-4b3ee4d5af16>
+  PrefabRemaps:
+    []
+  Name: Root
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 7cecb356-2c9b-4015-58dd-aa782afe423c
+- !<RenderMeshVisual/7cecb356-2c9b-4015-58dd-aa782afe423c>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -40,24 +49,8 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<SceneObject/59d901f4-4b64-44b7-bfee-3c6e744f52c3>
-  PrefabRemaps:
-    []
-  Name: Root
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 576b2360-0ec3-4695-b9e4-2f0e19f93d03
 - !<ObjectPrefabAssetData/9139a3bb-9a2c-406a-a6cf-6bf3b7643a07>
-  SourceRemaps:
-    - 25bbfa9d-d544-49e6-8aa3-b4c11b2a50e9: 59d901f4-4b64-44b7-bfee-3c6e744f52c3
-    - 7cecb356-2c9b-4015-a722-5587d501bdc3: 576b2360-0ec3-4695-b9e4-2f0e19f93d03
-    - db5599e8-7c42-4c7b-a6bd-58d947481dac: 4805efa9-56bb-47db-8a87-ecba901a6bc4
-  SourceState: !<own> 4805efa9-56bb-47db-8a87-ecba901a6bc4
+  Prototype: !<ObjectOwner/a011509a-5fb2-406a-8d42-573c758869e2>
+    PackagePath: ""
+    objects:
+      - !<own> 25bbfa9d-d544-49e6-755c-4b3ee4d5af16

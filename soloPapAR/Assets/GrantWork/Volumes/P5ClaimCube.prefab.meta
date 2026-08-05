@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> 019dd634-4db3-406d-afb2-3b4c6cdb8c15
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,7 +14,22 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<RenderMeshVisual/24608742-b7c9-4dea-91ab-f04e4f688ba2>
+- !<SceneObject/77e49644-39ac-4316-5ad9-f14e1ee3d149>
+  PrefabRemaps:
+    []
+  Name: Object Prefab
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 88e2335f-186a-4911-7216-c18368931c95
+- !<RenderMeshVisual/88e2335f-186a-4911-7216-c18368931c95>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -34,30 +49,8 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<ObjectPrefab/3f1108fd-70c0-4c97-8469-d158c74a2301>
-  PackagePath: ""
-  objects:
-    - !<own> df7d5fb6-787b-4c38-bf02-ee9b08d9423b
-  LazyLoading: false
-  RetainAssets: true
-- !<SceneObject/df7d5fb6-787b-4c38-bf02-ee9b08d9423b>
-  PrefabRemaps:
-    []
-  Name: Object Prefab
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 24608742-b7c9-4dea-91ab-f04e4f688ba2
 - !<ObjectPrefabAssetData/f69a3d51-82cc-4aab-8d30-29122479aac8>
-  SourceRemaps:
-    - 019dd634-4db3-406d-afb2-3b4c6cdb8c15: 3f1108fd-70c0-4c97-8469-d158c74a2301
-    - 77e49644-39ac-4316-a526-0eb1e11c2eb6: df7d5fb6-787b-4c38-bf02-ee9b08d9423b
-    - 88e2335f-186a-4911-8de9-3e7c976ce36a: 24608742-b7c9-4dea-91ab-f04e4f688ba2
-  SourceState: !<own> 3f1108fd-70c0-4c97-8469-d158c74a2301
+  Prototype: !<ObjectOwner/ddd968d8-fa97-4219-9945-98c0c69a2b02>
+    PackagePath: ""
+    objects:
+      - !<own> 77e49644-39ac-4316-5ad9-f14e1ee3d149

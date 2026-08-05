@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> 7b6bf067-d25b-4e07-909b-b5f3867d051e
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -15,18 +15,26 @@
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
 - !<ObjectPrefabAssetData/297a66e3-da16-4150-8991-dee8862a387f>
-  SourceRemaps:
-    - 31885f1e-5f26-4912-83d7-8b67f3f438e7: fd933915-ae19-43e6-a621-92a933a3a8b1
-    - 7b6bf067-d25b-4e07-909b-b5f3867d051e: 36a2cca5-8362-4843-91be-4e27a2f27614
-    - 90ca503f-963f-4d1e-911f-48c11ef97fef: 83146f0a-3c8b-483f-933d-ab290dc72a10
-  SourceState: !<own> 36a2cca5-8362-4843-91be-4e27a2f27614
-- !<ObjectPrefab/36a2cca5-8362-4843-91be-4e27a2f27614>
-  PackagePath: ""
-  objects:
-    - !<own> fd933915-ae19-43e6-a621-92a933a3a8b1
-  LazyLoading: false
-  RetainAssets: true
-- !<RenderMeshVisual/83146f0a-3c8b-483f-933d-ab290dc72a10>
+  Prototype: !<ObjectOwner/4f25173f-dde7-42fa-bf2c-7445ec210aa3>
+    PackagePath: ""
+    objects:
+      - !<own> 31885f1e-5f26-4912-7c28-74980c0bc718
+- !<SceneObject/31885f1e-5f26-4912-7c28-74980c0bc718>
+  PrefabRemaps:
+    []
+  Name: Root
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 90ca503f-963f-4d1e-6ee0-b73ee1068010
+- !<RenderMeshVisual/90ca503f-963f-4d1e-6ee0-b73ee1068010>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -46,18 +54,3 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<SceneObject/fd933915-ae19-43e6-a621-92a933a3a8b1>
-  PrefabRemaps:
-    []
-  Name: Root
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 83146f0a-3c8b-483f-933d-ab290dc72a10

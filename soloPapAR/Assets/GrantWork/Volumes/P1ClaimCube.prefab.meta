@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> 99267dff-1b24-4308-a022-dc67892f14e8
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,13 +14,27 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<ObjectPrefab/1f96459c-edf6-4352-b8ef-80e1e4276b98>
-  PackagePath: ""
-  objects:
-    - !<own> 6e1d352e-6c76-46b2-83e1-70ed65c898f0
-  LazyLoading: false
-  RetainAssets: true
-- !<SceneObject/6e1d352e-6c76-46b2-83e1-70ed65c898f0>
+- !<RenderMeshVisual/03449a56-7250-4c44-578f-cd1a3beb380a>
+  PrefabRemaps:
+    []
+  Name: Render Mesh Visual
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> d630718d-320d-48c7-a837-b605cb6f3c6c
+  Mesh: !<reference> e542623c-1432-4bfa-881d-a28905bd9e57
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/45255640-aab9-42a3-55c1-b78d0dc39d87>
   PrefabRemaps:
     []
   Name: Object Prefab
@@ -34,30 +48,9 @@
   Children:
     []
   Components:
-    - !<own> c3fd30ec-9c92-489d-949e-bb58186bccc5
-- !<RenderMeshVisual/c3fd30ec-9c92-489d-949e-bb58186bccc5>
-  PrefabRemaps:
-    []
-  Name: Render Mesh Visual
-  Enabled: true
-  RenderOrder: 0
-  StretchMode: Stretch
-  VerticalAlignment: Center
-  HorizontalAlignment: Center
-  MeshShadowMode: None
-  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-  ShadowDensity: 1.000000
-  Materials:
-    - !<reference> f16c896d-679b-45b9-bd99-ce5181f4d536
-  Mesh: !<reference> e542623c-1432-4bfa-881d-a28905bd9e57
-  Skin: !<reference> 00000000-0000-0000-0000-000000000000
-  BlendShapesEnabled: true
-  BlendNormals: false
-  BlendShapes:
-    {}
+    - !<own> 03449a56-7250-4c44-578f-cd1a3beb380a
 - !<ObjectPrefabAssetData/cc175160-2111-4a19-bb2a-9619c84b05bc>
-  SourceRemaps:
-    - 03449a56-7250-4c44-a870-32e5c414c7f5: c3fd30ec-9c92-489d-949e-bb58186bccc5
-    - 45255640-aab9-42a3-aa3e-4872f23c6278: 6e1d352e-6c76-46b2-83e1-70ed65c898f0
-    - 99267dff-1b24-4308-a022-dc67892f14e8: 1f96459c-edf6-4352-b8ef-80e1e4276b98
-  SourceState: !<own> 1f96459c-edf6-4352-b8ef-80e1e4276b98
+  Prototype: !<ObjectOwner/75fc200d-ed56-4a09-82bf-c51a4fa315d6>
+    PackagePath: ""
+    objects:
+      - !<own> 45255640-aab9-42a3-55c1-b78d0dc39d87

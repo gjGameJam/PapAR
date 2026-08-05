@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> 3261f9e5-32bb-426e-b688-7b5d56236970
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,28 +14,7 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<SceneObject/01f960af-0428-4b3f-8e65-89e796260d27>
-  PrefabRemaps:
-    []
-  Name: Root
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> afb862df-8272-474d-9ed3-00df28e9572d
-- !<ObjectPrefab/303cc54c-3353-4d6d-b151-184367df62f9>
-  PackagePath: ""
-  objects:
-    - !<own> 01f960af-0428-4b3f-8e65-89e796260d27
-  LazyLoading: false
-  RetainAssets: true
-- !<RenderMeshVisual/afb862df-8272-474d-9ed3-00df28e9572d>
+- !<RenderMeshVisual/529f5c2c-2f6b-4a38-6161-ca2b1292a14c>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -55,9 +34,23 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<SceneObject/81799b52-b519-4910-418c-74bf11578747>
+  PrefabRemaps:
+    []
+  Name: Root
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 529f5c2c-2f6b-4a38-6161-ca2b1292a14c
 - !<ObjectPrefabAssetData/b4cf4e51-cff9-4bca-b72c-0e99010c67d9>
-  SourceRemaps:
-    - 3261f9e5-32bb-426e-b688-7b5d56236970: 303cc54c-3353-4d6d-b151-184367df62f9
-    - 529f5c2c-2f6b-4a38-9e9e-35d4ed6d5eb3: afb862df-8272-474d-9ed3-00df28e9572d
-    - 81799b52-b519-4910-be73-8b40eea878b8: 01f960af-0428-4b3f-8e65-89e796260d27
-  SourceState: !<own> 303cc54c-3353-4d6d-b151-184367df62f9
+  Prototype: !<ObjectOwner/2d00b7e4-06a8-41aa-bd64-a52936ec3e78>
+    PackagePath: ""
+    objects:
+      - !<own> 81799b52-b519-4910-418c-74bf11578747

@@ -4,7 +4,7 @@
   ImporterName: ObjectPrefabImporter
   PrimaryAsset: !<reference> c847b6b7-f63f-4310-a3f5-ed15527c6b85
   PackageType: NotAPackage
-  PackagePolicy: CannotBeUnpacked
+  LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
@@ -14,13 +14,7 @@
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<ObjectPrefab/34434095-794b-4e04-bf5b-5217e9302767>
-  PackagePath: ""
-  objects:
-    - !<own> ff2808fd-7bf9-4fab-961e-e8305fb8881a
-  LazyLoading: false
-  RetainAssets: true
-- !<RenderMeshVisual/3eaaafe5-73ef-4913-aefd-568b988b5a55>
+- !<RenderMeshVisual/2f8179f7-0209-498e-4330-3fcb1956f17a>
   PrefabRemaps:
     []
   Name: Render Mesh Visual
@@ -41,12 +35,11 @@
   BlendShapes:
     {}
 - !<ObjectPrefabAssetData/4055aa67-dc6c-4ba2-8337-1127974e85bc>
-  SourceRemaps:
-    - 2f8179f7-0209-498e-bccf-c034e6a90e85: 3eaaafe5-73ef-4913-aefd-568b988b5a55
-    - 91ede609-53dc-4a72-8964-753a33ae2aa6: ff2808fd-7bf9-4fab-961e-e8305fb8881a
-    - c847b6b7-f63f-4310-a3f5-ed15527c6b85: 34434095-794b-4e04-bf5b-5217e9302767
-  SourceState: !<own> 34434095-794b-4e04-bf5b-5217e9302767
-- !<SceneObject/ff2808fd-7bf9-4fab-961e-e8305fb8881a>
+  Prototype: !<ObjectOwner/61cb5a71-7d62-422f-9a56-422ff6f42e59>
+    PackagePath: ""
+    objects:
+      - !<own> 91ede609-53dc-4a72-769b-8ac5cc51d559
+- !<SceneObject/91ede609-53dc-4a72-769b-8ac5cc51d559>
   PrefabRemaps:
     []
   Name: Root
@@ -60,4 +53,4 @@
   Children:
     []
   Components:
-    - !<own> 3eaaafe5-73ef-4913-aefd-568b988b5a55
+    - !<own> 2f8179f7-0209-498e-4330-3fcb1956f17a

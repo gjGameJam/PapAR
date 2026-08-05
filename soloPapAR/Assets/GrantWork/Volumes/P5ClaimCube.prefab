@@ -6,7 +6,8 @@
   RetainAssets: true
 - !<SceneObject/77e49644-39ac-4316-a526-0eb1e11c2eb6>
   PrefabRemaps:
-    []
+    - 77e49644-39ac-4316-a526-0eb1e11c2eb6: 77e49644-39ac-4316-5ad9-f14e1ee3d149
+    - 88e2335f-186a-4911-8de9-3e7c976ce36a: 88e2335f-186a-4911-7216-c18368931c95
   Name: Object Prefab
   Enabled: true
   Layers: 1
