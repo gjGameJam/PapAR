@@ -1,0 +1,39 @@
+- !<AssetImportMetadata/bad7e8c7-e9ef-461c-a490-435778b2e1d8>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 26c2d4da-5c9f-42f2-b52e-c18bbc3acf57
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 26c2d4da-5c9f-42f2-b52e-c18bbc3acf57
+  PackageType: NotAPackage
+  PackagePolicy: CannotBeUnpacked
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 4e2a18a7-3871-4f52-9db4-e9856f1435f6
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/4e2a18a7-3871-4f52-9db4-e9856f1435f6>
+  SvgIcon: ""
+  Description: ""
+  InternalVersion: 0
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  ComponentUid: af4ca432-dc2e-483b-8ecc-8754bb075b6e
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  CurrentVisibility: Editable
+  MaxVisibility: Editable
+  ScriptInputsHidden:
+    deviceTracking: false
+  ScriptTypesHidden:
+    {}
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  DefaultScriptInputs:
+    - deviceTracking: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Component.DeviceTracking deviceTracking

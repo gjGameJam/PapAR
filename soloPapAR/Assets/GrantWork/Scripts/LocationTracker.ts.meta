@@ -1,0 +1,56 @@
+- !<AssetImportMetadata/887977da-ff83-4152-b491-5fb6251410d6>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 2d15e220-16db-41e4-b878-c01cb863a78b
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 2d15e220-16db-41e4-b878-c01cb863a78b
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 1d18a491-8fc3-45f0-8ad5-13c8408be2c5
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/1d18a491-8fc3-45f0-8ad5-13c8408be2c5>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  ComponentUid: a58bfac3-3f1f-4da9-a8c5-cde18ddc6403
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    Networker: false
+    PlayerVisuals: false
+    networkedInstantiator: false
+    playerTracker: false
+    showLogs: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
+      Networker: !<MappingBased.AssignableType> 00000000-0000-0000-0000-000000000000
+      networkedInstantiator: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      PlayerVisuals: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      showLogs: false
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Component.DeviceTracking playerTracker
+    - // @input AssignableType Networker
+    - // @input AssignableType_1 networkedInstantiator
+    - // @input AssignableType_2 PlayerVisuals
+    - // @input bool showLogs
