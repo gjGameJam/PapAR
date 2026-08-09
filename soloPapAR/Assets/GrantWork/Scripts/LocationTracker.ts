@@ -6,13 +6,6 @@ import { PlayerVisuals } from './PlayerVisuals';
 
 @component
 export class LocationTracker extends BaseScriptComponent {
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  horizontalAccuracy: number;
-  verticalAccuracy: number;
-  timestamp: Date;
-  locationSource: string;
     
   unitsPerCell: number = 200;//cells are this number by this number meters
   gridRadius: number = 20;
@@ -33,9 +26,7 @@ export class LocationTracker extends BaseScriptComponent {
   @input
   showLogs: boolean = false; // gate debug prints via this.log()
 
-  private repeatUpdateUserLocation: DelayedCallbackEvent;
   private getNewPosition: DelayedCallbackEvent;
-  private locationService: LocationService;
   private hasStarted: boolean = false;
   private seshController: SessionController;
   //id number of client to use for material color and unique claim ability

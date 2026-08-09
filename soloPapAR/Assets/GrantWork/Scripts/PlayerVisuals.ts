@@ -894,26 +894,28 @@ export class PlayerVisuals extends BaseScriptComponent {
     }
 
     //function to display info as text on screen
-    //this is called by grid claimer in update pos
-    updateHUDText(lat: number, long: number, gridx: number, gridy: number, latOff: number, longOff: number): void {
+    //called every 0.1s tick by LocationTracker as (grid x, grid y, world x, world z, 0, 0).
+    //These were named lat/long back when position came from GPS; position now comes solely
+    //from DeviceTracking world space, so no geolocation data reaches this HUD.
+    updateHUDText(gridX: number, gridY: number, worldX: number, worldZ: number, spareA: number, spareB: number): void {
         if (!this.showHUDText) {
             this.uiText.text = "";
             return;
         }
 
-        // Clamp latitude and longitude to 5 decimal places
-        const clampedLat = lat.toFixed(5);
-        const clampedLong = long.toFixed(5);
-        const clampedgridx = gridx.toFixed(5);
-        const clampedgridy = gridy.toFixed(5);
-        const clampedlatOff = latOff.toFixed(5);
-        const clampedlongOff = longOff.toFixed(5);
+        // Clamp each value to 5 decimal places
+        const clampedGridX = gridX.toFixed(5);
+        const clampedGridY = gridY.toFixed(5);
+        const clampedWorldX = worldX.toFixed(5);
+        const clampedWorldZ = worldZ.toFixed(5);
+        const clampedSpareA = spareA.toFixed(5);
+        const clampedSpareB = spareB.toFixed(5);
 
-        // Display the clamped coordinates and grid position
+        // Display the clamped grid and world position
         this.uiText.text =
-            `Grid: (${clampedLat}, ${clampedLong})\n` +
-            `WorldPos: (${clampedgridx}, ${clampedgridy})\n` +
-            `N/A: (${clampedlatOff}, ${clampedlongOff})`;
+            `Grid: (${clampedGridX}, ${clampedGridY})\n` +
+            `WorldPos: (${clampedWorldX}, ${clampedWorldZ})\n` +
+            `N/A: (${clampedSpareA}, ${clampedSpareB})`;
     }
 
     //gated logging: only prints when showLogs is enabled
