@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Version 3.0 (polygonal multiplayer) is in progress — Phase 0 (dead-code purge) is complete.** This file documents **2.0 as-built** (grid
+> multiplayer). The approved 3.0 design lives in [`V3_SPEC.md`](./V3_SPEC.md) (functionality/rules)
+> and [`V3_IMPLEMENTATION.md`](./V3_IMPLEMENTATION.md) (architecture, migration phases, progress
+> tracker, frozen research facts). Before starting any 3.0 work, read both and check the progress
+> tracker at the top of `V3_IMPLEMENTATION.md`.
+
 ## Project Overview
 
 **soloPapAR** is a Paper.io-inspired AR game for **Snap Spectacles** (AR glasses), built in **Snap Lens Studio 5.12.1** using **TypeScript**. Players physically walk in the real world to stake trails, loop back to their own territory, and convert the enclosed area into permanent claims. The AR grid and all player objects are overlaid on the physical world at 1:1 scale (2 meters per cell). Stepping on another player's stake trail kills its owner; a killed player (or one who leaves) is cleaned up on every client, then — after a 3-second respawn countdown — rejoins with a fresh home claim.
@@ -22,23 +28,25 @@ soloPapAR/
 │   │   ├── Scripts/               # All custom TypeScript — the entire game logic
 │   │   │   ├── LocationTracker.ts
 │   │   │   ├── Networker.ts
-│   │   │   ├── PlayerVisuals.ts
-│   │   │   ├── GridClaimer.ts     # Legacy — SparseGrid + CellState still imported
-│   │   │   └── UnionFindLoopDetection.ts  # Stub, fully commented out
-│   │   ├── Volumes/
-│   │   │   ├── P1–P5 ClaimCube / StakeCube / StakePillar  (.prefab)
-│   │   │   ├── Materials/         # P1–P5 Claim / Stake / Pillar materials (.mat)
-│   │   │   └── Shaders/           # P1–P5 Claim / Stake / Pillar shaders (.ss_graph)
-│   │   └── GameLocation.location  # Snap location anchor asset
+│   │   │   └── PlayerVisuals.ts
+│   │   └── Volumes/
+│   │       ├── P1–P5 ClaimCube / StakeCube / StakePillar  (.prefab)
+│   │       ├── Materials/         # P1–P5 Claim / Stake / Pillar materials (.mat)
+│   │       └── Shaders/           # P1–P5 Claim / Stake / Pillar shaders (.ss_graph)
 │   └── ...                        # HDR env, device camera texture, base image
 └── SpectaclesSyncKit.lspkg/       # Networking package (imported as package, not asset)
 ```
+
+> **Deliberately absent — do not re-add.** There is no `.location` asset (a former
+> `GrantWork/GameLocation.location`) and no `Requirements.ts`. Each independently declared the
+> **Location** permission, which Snap will not publish alongside Connected Lenses. Re-adding
+> either re-breaks submission. See *Lens Publication — Known Submission Blockers → item 0*.
 
 ---
 
 ## Script Architecture
 
-Three active `BaseScriptComponent` classes drive the game — `LocationTracker`, `Networker`, `PlayerVisuals` — each attached to a scene object and wired together via `@input` fields. Two more classes are documented below but inactive: `GridClaimer` (legacy, being phased out) and `UnionFindLoopDetection` (defunct stub).
+Three `BaseScriptComponent` classes drive the game — `LocationTracker`, `Networker`, `PlayerVisuals` — each attached to a scene object and wired together via `@input` fields. (Two former legacy files — `GridClaimer.ts` and `UnionFindLoopDetection.ts` — were deleted in the V3 Phase 0 purge, 2026-08-12; git history keeps them.)
 
 ### `LocationTracker.ts` — Entry point / position polling
 
@@ -158,7 +166,7 @@ Steps:
 
 #### Interior fill algorithm
 
-`findAndFillEnclosedRegion(loop, realWorldCoords, epoch)` uses **exterior flood fill** (NET-4). Enclosure on a discrete grid is a connectivity question ("can this cell reach the outside without crossing my boundary?"), not the crossing-parity question the old point-in-polygon ray-cast (`isInLoop`/`getLoopEdges`, removed from `Networker` — they still physically exist in the legacy `GridClaimer.ts`) answered — that ray-cast treated cells as idealized points and left squares beside diagonal edges unfilled.
+`findAndFillEnclosedRegion(loop, realWorldCoords, epoch)` uses **exterior flood fill** (NET-4). Enclosure on a discrete grid is a connectivity question ("can this cell reach the outside without crossing my boundary?"), not the crossing-parity question the old point-in-polygon ray-cast (`isInLoop`/`getLoopEdges`, removed from `Networker`; the legacy `GridClaimer.ts` copies were deleted in Phase 0) answered — that ray-cast treated cells as idealized points and left squares beside diagonal edges unfilled.
 
 1. Compute the bounding box `[minX, maxX] × [minZ, maxZ]` of the stake loop; early-return if `loop.length < 4` or `maxX - minX <= 1 || maxZ - minZ <= 1` (no interior possible).
 2. **Build a barrier** `Set<number>` (key = `x * height + z`; only in-bounds cells) of cells the fill can't cross:
@@ -301,7 +309,7 @@ Returns a `vec2(x, z)`. Used when spawning visuals (y is passed through from rea
 - Both references pushed into `spawnedStakes: SceneObject[]` (only if still valid at `onSuccess` time)
 - Prefabs: `getStakeVolumeFromPlayerID(ID)` and `getStakePillarFromPlayerID(ID)`
 
-(`ownerClientID`/`isStillValid` are optional so legacy `GridClaimer` call sites still compile; `Networker` always passes both.)
+(`ownerClientID`/`isStillValid` are optional parameters; `Networker` always passes both. The legacy `GridClaimer` call sites that motivated the optionality are gone — Phase 0.)
 
 **Destruction — self**: `DestroyAllClaims()` and `DestroyAllStakes()` iterate their arrays via `safeDestroy()` and reset array length to 0 **in a `finally`**. `safeDestroy` skips null/`isNull()` natives and try/catches the `destroy()` (logging, never silently) — a remote `deleteRealtimeStore` can destroy an object under us without splicing the array, and a raw `obj.destroy()` on a destroyed native throws, which used to abort the teardown mid-loop and leave dead refs poisoning every later death (NET-13). These arrays only contain objects spawned by this local device (populated via `onSuccess`, which fires only on the spawner), so they are the correct path for self-death teardown only.
 
@@ -340,7 +348,7 @@ Stake cube and pillar materials share the same RGB. Pillars are fully opaque (al
 
 Material cloning: each background `Image` in `miniMapCells` gets its material cloned on the first write (guarded by `img.__hasUniqueMaterial`) to prevent shared-material color bleed across all cells; each `stakeDots` Image is created with its own `cellMaterial.clone()` up front for the same reason.
 
-**Legacy path — `updateMiniMap(gridPos, grid)`**: Reads from a local `SparseGrid` — not the cloud. This path is dead code; `GridClaimer.updatePos()` (its only caller) has been commented out. Do not call it. Use `updateMiniMapNetworked` instead.
+(The former legacy path — `updateMiniMap(gridPos, grid)` reading a local `SparseGrid`, plus its helpers `renderMiniMapCell`/`getCellColor`/`createUICell`/`getCellMatClone` — was deleted in Phase 0. `updateMiniMapNetworked` is the only minimap renderer.)
 
 #### Direction arrow (rotation + sub-cell slide)
 
@@ -362,50 +370,13 @@ Both methods no-op safely if the input is unassigned. Requires a centered screen
 
 #### `@input` fields (all assigned in Lens Studio scene)
 
-`uiText`, `respawnCountdownText`, `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`.
+`uiText`, `respawnCountdownText`, `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`. (`screenTransform` is no longer read by any code since Phase 0 deleted `createUICell`; the input is kept wired for now — removing it is a Lens Studio scene edit, slated for the V3 minimap rework.)
 
 ---
 
-### `GridClaimer.ts` — Legacy (being phased out)
+### Deleted legacy files (V3 Phase 0, 2026-08-12)
 
-**Do not add new game logic here.** `Networker.ts` has superseded all functionality from `GridClaimer`. However, `GridClaimer.ts` still provides two actively imported exports:
-
-#### `SparseGrid` class
-
-Local-only (not networked) sparse grid for single-player state or for `updateMiniMap`.
-
-Storage:
-- `claimedCells: Map<GridCell, { claimOwner: PlayerID }>` — key is `"x,y"` template literal type
-- `stakedCells: Map<GridCell, PlayerID>` — separate map; staked cells take priority over claimed in `getCellState()`
-
-Key methods:
-- `getCellState(x, y)`: checks `stakedCells` first, then `claimedCells`, then returns `UNCLAIMED`
-- `claimCell(x, y, player)`: writes to `claimedCells` AND deletes from `stakedCells`
-- `stakeCell(x, y, player)`: writes only to `stakedCells`, leaves claim intact
-- `getPlayerStakes(playerID)` / `getPlayerClaims(playerID)`: linear scan over maps, returns `GridCell[]`
-- `unclaimCell`, `unstakeCell`: delete from respective map
-
-`GridCell` is a TypeScript template literal type: `` `${number},${number}` ``. This enforces key format at compile time.
-
-#### `CellState` enum
-
-```typescript
-export enum CellState {
-    UNCLAIMED = "Unclaimed",
-    CLAIMED = "Claimed",
-    STAKED = "Staked",
-}
-```
-
-Imported by `PlayerVisuals.ts` for minimap rendering.
-
-The `GridClaimer` component class itself still has `updatePos()`, `handlePlayerDeath()`, `addStakedRegionToClaim()`, and `findAndFillEnclosedRegion()` — these are the local single-player equivalents of the networked versions in `Networker`. `LocationTracker` previously called `GridClaimer.updatePos()` but that call is now commented out.
-
----
-
-### `UnionFindLoopDetection.ts` — Defunct stub
-
-The `LoopDetection` class exists but its entire implementation is commented out. It was intended to detect loop closure using Union-Find (path compression + union by size), with a helper to convert a stake list to an adjacency list for 4-connected neighbors. This approach was abandoned in favor of the flood-fill in `Networker.findAndFillEnclosedRegion()`.
+`GridClaimer.ts` (the local single-player `SparseGrid`/`CellState` pipeline superseded by `Networker`) and `UnionFindLoopDetection.ts` (a fully commented-out Union-Find stub, abandoned in favor of `Networker.findAndFillEnclosedRegion()`'s flood fill) were deleted along with their `.meta` files and `PlayerVisuals`'s dead minimap methods. Neither had any scene reference (verified against component GUIDs). Git history preserves them; do not re-add.
 
 ---
 
@@ -415,7 +386,7 @@ Three spaces exist simultaneously. Two functions convert between them:
 
 ### AR World → Grid
 
-`worldCoordsToGridPos(wPos: vec2): vec2` (in both `LocationTracker` and `GridClaimer`):
+`worldCoordsToGridPos(wPos: vec2): vec2` (in `LocationTracker`):
 ```
 cellX = worldX / 200
 cellY = worldZ / 200
@@ -426,7 +397,7 @@ Result: integer grid indices `[0, 39]`. The origin cell (grid position 20, 20) m
 
 ### Grid → AR World
 
-`gridPosToWorldCoords(col, row): vec2` (in both `Networker` and `GridClaimer`):
+`gridPosToWorldCoords(col, row): vec2` (in `Networker`):
 ```
 worldX = (col - 20) * 200
 worldZ = (row - 20) * 200
@@ -613,8 +584,8 @@ Device pose   [every frame — PlayerVisuals.onUpdate]
 
 | Constant | Value | Location | Meaning |
 |---|---|---|---|
-| `unitsPerCell` | `200` | `Networker`, `LocationTracker`, `GridClaimer` | Cell size in cm (2 m) |
-| `gridRadius` | `20` | `Networker`, `LocationTracker`, `GridClaimer` | Half of grid width |
+| `unitsPerCell` | `200` | `Networker`, `LocationTracker` | Cell size in cm (2 m) |
+| `gridRadius` | `20` | `Networker`, `LocationTracker` | Half of grid width |
 | `height` | `40` | `Networker` | Grid width and height in cells |
 | `localCacheMaxAge` | `5000ms` | `Networker.getData()` | Cache TTL before fallback to cloud |
 | Conversion delay | `40ms` | `convertStakesSequentially()` | Delay between stake→claim writes |
@@ -650,13 +621,16 @@ Device pose   [every frame — PlayerVisuals.onUpdate]
 
 **`SessionController [CONFIGURE_ME]` scene object**:
 - `connectedLensModule` ✓
-- `locationCloudStorageModule` ✓
+- `locationCloudStorageModule` ✓ — required for colocated mapping; **not** a location-permission trigger
 - `isColocated: true` ✓
-- `locatedAtComponent` → `ColocatedWorld [CONFIGURE_ME]`'s LocatedAtComponent ✓
+- `locatedAtComponent` → `ColocatedWorld [CONFIGURE_ME]`'s LocatedAtComponent ✓ — **must stay assigned.** It is `@input` + `@showIf("isColocated")` with no default, so Lens Studio's `checkUndefined` hard-fails at runtime if cleared: `Error: Input locatedAtComponent was not provided for the object SessionController [CONFIGURE_ME]`. `SessionController.configure()` also dereferences `this.locatedAtComponent.location` with no null guard.
 - `skipUiInStudio: false` — multiplayer join UI shows in Studio preview; set to `true` to skip it during iteration
 
 **`ColocatedWorld [CONFIGURE_ME]` scene object**:
 - Has `LocatedAtComponent` directly on it ✓
+- Its **`Location` field MUST be empty** (`Location: !<reference> 00000000-0000-0000-0000-000000000000`) ✓ — matching Snap's shipped `SpectaclesSyncKit.prefab`. Assigning any `LocationAsset` here is the Custom Location AR opt-in and makes the Lens unpublishable (see Lens Publication item 0). Colocation does not use this field: `SessionController` hardcodes `mappingOptions.location = LocationAsset.getAROrigin()`.
+
+> **Do not confuse these two fields.** `SessionController.locatedAtComponent` (a reference **to** the component — keep) vs `ColocatedWorld`'s `Located At` → `Location` (a reference to a **LocationAsset** — clear). Clearing the first is the runtime error above; clearing the second is the publication fix.
 
 The scene still contains leftover example objects from the SpectaclesSyncKit template that are not used: `SessionControllerExampleTypescript`, two `SessionControllerExampleJavascript` objects, `InstantiatorExampleAuto`, a `SyncTransform` demo object, and a `SyncMaterial` demo object (disabled). These can be deleted.
 
@@ -688,7 +662,6 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 ### Code quality
 
 - **`getData()` ID parameter used only for logging**: `getData(ID, xpos, zpos)` references `ID` only in log statements (an opening trace and a "still staked by ID" warning), never for game logic. It's a legacy artifact; removing it means dropping those log lines too (see KNOWN_ISSUES TD-1).
-- **`UnionFindLoopDetection.ts`**: Entirely commented out. The `LoopDetection` class compiles as an empty component. The Union-Find approach was abandoned in favor of the flood-fill in `Networker.findAndFillEnclosedRegion()`.
 - **`computeClientID` duplicated**: The FNV-1a hash exists in both `LocationTracker.getDeterministicPlayerId` and `Networker.computeClientID`. If the hash algorithm ever changes, both must be updated. Could be extracted to a shared utility module.
 - **Gated logging still builds the string every call (KNOWN_ISSUES TD-9)**: `log()` checks `showLogs` *inside* the method, so every `this.log("…" + a + …)` concatenates its argument before the call even when logging is off. In the 10 Hz loop this is real per-tick allocation on device — worst in `getData()` (~10 concatenations/tick), `sendData()`, and the `onAnyChange` cell listener. Guard hot call sites with `if (this.showLogs)`, or delete the per-tick `getData()` call (also TD-1).
 - **Cleanup debt from the death-cleanup fix (KNOWN_ISSUES TD-12, TD-15)**: the epoch-gated `onSuccess` closure is copy-pasted three times across the `PlayerVisuals` spawn methods (TD-12); and `updateCellValue` dispatches immediate-vs-pending write mode by substring-matching the human-readable `description` label, which every new writer string silently opts out of (TD-15 — pass an explicit mode flag).
@@ -703,17 +676,44 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ## Lens Publication — Known Submission Blockers
 
-A submission to Snap's Lens Explorer was rejected with the generic "Invalid Lens Submitted / violates our Guidelines" boilerplate. The likely causes, in priority order, against the [Spectacles publishing requirements](https://developers.snap.com/spectacles/get-started/start-building/publishing-lens) and [Lens Submission Guidelines](https://developers.snap.com/lens-studio/publishing/submitting/submission-guidelines):
+> **Current status: the Lens PUBLISHES SUCCESSFULLY as of 2026-08-09.** The list below is kept as a
+> **regression checklist**, not an active blocker list. Item 0 is the one that was actually
+> diagnosed and fixed — treat it as a hard invariant. Items 1–4 were the earlier suspects for a
+> generic rejection; the lens now passes review, so they are retained as good practice and as the
+> first place to look if a future submission is rejected again.
 
-0. **Location + Connected Lenses — TWO independent causes** — submissions are rejected with a *specific* error: *"This Lens tracks a Snapchatter's location and also uses Connected Lenses or a Remote API. That combination is not allowed, because a Snapchatter's location cannot be shared with other users."* Snap's [Transparent Permission](https://developers.snap.com/spectacles/permission-privacy/transparent-permission) system blocks a sensitive permission (Location) combined with a connectivity type (Connected Lenses) at publication time. The Connected Lenses half (`ConnectedLensModule`, `LocationCloudStorageModule`, `isColocated: true`) is load-bearing for multiplayer and cannot be dropped, so the **location half must stay at exactly zero**.
+Earlier submissions to Snap's Lens Explorer were rejected — first with the generic "Invalid Lens Submitted / violates our Guidelines" boilerplate, later with the *specific* location/Connected-Lenses error in item 0. Assessed against the [Spectacles publishing requirements](https://developers.snap.com/spectacles/get-started/start-building/publishing-lens) and [Lens Submission Guidelines](https://developers.snap.com/lens-studio/publishing/submitting/submission-guidelines):
+
+0. **Location + Connected Lenses — ✅ RESOLVED 2026-08-09 (commit `d969cdb3`); DO NOT REGRESS** — the Lens **published successfully** after both causes below were removed. Submissions had been rejected with a *specific* error: *"This Lens tracks a Snapchatter's location and also uses Connected Lenses or a Remote API. That combination is not allowed, because a Snapchatter's location cannot be shared with other users."* Snap's [Transparent Permission](https://developers.snap.com/spectacles/permission-privacy/transparent-permission) system blocks a sensitive permission (Location) combined with a connectivity type (Connected Lenses) at publication time. The Connected Lenses half (`ConnectedLensModule`, `LocationCloudStorageModule`, `isColocated: true`) is load-bearing for multiplayer and cannot be dropped, so the **location half must stay at exactly zero**. There were **two fully independent causes** — removing only one still fails, which is why the first resubmission was rejected.
 
    **Cause A — `require("ProcessedLocationModule")` (fixed)**: `Assets/GrantWork/Scripts/Requirements.ts` was an orphaned stub component (class `NewScript`, empty `onAwake()`, attached to nothing in `Scene.scene`) whose first line was that `require`. Per [Permissions & Privacy](https://developers.snap.com/spectacles/permission-privacy/overview), `ProcessedLocationModule` **is** the "Location – Coarse" permission (`RawLocationModule` is "GPS – Precise"); a bare `require()` declares the permission even though no location API is ever called. **Fix applied**: deleted `Requirements.ts` + `.ts.meta` and stripped the vestigial GPS fields (`latitude`/`longitude`/`altitude`/`horizontalAccuracy`/`verticalAccuracy`/`timestamp`/`locationSource`/`locationService: LocationService`/`repeatUpdateUserLocation`) from `LocationTracker.ts`. Zero gameplay impact — the game's only position source is `playerTracker: DeviceTracking` → `getTransform().getWorldPosition()` (AR world space, cm, relative to the colocated origin); GPS was never consumed.
 
-   **Cause B — a `LocationAsset` assigned to the `LocatedAtComponent`**: the `ColocatedWorld [CONFIGURE_ME]` object's `Located At` component had its `Location` field pointing at `Assets/GrantWork/GameLocation.location`. That is the **Custom Location AR** opt-in — the signature Snap classifies as location tracking. Snap's own shipped `SpectaclesSyncKit.prefab` leaves this field **empty** (`Location: !<reference> 00000000-0000-0000-0000-000000000000`) for standard colocated multiplayer. Verified against the SyncKit sources: `SessionController` hardcodes `mappingOptions.location = LocationAsset.getAROrigin()`, so the colocated map **never** uses `locatedAtComponent.location`; the field only feeds `getCustomLandmark()` and `getMapExists()`, which are consumed solely by SyncKit's mapping-flow UI (`JoiningController`, `JoiningState`, `Mapping{Successful,Unsuccessful}State`) and by **no** PapAR script. Assigning it makes `getMapExists()` return true immediately, short-circuiting the normal colocated scan flow. **Fix**: clear the `Location` field in Lens Studio and delete `GameLocation.location`; colocation is unaffected, but the standard scan/join mapping UI returns.
+   **Cause B — a `LocationAsset` assigned to the `LocatedAtComponent`**: the `ColocatedWorld [CONFIGURE_ME]` object's `Located At` component had its `Location` field pointing at `Assets/GrantWork/GameLocation.location`. That is the **Custom Location AR** opt-in — the signature Snap classifies as location tracking. Snap's own shipped `SpectaclesSyncKit.prefab` leaves this field **empty** (`Location: !<reference> 00000000-0000-0000-0000-000000000000`) for standard colocated multiplayer. Verified against the SyncKit sources: `SessionController` hardcodes `mappingOptions.location = LocationAsset.getAROrigin()`, so the colocated map **never** uses `locatedAtComponent.location`; the field only feeds `getCustomLandmark()` and `getMapExists()`, which are consumed solely by SyncKit's mapping-flow UI (`JoiningController`, `JoiningState`, `Mapping{Successful,Unsuccessful}State`) and by **no** PapAR script. Assigning it makes `getMapExists()` return true immediately, short-circuiting the normal colocated scan flow. **Fix applied**: cleared the `Location` field in Lens Studio (now `00000000-0000-0000-0000-000000000000`) and deleted `GameLocation.location` + `.meta`. Colocation is unaffected; the standard scan/join mapping UI returns (that short-circuit was the only behavioural change).
+   ⚠️ **The two-field trap.** Two similarly-named fields; clearing the wrong one breaks the Lens at runtime:
+   - **KEEP ASSIGNED** — `locatedAtComponent`, on `SessionController [CONFIGURE_ME]` → script inspector → **Colocation** group. A reference *to* the component. Clearing it throws `Error: Input locatedAtComponent was not provided for the object SessionController [CONFIGURE_ME]` (`checkUndefined@…/SessionControllerComponent_c.js`) — it is `@input` + `@showIf("isColocated")` with no default, and `configure()` dereferences `.location` on it with no null guard.
+   - **CLEAR TO NONE** — `Location`, on `ColocatedWorld [CONFIGURE_ME]` → its **`Located At`** component. A reference to a `LocationAsset`. A null value here on an *assigned* component is fully supported: `getCustomLandmark(): LocationAsset | null` is documented "or null if not set".
 
-   **Guard rail**: never `require()` `ProcessedLocationModule`/`RawLocationModule`, and never assign a `LocationAsset` to a `LocatedAtComponent` in this project. Audit command — all four of these must return nothing: `require\(` in `Assets/`, and any `ProcessedLocationModule|RawLocationModule|LocationService|DeviceLocationTrackingComponent` in `Assets/` or in the extracted `Packages/*.lspkg` (they are ZIP archives — `unzip` them before grepping; an in-place text grep silently skips them). `LocationCloudStorageModule` itself is **required for colocated mapping** and is not a location-permission trigger per Snap's permission table.
+   **Guard rail — never** `require()` `ProcessedLocationModule`/`RawLocationModule`, and **never** assign a `LocationAsset` to a `LocatedAtComponent` in this project. Re-audit before any future submission; all of these must come back empty:
 
-1. **Trademark / IP** — the lens name `PapAR` and the "Paper.io-inspired" framing trade on Paper.io, a trademarked game by Voodoo. IP issues almost always trigger the generic boilerplate rejection rather than specific feedback. **Fix**: rename the lens to something non-derivative (e.g. "Territory AR", "Claim Trails") and scrub references to Paper.io from the lens name, description, release notes, and any in-game text.
+   ```bash
+   # 1. No require() of anything, anywhere in Assets (the project has zero legitimate ones)
+   grep -rn 'require(' Assets/
+   # 2. No location APIs in scripts or scene
+   grep -rnE 'ProcessedLocationModule|RawLocationModule|LocationService|DeviceLocationTrackingComponent' Assets/
+   # 3. No LocationAsset wired to the LocatedAtComponent (must be the all-zero GUID)
+   grep -A6 '^- !<LocatedAtComponent/' Assets/Scene.scene | grep 'Location:'
+   # 4. No .location assets in the project at all
+   find Assets -name '*.location*'
+   # 5. Packages are ZIP archives — an in-place grep SILENTLY SKIPS them. Unzip first.
+   for f in Packages/*.lspkg; do unzip -qo "$f" -d /tmp/pkg/$(basename "$f" .lspkg); done
+   grep -rnE 'require\("[A-Za-z]+"\)|ProcessedLocationModule|RawLocationModule|LocationService' /tmp/pkg/
+   ```
+
+   Verified clean as of the successful publish: SpectaclesSyncKit and SpectaclesInteractionKit contain **zero** `require()` calls and **zero** location-API references, and the scene's whole component inventory holds one `DeviceTracking`, one `LocatedAtComponent` (empty `Location`), and no GPS components. `LocationCloudStorageModule` is **required for colocated mapping** and is *not* a location-permission trigger per Snap's permission table — leave it assigned.
+
+   **After any change, restart Lens Studio before resubmitting.** Permissions are derived at import/build time; a stale editor session can submit the pre-fix permission set. Confirm the publish flow lists no Location permission.
+
+1. **Trademark / IP — largely addressed** — the published lens name is now **`ClaimAR`** (`soloPapAR.esproj` → `metaInfo.lensName: ClaimAR`), replacing `PapAR`, which traded on Paper.io (a trademarked game by Voodoo). IP issues almost always trigger the generic boilerplate rejection rather than specific feedback. **Residual**: the repo, project file, and these docs still use "PapAR" / "Paper.io-inspired" internally. That is harmless for review (reviewers see submission metadata, not source), but keep Paper.io out of the **lens name, store description, release notes, and any in-game text**.
 2. **Encouragement of real-world risky behavior** — the core loop has players physically racing across an ~80m × 80m area in AR glasses. Snap explicitly bans content that encourages risky real-life behavior. **Fix**: add an onboarding screen warning players to play in a safe, open area clear of obstacles and traffic, and consider shrinking the play area.
 3. **Missing required submission metadata** — eligibility requires all of: custom icon, 3×4 preview image, concise description, release notes, reviewer test notes, version number displayed at launch, and on-activation visuals communicating the objective. None of these are currently wired into the scene.
 4. **Quality / stability flags for solo reviewers** — the multiplayer-only experience feels empty when tested solo. (Three former stability blockers are resolved: permadeath — players now respawn after a 3-second countdown, so a reviewer who dies early is no longer stuck; the "conversion continues after death" glitch — conversion/interior chains now abort immediately on death via `conversionEpoch`, so a dead player no longer spawns stray claim visuals; and the death/visual-cleanup races — former NET-11…NET-15 — that rarely left orphan 3D volumes or stale minimap cells after a death, fixed by epoch-gated spawns, owner-stamped stores, pending-aware sweeps, ghost interceptors, and the join-window death replay.)

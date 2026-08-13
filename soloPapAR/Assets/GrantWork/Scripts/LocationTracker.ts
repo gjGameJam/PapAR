@@ -1,4 +1,3 @@
-//import { GridClaimer } from './GridClaimer';
 import { Networker, RESPAWN_FLOOR_S } from './Networker';
 import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
 import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';

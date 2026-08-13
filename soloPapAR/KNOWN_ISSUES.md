@@ -8,7 +8,7 @@
 > detail) and mirror the change into the relevant `CLAUDE.md` section. This file lists only
 > open/documented/missing work — no "resolved" archive, to keep it scannable.
 >
-> **Last updated:** 2026-07-13
+> **Last updated:** 2026-08-12
 > **Line numbers** are approximate and will drift — the file + symbol/function name is the
 > durable anchor.
 
@@ -36,14 +36,12 @@
 | NET-2 | clientID `0` (null display name) collides with "unclaimed" | 🟡 | ⬜ Open |
 | NET-5 | Death cloud cleanup best-effort for kills (leave residual closed by store sweep) | 🟡 | ⬜ Open |
 | NET-6 | Redundant simultaneous death-cleanup writes | 🟡 | ⬜ Open |
-| DEAD-1 | `GridClaimer` single-player pipeline dead; `updateMiniMap` colors latently broken | 🟡 | ⬜ Open |
-| DEAD-2 | `UnionFindLoopDetection` empty stub component | 🟡 | ⬜ Open |
-| DEAD-3 | Dead legacy GPS fields in `LocationTracker` | 🟡 | ⬜ Open |
+| DEAD-3 | Dead field `hasStarted` in `LocationTracker` (9 GPS fields removed in `d969cdb3`) | 🟡 | ⬜ Open |
 | DEAD-4 | Dead helpers `coordsToIndex` / `indexToCoords` / `lastIdx` | 🟡 | ⬜ Open |
 | TD-1 | `getData()` called every tick for nothing (post-LOG) | 🟡 | ⬜ Open |
 | TD-2 | FNV hash + coord conversion + constants duplicated across files | 🟡 | ⬜ Open |
 | TD-3 | `as any` reach into SyncKit `spawnedInstances` — now encapsulated; dependency irreducible | 🟡 | 📝 Documented |
-| TD-4 | `updateHUDText` misleading legacy param names | 🟡 | ⬜ Open |
+| TD-4 | `updateHUDText` carries two always-zero spare params (names fixed in `d969cdb3`) | 🟡 | ⬜ Open |
 | TD-5 | `Array(25).fill(vec2.zero())` shares one instance | 🟡 | ⬜ Open |
 | TD-6 | `getCellDataReadOnly` has no cache TTL (unlike `getData`/`getMiniMapCells`) | 🟡 | ⬜ Open |
 | TD-7 | Magic numbers (delays, TTL, `scale/6`) uncentralized | 🟡 | ⬜ Open |
@@ -116,32 +114,21 @@
 
 ## Dead / broken code
 
-### DEAD-1 — `GridClaimer` single-player pipeline is dead; `updateMiniMap` colors latently broken
-- **Sev:** 🟡 Low · **Location:** `GridClaimer.ts` (whole component's runtime path);
-  `PlayerVisuals.updateMiniMap()` / `renderMiniMapCell()` / `getCellColor()` /
-  `createUICell()`.
-- **Detail:** `GridClaimer` is no longer wired into the scene — its import/usage in
-  `LocationTracker` is commented out and `updatePos()` (the only caller of `updateMiniMap`, via
-  `GridClaimer.ts`) is never invoked — so this entire local-`SparseGrid` render path is
-  unreachable. `Networker` + `updateMiniMapNetworked` superseded it. If ever re-enabled, `getCellColor`
-  returns 0–255 `vec4`s (e.g. `new vec4(255,0,0,0.5)`) where shaders expect 0–1 — it would
-  render fully clipped. `SparseGrid` and `CellState` are still legitimately imported/used and
-  should stay.
-- **Fix hint:** Delete the dead render methods and the `GridClaimer` component's game logic,
-  keeping `SparseGrid`/`CellState` if still needed, or drop `GridClaimer` from the scene.
+> DEAD-1 (`GridClaimer` dead pipeline) and DEAD-2 (`UnionFindLoopDetection` stub) were resolved
+> by the V3 Phase 0 purge (2026-08-12): both files deleted along with `PlayerVisuals`'s dead
+> minimap methods (`updateMiniMap`/`renderMiniMapCell`/`getCellColor`/`createUICell`/
+> `getCellMatClone`) and the `GridClaimer` imports. Git history keeps the detail.
 
-### DEAD-2 — `UnionFindLoopDetection` empty stub
-- **Sev:** 🟡 Low · **Location:** `UnionFindLoopDetection.ts` — `LoopDetection` compiles to a
-  no-op `BaseScriptComponent`; its whole body is commented out (abandoned in favor of the
-  flood-fill in `Networker.findAndFillEnclosedRegion()`).
-- **Fix hint:** Delete the file (and detach from the scene if attached).
-
-### DEAD-3 — Dead legacy GPS fields in `LocationTracker`
-- **Sev:** 🟡 Low · **Location:** `LocationTracker.ts` — `latitude`, `longitude`, `altitude`,
-  `horizontalAccuracy`, `verticalAccuracy`, `timestamp`, `locationSource`,
-  `repeatUpdateUserLocation`, `locationService`, `hasStarted`. None are read/written;
-  leftovers from a GPS-based prototype.
-- **Fix hint:** Remove all ten fields.
+### DEAD-3 — Dead field `hasStarted` in `LocationTracker`
+- **Sev:** 🟡 Low · **Location:** `LocationTracker.ts` — `private hasStarted: boolean = false`.
+  Declared, never read or written.
+- **History:** the other nine fields this entry used to cover (`latitude`, `longitude`,
+  `altitude`, `horizontalAccuracy`, `verticalAccuracy`, `timestamp`, `locationSource`,
+  `repeatUpdateUserLocation`, `locationService: LocationService`) were removed in `d969cdb3`.
+  They were GPS-prototype leftovers, and the `LocationService` type reference made the Lens
+  *look* like it consumed geolocation. Not the publication blocker itself, but removed as part
+  of that cleanup — see `CLAUDE.md` → "Lens Publication — Known Submission Blockers" item 0.
+- **Fix hint:** Remove the one remaining field.
 
 ### DEAD-4 — Dead helpers `coordsToIndex` / `indexToCoords` / `lastIdx`
 - **Sev:** 🟡 Low · **Location:** `Networker.ts` — `lastIdx`, `coordsToIndex()`,
@@ -164,10 +151,10 @@
 ### TD-2 — Duplicated hash / coordinate conversion / constants
 - **Sev:** 🟡 Low · **Location:** FNV-1a hash in both
   `LocationTracker.getDeterministicPlayerId` and `Networker.computeClientID`;
-  `worldCoordsToGridPos` in `LocationTracker` + `GridClaimer` and `gridPosToWorldCoords` in
-  `Networker` + `GridClaimer` (each pair duplicated, not all three files); `unitsPerCell = 200`
-  in all three grid files, `gridRadius = 20` as a literal in `LocationTracker` / `GridClaimer`
-  (derived as `height / 2` in `Networker`), `height = 40` only in `Networker`.
+  `worldCoordsToGridPos` in `LocationTracker` and `gridPosToWorldCoords` in `Networker`
+  (halved by the Phase 0 `GridClaimer` deletion); `unitsPerCell = 200` in both files,
+  `gridRadius = 20` as a literal in `LocationTracker` (derived as `height / 2` in
+  `Networker`), `height = 40` only in `Networker`.
 - **Risk:** Any change must be made in 2–3 places; silent divergence.
 - **Fix hint:** Extract a shared `GridMath`/`PlayerId` util module.
 
@@ -195,12 +182,15 @@
   remote-player visual cleanup (now fails loud, not silent). No further action planned unless
   the SDK gains a public API.
 
-### TD-4 — `updateHUDText` misleading legacy param names
-- **Sev:** 🟡 Low · **Location:** `PlayerVisuals.updateHUDText(lat, long, gridx, gridy, …)`
-  is actually passed grid + world coords, not GPS. Labels in the rendered string are correct;
-  only the parameter names lie.
-- **Fix hint:** Rename params (e.g. `gridX, gridY, worldX, worldZ`) and drop the unused
-  `latOff/longOff`.
+### TD-4 — `updateHUDText` carries two always-zero spare params
+- **Sev:** 🟡 Low · **Location:** `PlayerVisuals.updateHUDText(gridX, gridY, worldX, worldZ,
+  spareA, spareB)`. The only call site always passes `0, 0` for the last pair, which renders
+  as a dead `N/A: (0.00000, 0.00000)` line in the debug HUD.
+- **History:** the params were renamed from `lat/long/gridx/gridy/latOff/longOff` in `d969cdb3`
+  — they were always passed grid + world coords, never GPS. The misleading-names half of this
+  entry is fixed; only the unused arity remains.
+- **Fix hint:** Drop `spareA`/`spareB` and the `N/A:` line, updating the single call site in
+  `LocationTracker.getDeviceTrackerPosition()`.
 
 ### TD-5 — `Array(25).fill(vec2.zero())` shares one instance
 - **Sev:** 🟡 Low · **Location:** `Networker.getMiniMapCells()` not-ready return — all
@@ -236,7 +226,7 @@
 
 ### TD-9 — Gated logging still builds the log string on every call (hot-path perf)
 - **Sev:** 🟡 Low · **Location:** `log(msg: string)` in `Networker`, `LocationTracker`, and
-  `PlayerVisuals` (plus raw `print()` calls in `GridClaimer`). The `showLogs` check lives
+  `PlayerVisuals`. The `showLogs` check lives
   *inside* `log()`, so every `this.log("…" + a + "…" + b)` fully evaluates and concatenates
   its string argument **before** the call — the guard only suppresses the `print()`, not the
   string construction.
@@ -323,3 +313,5 @@
 | Player identity, color cycling | "Player Identity & Color Cycling" |
 | Full open-issue prose | "Known Incomplete Areas" |
 | Submission blockers (IP, safety, metadata) | "Lens Publication — Known Submission Blockers" |
+| **Location-permission invariant** — why the Lens is publishable at all | "Lens Publication — Known Submission Blockers" → **item 0** (hard invariant, do not regress) |
+| Scene wiring trap: `SessionController.locatedAtComponent` vs `Located At` → `Location` | "Scene configuration reference" + Lens Publication item 0 |
