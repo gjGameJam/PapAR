@@ -53,6 +53,7 @@ The two callbacks are independent — the position loop can start before `client
 2. Converts to grid coords via `worldCoordsToGridPos()`
 3. Calls `PlayerVisuals.updateHUDText()` every tick
 4. **Event-driven minimap redraw**: calls `Networker.shouldRedrawMiniMap(gridPos.x, gridPos.y)` (a cheap guard) and only when it returns true does it call `Networker.getMiniMapCells()` → `PlayerVisuals.updateMiniMapNetworked()`. A redraw fires only when the player crosses into a new cell (the 5×5 window shifts) or a cell **inside the current window** changed value (`Networker.miniMapDirty`, set by `updateCellValue` on local writes and by the `onAnyChange` listener on remote cloud updates). While the player stands still and nothing in-window changes, the minimap does no per-tick read or recolor.
+4b. **Event-driven leaderboard redraw**: when `Networker.shouldRedrawLeaderboard()` is true, calls `PlayerVisuals.updateLeaderboard(Networker.getLeaderboard(), clientID, getPlayerVisualID)`. Sits above the `clientID`/alive gates so it keeps updating while dead; costs one boolean read per tick when nothing changed.
 5. **Branches on alive/dead state** (this branch only runs once `Networker.gridReady` is true):
    - **Dead** (`!Networker.isAlive`): calls `handleRespawnCountdown(gridPos, worldPosition)` — the respawn path (see below). The normal `getData`/`sendData` flow is skipped entirely while dead.
    - **Alive**: first checks bounds — if the grid position is outside the 40×40 arena (`!Networker.isInBounds()`), calls `Networker.killLocalPlayer()` (leaving the play area is fatal) and skips the rest of the tick. Otherwise calls `Networker.getData(clientID, gridPos.x, gridPos.y)` — result is used only for debug logging (`this.log("cell: " + gridPos + ...)`), not for game logic — then only calls `Networker.sendData()` if the player has moved to a **new cell** (checked by `PlayerVisuals.isInSameCell()`).
@@ -261,6 +262,17 @@ Respawn is entirely local — there is no cloud-side respawn state or RPC. The p
 
 **`onAnyChange` listener**: Fires whenever the cloud reports any value change for a cell (and, at the LateUpdate flush, for local pending-write promotions — with a `null` `updateInfo`). Always clears the `localCellState` entry unconditionally — cloud is authoritative. The previous conditional clear (only when local cache matched cloud value) left stale cache entries when another player overwrote a pending local write: the mismatch meant the cache was never cleared, and `getMiniMapCells` continued reading the stale local value even though `prop.currentValue` was correct. `getMiniMapCells` also enforces a 5-second TTL on `localCellState` reads as a safety net. It also **marks the minimap dirty** (`miniMapDirty = true`) when the changed cell is within the current window (`isWithinMiniMapWindow`), so a remote player's stake/claim inside the view triggers a redraw without the local player moving. Finally it runs the **ghost interceptor** (`interceptGhostCellWrite`, see Ghost interceptors) on the new value.
 
+#### Leaderboard tally (score = claimed cells × `SCORE_PER_CELL`)
+
+Scores are **derived from the cell store on each client** — there is no cloud score counter (a counter would drift: a player's claim count is changed by many writers — enemy captures, death clears from every client, leave sweeps, ghost clears). The tally is **event-driven, never polled**:
+
+- State: `claimOwnerByKey: Map<cellKey, clientID>` (nonzero owners only), `claimCounts: Map<clientID, cells>`, `leaderboardDirty`.
+- **`noteClaimOwner(key, newOwner)`** is the only place the tally changes. It diffs against the last known owner of that cell, so it is idempotent — hearing about one change twice is harmless. Sets `leaderboardDirty`.
+- Sources feeding it: (1) `seedClaimCounts()` — a one-time full `currentStore.getAllKeys()` scan in `notifyOnReady` (seeded values fire no events); (2) `gridSyncEntity.storeCallbacks.onStoreUpdated` — fires for **every** key in the grid store, subscribed or not (see Networking Architecture), covering remote changes anywhere on the grid without adding `gridCells` subscriptions; (3) `updateCellValue` — our own writes, counted optimistically (the platform may not echo them back); (4) `healStoreCellsChunked` — the raw leave-sweep `putVec2`; (5) the per-cell `onAnyChange` listener — the confirmed value wins for subscribed cells, correcting (3) when a remote write and our pending write cross.
+- `leaderboardDirty` is also set by the join/leave handlers (presence filters the board) the color-slot `onAnyChange` (a slot change recolors rows), and `setPlayerID` (the board can only mark the local row once `clientID` is known).
+- **`shouldRedrawLeaderboard()`** (public) returns the dirty flag; **`getLeaderboard()`** (public) returns `{clientID, score}[]` for every **present** player with ≥1 claimed cell, sorted by score desc then `clientID` asc (identical order on all clients), and clears the flag. Absent ids are filtered so a departed player's not-yet-swept cells never show a ghost row. Stakes never score.
+- Accepted limit: after the seed the tally trusts the event stream; a missed store update would leave that cell miscounted until its next write (no periodic re-scan by design — re-running `seedClaimCounts()` is the fix if drift is ever observed).
+
 #### Grid constants
 
 ```
@@ -360,9 +372,15 @@ A dedicated screen-space `Text` (`respawnCountdownText` `@input`, kept separate 
 
 Both methods no-op safely if the input is unassigned. Requires a centered screen-space `Text` object wired into `respawnCountdownText` in the Lens Studio scene.
 
+#### Leaderboard display
+
+`updateLeaderboard(entries, localClientID, getPlayerVisualID)` — called by `LocationTracker` only on a leaderboard change. Uses the `leaderboardRows: Text[]` input (4 rows, top-left corner). Each row is a **player-color dot + the score in white** — no rank numbers, names, or labels; row order is the ranking. Rows 0–2 show the top three; rows without an entry are hidden. The **local player's row is marked by a white ring around its dot**. Row 3 is shown only when the local player is outside the top three and carries their own score (0 when they hold no cells), always ringed. `setLeaderboardRow(i, text, visualID, isLocal)` toggles the text/dot/ring objects and memoizes text and visualID on each `Text`, writing only what changed. No-ops if the input is unassigned; all rows are hidden in `onAwake()`.
+
+**Dots and rings are built at runtime** (`layoutLeaderboard`, called once from `onAwake()` after `alignMiniMapCells()`), the same way as the minimap stake dots: siblings of the row `Text` under its parent, copying its render `layer`, each with a cloned `cellMaterial`. **The code owns the whole layout**, in the parent's anchor space (screen = −1…1), from private constants: `leaderboardTop` (0.92) / `leaderboardLeft` (−0.92) place the top-left corner, `leaderboardRowPitch` (0.13) is the row height, the dot's side is `leaderboardDotScale` (0.48) × the pitch, the ring is `leaderboardRingScale` (1.4) × the dot (created first so the dot draws on top), and row 3 sits `leaderboardOwnRowGap` (0.5) pitches lower. Anchor width is derived from anchor height via the parent's world-per-anchor ratio so the squares are square on screen. Each row's `Text` rect is **overwritten** too (right of the ring, same band, `leaderboardTextWidth` wide, vertically centered, left-aligned, Background forced off so no box hides the 3D visuals) — the rects authored in the editor do not matter (they were once full-screen, which pushed rect-derived squares off-screen; do not go back to deriving layout from them). The "dot" and "ring" are **squares** by design (they echo the grid cells): both use the minimap's `whiteCell` texture, the dot tinted via `baseColor` with the claim color at alpha 1 and the ring left white, so the ring reads as a white outline around the local player's square. No procedural texture or extra asset is involved. The rows share the top-left corner with the `uiText` debug HUD, so `showHUDText` should be off in normal play.
+
 #### `@input` fields (all assigned in Lens Studio scene)
 
-`uiText`, `respawnCountdownText`, `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`.
+`uiText`, `respawnCountdownText`, `leaderboardRows` (optional), `screenTransform`, `cellMaterial`, `whiteCell`, `playerArrow`, `deviceTracker`, `networkedInstantiator`, `miniMapCells`, and 15 prefab references: `p1–p5 claimCellObj / stakeCellObj / stakePillarObj`.
 
 ---
 
@@ -510,6 +528,10 @@ One `SyncEntity` (`gridSyncEntity`) is created on the `Networker` component. All
 
 `gridSyncEntity.currentStore` is a public `GeneralDataStore` supporting `getAllKeys()` / `getVec2(key)` / `putVec2(key, value)` without any StorageProperty (SyncKit itself uses `getAllKeys()` in `StoragePropLookup`; the store replica is a complete snapshot by entity-ready). The **one sanctioned raw-access site** is the full-store leave sweep (`sweepStoreForDepartedClient` — see Death handling), under three constraints that any future raw access must also honor: never raw-write a key this client holds a `StorageProperty` for (SyncEntity drops self-echoes, so the local property would go permanently stale — go through the property instead); never use `store.remove()`/`clear()` to propagate a change (SyncEntity doesn't wire `onStoreKeyRemoved`, so subscribed clients would never see it — write zeros via `putVec2`); a raw `putVec2` **does** fire `onAnyChange` on every *other* client subscribed to that key, so raw writes integrate with the interceptor machinery.
 
+#### Store-level update events (leaderboard)
+
+`gridSyncEntity.storeCallbacks.onStoreUpdated` fires `(session, store, key, updateInfo)` for **every key** in the entity's store — `StoreEventWrapper` filters by the store's network ID only, never by key — so it reports changes to cells this client holds no `StorageProperty` for. The leaderboard tally uses it to track claims across the whole grid without subscribing. Whether a client's **own** writes come back through it is unverified, so local writes are counted at the write site instead (the tally helper is idempotent, so either behavior is correct).
+
 #### Reading lazily-subscribed properties: `currentValue` vs `currentOrPendingValue`
 
 This is a non-obvious SpectaclesSyncKit gotcha that burned us on the minimap.
@@ -560,6 +582,10 @@ Grid coordinates (0–39 int)
         │               reads prop.currentValue for all 25 cells in 5×5 window
         │               background square = claim/white/gray; stake dot (applyStakeDot) = staker color
         │               colors by player visual ID via Networker.getPlayerVisualID()
+        │
+        ├─▶ if Networker.shouldRedrawLeaderboard():          [redraw only when a score / presence / color slot changed]
+        │       Networker.getLeaderboard()                   (from the incremental claim tally; clears leaderboardDirty)
+        │       └─▶ PlayerVisuals.updateLeaderboard()        (top 3 rows + own row, changed-only)
         │
         ├─▶ if DEAD: LocationTracker.handleRespawnCountdown()  [every tick while dead]
         │       checks Networker.isLegalSpawnCell() — blocked (occupied/OOB) resets to 3.0s
@@ -629,6 +655,7 @@ Device pose   [every frame — PlayerVisuals.onUpdate]
 | `LEAVE_RESWEEP_DELAYS_S` | `[2.0s, 8.0s]` | `Networker` | Leave-only late re-sweeps (visuals + store) for writes still in their network round-trip at cleanup time |
 | `STORE_SWEEP_CHUNK` | `40` | `Networker` | Heal writes per chunk in the full-store leave sweep |
 | `STORE_SWEEP_CHUNK_DELAY_S` | `0.05s` | `Networker` | Pause between leave-sweep heal chunks (matches the 40–50 ms write-pacing philosophy) |
+| `SCORE_PER_CELL` | `10` | `Networker` | Leaderboard points per claimed cell |
 | Owner stamp key | `"_papar_owner"` | `PlayerVisuals` (`OWNER_KEY`) | clientID stamped into every spawned volume's realtime store; primary match for death sweeps |
 
 ---
@@ -647,6 +674,10 @@ Device pose   [every frame — PlayerVisuals.onUpdate]
 - Centered in the AR view, large readable font ✓
 - Starts hidden — toggled at runtime by `PlayerVisuals.show/hideRespawnCountdown()` ✓
 - Separate object from the `uiText` debug HUD ✓
+
+**`LeaderboardEntry1`–`4` (screen-space `Text`, wired in order into `PlayerVisuals.leaderboardRows`)** ✓:
+- Under `Orthographic Camera > Full Frame Region`; font size 32. Their rects and alignment are overwritten at runtime by `PlayerVisuals.layoutLeaderboard()`, so only font/style settings in the editor matter
+- `showHUDText` unticked on `PlayerVisuals` in normal play (the debug HUD occupies the same corner)
 
 **`SessionController [CONFIGURE_ME]` scene object**:
 - `connectedLensModule` ✓
@@ -696,7 +727,6 @@ The scene still contains leftover example objects from the SpectaclesSyncKit tem
 
 ### Stretch features
 
-- **Score / leaderboard**: No tracking of how many cells each player owns. Could be derived by iterating all subscribed `gridCells` and counting `currentValue.x === clientID`, but this is O(n) per tick and only covers subscribed cells. A dedicated `StorageProperty<number>` per player tracking claim count would be more efficient.
 - **Kill feed / death announcement**: Death events are logged to `print()` only. A UI overlay showing who killed whom would use the `killerID` field already present in `playerDeathEvent`'s `vec3(deadPlayerID, killerID, victimVisualID)` payload — but note `killerID === deadPlayerID` is ambiguous between self-collision (an intended mechanic — see the `sendData` decision tree), voluntary leave, and out-of-bounds death (KNOWN_ISSUES FEAT-3).
 
 ---

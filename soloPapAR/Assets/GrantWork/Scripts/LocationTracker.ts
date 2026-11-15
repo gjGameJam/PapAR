@@ -134,6 +134,17 @@ export class LocationTracker extends BaseScriptComponent {
             );
         }
 
+        // FEAT-2: event-driven leaderboard — redraw only when a score, the present set, or a
+        // color slot changed (Networker.leaderboardDirty). Above the clientID/alive gates so it
+        // keeps updating while dead; before clientID is known no row is tagged YOU.
+        if (this.Networker.shouldRedrawLeaderboard()) {
+            this.PlayerVisuals.updateLeaderboard(
+                this.Networker.getLeaderboard(),
+                this.clientID,
+                (id: number) => this.Networker.getPlayerVisualID(id)
+            );
+        }
+
         // NET-1: clientID is assigned in SessionController.notifyOnReady(), which is independent
         // of the instantiator readiness that started this loop. If the instantiator became ready
         // first, clientID is still undefined here — running sendData/getData/respawn now would

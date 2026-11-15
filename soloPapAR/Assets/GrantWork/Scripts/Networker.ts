@@ -125,7 +125,18 @@ export class Networker extends BaseScriptComponent {
     private miniMapCenterX = NaN; // NaN = uninitialized -> forces the first redraw once ready
     private miniMapCenterY = NaN;
     private miniMapDirty = false;
-    
+
+    // FEAT-2 leaderboard: score = claimed cells * SCORE_PER_CELL. The tally is DERIVED from the
+    // cell store (never stored as a cloud counter — many writers change a player's claim count:
+    // enemy captures, death clears, leave sweeps, ghost clears) and kept incrementally:
+    // seeded once from a full store scan at grid-ready, then updated only when a cell's claim
+    // owner changes (noteClaimOwner). No polling — leaderboardDirty gates the UI redraw, same
+    // pattern as miniMapDirty.
+    readonly SCORE_PER_CELL = 10;
+    private claimOwnerByKey: Map<string, number> = new Map(); // cell key -> claim owner (nonzero only)
+    private claimCounts: Map<number, number> = new Map();     // clientID -> claimed cell count
+    private leaderboardDirty = false;
+
     //script to manager the grid claim modification permissions
     onAwake() {
         // TD-14: hard invariant — the ghost window must close before the earliest possible
@@ -160,9 +171,29 @@ export class Networker extends BaseScriptComponent {
             // Initialize all grid cells as individual storage properties
             this.initializeGridCells();
 
+            // FEAT-2: seed the leaderboard tally from the whole store (seeded values fire no
+            // events, so pre-existing cells can only be learned here). Before the replay below
+            // so its heal writes diff against a seeded tally.
+            this.seedClaimCounts();
+
             // F4: replay deaths that arrived while the grid entity was initializing — the color
             // slots were just seeded synchronously by addStorageProperty, so slot-frees work now.
             this.replayPendingDeathCleanups();
+        });
+
+        // FEAT-2: the store-level update event is filtered by store network ID only, NOT by key
+        // (StoreEventWrapper), so it fires for every cell key in the grid store — including
+        // cells this client never subscribed. This is what keeps the leaderboard tally current
+        // for far-away territory without adding gridCells subscriptions. Pre-ready events are
+        // ignored; seedClaimCounts() picks those values up from the store snapshot at ready.
+        this.gridSyncEntity.storeCallbacks.onStoreUpdated.add((_session, store, key) => {
+            if (!this.gridReady || !key || key.indexOf("cell_") !== 0) return;
+            try {
+                const val = store.getVec2(key);
+                this.noteClaimOwner(key, val ? val.x : 0);
+            } catch (e) {
+                this.log("NetworkerV2: LEADERBOARD store-update read failed for " + key + ": " + e);
+            }
         });
 
         // All clients handle death cleanup, not just the dying player's device
@@ -210,6 +241,7 @@ export class Networker extends BaseScriptComponent {
             // NET-17/TD-11: drop from the presence cache BEFORE the cleanup below runs, so
             // isClientPresent correctly reads them as absent throughout.
             this.presentClientIDs.delete(leftClientID);
+            this.leaderboardDirty = true; // FEAT-2: presence filters the board
             // F2: leave-ghosts can't self-clean (the leaver's device is gone) — remember the
             // departure so the interceptors and seed-checks clear anything still naming them.
             this.departedClients.add(leftClientID);
@@ -241,6 +273,7 @@ export class Networker extends BaseScriptComponent {
             if (joinedClientID === 0) return;
             // NET-17/TD-11: track presence by clientID (the hash is already computed here).
             this.presentClientIDs.add(joinedClientID);
+            this.leaderboardDirty = true; // FEAT-2: presence filters the board
             // NET-16: a rejoiner's ghost window must not outlive their return — without this
             // delete, their fresh writes inside the 2s TTL (home claim, first stakes) would
             // still be ghost-cleared by every client, soft-locking their new life.
@@ -272,6 +305,7 @@ export class Networker extends BaseScriptComponent {
             // is not present) would otherwise leak that color for the whole session (the leaver
             // can't self-clean and everyone's slot-free already ran). Zero it on arrival.
             slot.onAnyChange.add((newVal: vec2, _oldVal: vec2, updateInfo) => {
+                this.leaderboardDirty = true; // FEAT-2: a color-slot change recolors rows
                 this.interceptGhostSlotWrite(slot, newVal, updateInfo);
             });
         }
@@ -339,6 +373,10 @@ export class Networker extends BaseScriptComponent {
                 this.miniMapDirty = true;
             }
 
+            // FEAT-2: the confirmed value wins for subscribed cells — corrects the optimistic
+            // tally from updateCellValue if a remote write and our pending write crossed.
+            this.noteClaimOwner(cellKey, newClaimed);
+
             // F2/NET-12 ghost interceptor: a value naming a recently-dead (sent inside their
             // window) or departed player is a stale remnant of that life — clear it immediately.
             this.interceptGhostCellWrite(x, y, newVal, updateInfo);
@@ -397,11 +435,85 @@ export class Networker extends BaseScriptComponent {
             this.miniMapDirty = true;
         }
 
+        // FEAT-2: count our own write now — the platform may not echo it back through
+        // onStoreUpdated, and this makes the local score update instantly.
+        this.noteClaimOwner(cellKey, newValue.x);
+
         return true;
     }
-    
+
+    // FEAT-2: the ONLY place the leaderboard tally changes. Idempotent — it diffs against the
+    // last known owner of the cell, so hearing about the same change twice (local write + echo,
+    // store event + property event) is harmless.
+    private noteClaimOwner(key: string, newOwner: number): void {
+        if (!newOwner || isNaN(newOwner)) newOwner = 0;
+        const oldOwner = this.claimOwnerByKey.get(key) || 0;
+        if (oldOwner === newOwner) return;
+        if (oldOwner !== 0) {
+            const remaining = (this.claimCounts.get(oldOwner) || 0) - 1;
+            if (remaining > 0) this.claimCounts.set(oldOwner, remaining);
+            else this.claimCounts.delete(oldOwner);
+        }
+        if (newOwner !== 0) {
+            this.claimCounts.set(newOwner, (this.claimCounts.get(newOwner) || 0) + 1);
+            this.claimOwnerByKey.set(key, newOwner);
+        } else {
+            this.claimOwnerByKey.delete(key);
+        }
+        this.leaderboardDirty = true;
+    }
+
+    // FEAT-2: one-time full-store scan at grid-ready (local reads only). Same key filtering as
+    // sweepStoreForDepartedClient, without the gridCells skip — this is read-only.
+    private seedClaimCounts(): void {
+        const store = this.gridSyncEntity.currentStore;
+        if (!store) return;
+        try {
+            const allKeys = store.getAllKeys();
+            for (const key of allKeys) {
+                try {
+                    if (key.indexOf("cell_") !== 0) continue;
+                    const keyParts = key.split('_');
+                    if (keyParts.length !== 3) continue;
+                    const cellX = parseInt(keyParts[1]);
+                    const cellY = parseInt(keyParts[2]);
+                    if (isNaN(cellX) || isNaN(cellY) || !this.isInBounds(cellX, cellY)) continue;
+                    const val = store.getVec2(key);
+                    if (!val) continue;
+                    this.noteClaimOwner(key, val.x);
+                } catch (e) {
+                    this.log("NetworkerV2: LEADERBOARD seed read failed for " + key + ": " + e);
+                }
+            }
+        } catch (e) {
+            this.log("NetworkerV2: LEADERBOARD seed enumeration failed: " + e);
+        }
+        this.leaderboardDirty = true;
+    }
+
+    // FEAT-2: cheap per-tick guard for LocationTracker (mirrors shouldRedrawMiniMap).
+    shouldRedrawLeaderboard(): boolean {
+        return this.leaderboardDirty;
+    }
+
+    // FEAT-2: every present player holding at least one claimed cell, highest score first.
+    // Ties break on clientID so all clients show the same order. Absent ids are filtered out
+    // so a departed player's not-yet-swept cells never produce a ghost row. Clears the dirty flag.
+    getLeaderboard(): { clientID: number, score: number }[] {
+        this.leaderboardDirty = false;
+        const entries: { clientID: number, score: number }[] = [];
+        this.claimCounts.forEach((count, id) => {
+            if (count > 0 && this.isClientPresent(id)) {
+                entries.push({ clientID: id, score: count * this.SCORE_PER_CELL });
+            }
+        });
+        entries.sort((a, b) => (b.score - a.score) || (a.clientID - b.clientID));
+        return entries;
+    }
+
     setPlayerID(passedID: number): void {
         this.clientID = passedID;
+        this.leaderboardDirty = true; // FEAT-2: the board can now mark the local player's row
         this.log("NetworkerV2: client ID set to: " + this.clientID);
         if (this.gridReady) {
             this.assignAndWritePlayerID();
@@ -1117,6 +1229,7 @@ export class Networker extends BaseScriptComponent {
                 const clearStake = val.y !== 0 && val.y === leftClientID;
                 if (!clearClaim && !clearStake) continue; // changed since collect (e.g. another client's heal landed)
                 store.putVec2(key, new vec2(clearClaim ? 0 : val.x, clearStake ? 0 : val.y));
+                this.noteClaimOwner(key, clearClaim ? 0 : val.x); // FEAT-2: raw write, no property event
             } catch (e) {
                 this.log("NetworkerV2: STORE SWEEP heal failed for " + key + ": " + e);
             }

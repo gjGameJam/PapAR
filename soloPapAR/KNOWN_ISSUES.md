@@ -53,7 +53,6 @@
 | TD-12 | Three near-identical epoch-gated `onSuccess` closures in `PlayerVisuals` spawn methods | 🟡 | ⬜ Open |
 | TD-15 | `updateCellValue` write-mode dispatch by description substring (writer set now larger) | 🟡 | ⬜ Open |
 | FEAT-1 | No kill on entering enemy **claimed** territory | — | ⬛ Missing |
-| FEAT-2 | No score / leaderboard | — | ⬛ Missing |
 | FEAT-3 | No kill feed / death announcement | — | ⬛ Missing |
 
 ---
@@ -300,8 +299,6 @@
   **stake trail**; stepping into an enemy **claim** just stakes over it. To add: in the
   `else` branch, `if (claimedBy !== 0 && claimedBy !== ID)` fire a `playerDeathEvent` for the
   entering player.
-- **FEAT-2 — Score / leaderboard:** no per-player cell count. Could derive by scanning
-  subscribed `gridCells`, or track a dedicated `StorageProperty<number>` per player.
 - **FEAT-3 — Kill feed / death announcement:** deaths only `this.log`. The
   `playerDeathEvent` payload already carries `vec3(deadPlayerID, killerID, victimVisualID)`
   (`killerID === deadPlayerID` ⇒ self-collision — a documented, intended mechanic, see

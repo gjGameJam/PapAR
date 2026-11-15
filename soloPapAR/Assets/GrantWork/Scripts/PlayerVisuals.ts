@@ -17,6 +17,12 @@ export class PlayerVisuals extends BaseScriptComponent {
     @input
     respawnCountdownText: Text; // dedicated centered screen-space countdown ("Respawning 3")
 
+    // FEAT-2 leaderboard: 4 screen-space Text rows (top 3 + the local player's own row, shown
+    // only when they're outside the top 3). Optional — the leaderboard no-ops if unassigned.
+    @input
+    @allowUndefined
+    leaderboardRows: Text[];
+
     @input
     showHUDText: boolean = true; // Toggle to show/hide the location HUD text
 
@@ -140,6 +146,20 @@ export class PlayerVisuals extends BaseScriptComponent {
 
     // The stake dot spans this fraction of the cell (centered). Tunable; ~0.4 = small dot.
     private readonly stakeDotScale = 0.4;
+
+    // FEAT-2 leaderboard: per-row player-color dot + white "you" ring, built at runtime by
+    // layoutLeaderboard (index-aligned to leaderboardRows).
+    private leaderboardDots: (Image | null)[] = [];
+    private leaderboardRings: (Image | null)[] = [];
+    // Layout is owned by code (layoutLeaderboard), in the parent's anchor space (screen = -1..1),
+    // so it does not depend on how the row Text rects are authored in the editor.
+    private readonly leaderboardTop = 0.92;        // top edge of row 0
+    private readonly leaderboardLeft = -0.92;      // left edge of the outline square
+    private readonly leaderboardRowPitch = 0.13;   // row height / spacing
+    private readonly leaderboardDotScale = 0.48;   // color square side as a fraction of the row pitch
+    private readonly leaderboardRingScale = 1.4;   // white outline square relative to the color square
+    private readonly leaderboardOwnRowGap = 0.5;   // extra gap above row 3 (own score), in row pitches
+    private readonly leaderboardTextWidth = 0.6;   // width of the score text rect
 
 
     //returns true if new worldPos == previous position
@@ -468,6 +488,167 @@ export class PlayerVisuals extends BaseScriptComponent {
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
         this.alignMiniMapCells();
         this.hideRespawnCountdown();
+        this.layoutLeaderboard();
+        this.updateLeaderboard([], null, () => 0); // start with every row hidden
+    }
+
+    // FEAT-2: lays out the whole leaderboard once. Per row it builds the player-color square and
+    // the larger white "this is you" square behind it (which shows as a white outline), and
+    // re-anchors the row's score Text to sit right of them. Squares on purpose — they echo the
+    // grid cells and reuse the minimap's whiteCell texture, like the stake dots. Squares are
+    // siblings of the row Text (same parent, same render layer). Every position comes from the
+    // leaderboard* constants in the parent's anchor space; the Text rects authored in the
+    // editor are overwritten, so their setup cannot break the layout.
+    private layoutLeaderboard(): void {
+        const rows = this.leaderboardRows;
+        if (!rows || rows.length === 0) return;
+        if (!this.cellMaterial || !this.whiteCell) {
+            this.log("layoutLeaderboard: cellMaterial/whiteCell unassigned — leaderboard squares skipped");
+            return;
+        }
+        const tex = this.whiteCell;
+
+        for (let i = 0; i < rows.length; i++) {
+            this.leaderboardDots[i] = null;
+            this.leaderboardRings[i] = null;
+            const row = rows[i];
+            if (!row) continue;
+            const rowObj = row.getSceneObject();
+            const st = rowObj.getComponent("Component.ScreenTransform") as ScreenTransform;
+            const parentObj = rowObj.getParent();
+            const parentST = parentObj ? parentObj.getComponent("Component.ScreenTransform") as ScreenTransform : null;
+            if (!st || !parentST) {
+                this.log("layoutLeaderboard: row " + i + " or its parent has no ScreenTransform");
+                continue;
+            }
+
+            // Score text is always white; identity is carried by the square.
+            row.textFill.color = new vec4(1, 1, 1, 1);
+            // No box behind the number — it would block the 3D visuals (the scene Text objects
+            // were authored with Background enabled).
+            row.backgroundSettings.enabled = false;
+
+            // Row band in the parent's anchor space. Row 3 (the local player's own score) sits
+            // an extra half row lower so it reads as separate from the top three.
+            const pitch = this.leaderboardRowPitch;
+            const top = this.leaderboardTop - i * pitch - (i === 3 ? pitch * this.leaderboardOwnRowGap : 0);
+            const cy = top - pitch / 2;
+
+            // Anchor units are not square on screen: convert the square's anchor height to the
+            // anchor width that gives the same on-screen size. A ratio, so it survives a later
+            // rescale of the screen mapping.
+            const w0 = parentST.localPointToWorldPoint(new vec2(0, 0));
+            const w1 = parentST.localPointToWorldPoint(new vec2(1, 1));
+            const perX = Math.abs(w1.x - w0.x);
+            const perY = Math.abs(w1.y - w0.y);
+            const xPerY = (perX > 0 && perY > 0) ? perY / perX : 1;
+
+            const dotHalfH  = pitch * this.leaderboardDotScale / 2;
+            const ringHalfH = dotHalfH * this.leaderboardRingScale;
+            const ringHalfW = ringHalfH * xPerY;
+            const cx = this.leaderboardLeft + ringHalfW;
+
+            const make = (name: string, halfH: number): Image => {
+                const halfW = halfH * xPerY;
+                const obj = global.scene.createSceneObject(name + i);
+                obj.setParent(parentObj);
+                obj.layer = rowObj.layer; // draw on the same UI camera as the row text
+                const dst = obj.createComponent("Component.ScreenTransform") as ScreenTransform;
+                dst.anchors.left = cx - halfW; dst.anchors.right = cx + halfW;
+                dst.anchors.top = cy + halfH;  dst.anchors.bottom = cy - halfH;
+                dst.offsets.left = 0; dst.offsets.right = 0; dst.offsets.top = 0; dst.offsets.bottom = 0;
+                const img = obj.createComponent("Component.Image") as Image;
+                img.mainMaterial = this.cellMaterial.clone();
+                img.mainPass.baseTex = tex;
+                obj.enabled = false;
+                return img;
+            };
+            // Ring first so the dot (created after it) renders on top.
+            const ring = make("LeaderboardRing", ringHalfH);
+            ring.mainPass.baseColor = new vec4(1, 1, 1, 1);
+            this.leaderboardRings[i] = ring;
+            this.leaderboardDots[i] = make("LeaderboardDot", dotHalfH);
+
+            // The score text's rect is owned by code too: just right of the outline, the same
+            // band as the square, vertically centered — so the authored rect never matters.
+            const textLeft = cx + ringHalfW + ringHalfW * 0.6;
+            st.anchors.left = textLeft; st.anchors.right = textLeft + this.leaderboardTextWidth;
+            st.anchors.top = top;       st.anchors.bottom = top - pitch;
+            st.offsets.left = 0; st.offsets.right = 0; st.offsets.top = 0; st.offsets.bottom = 0;
+            row.verticalAlignment = VerticalAlignment.Center;
+            row.horizontalAlignment = HorizontalAlignment.Left;
+        }
+    }
+
+    // FEAT-2: entries = all scoring players, highest first (Networker.getLeaderboard()).
+    // Rows 0-2 show the top three: a dot in the player's claim color + the score in white.
+    // The local player's row is marked by a white ring around its dot. Row 3 shows the local
+    // player's own score only when they are outside the top three. Called only on a change.
+    updateLeaderboard(
+        entries: { clientID: number, score: number }[],
+        localClientID: number | null,
+        getPlayerVisualID: (id: number) => number
+    ): void {
+        const rows = this.leaderboardRows;
+        if (!rows || rows.length === 0) return;
+
+        const top = Math.min(3, rows.length);
+        let localInTop = false;
+        for (let i = 0; i < top; i++) {
+            const e = i < entries.length ? entries[i] : null;
+            if (!e) {
+                this.setLeaderboardRow(i, null, 0, false);
+                continue;
+            }
+            const isLocal = localClientID != null && e.clientID === localClientID;
+            if (isLocal) localInTop = true;
+            this.setLeaderboardRow(i, "" + e.score, getPlayerVisualID(e.clientID), isLocal);
+        }
+
+        if (rows.length > 3) {
+            if (localClientID == null || localInTop) {
+                this.setLeaderboardRow(3, null, 0, false);
+            } else {
+                let score = 0; // holding no cells yet
+                for (let i = 0; i < entries.length; i++) {
+                    if (entries[i].clientID === localClientID) {
+                        score = entries[i].score;
+                        break;
+                    }
+                }
+                this.setLeaderboardRow(3, "" + score, getPlayerVisualID(localClientID), true);
+            }
+        }
+    }
+
+    // text === null hides row i (text, dot and ring). Writes only what changed (memoized on the
+    // Text, like the minimap's __lastColor).
+    private setLeaderboardRow(i: number, text: string | null, visualID: number, isLocal: boolean): void {
+        const row = this.leaderboardRows[i];
+        if (!row) return;
+        const memo = row as any;
+        const obj = row.getSceneObject();
+        const dot = this.leaderboardDots[i];
+        const ring = this.leaderboardRings[i];
+        const dotObj = dot ? dot.getSceneObject() : null;
+        const ringObj = ring ? ring.getSceneObject() : null;
+
+        const visible = text !== null;
+        if (obj.enabled !== visible) obj.enabled = visible;
+        if (dotObj && dotObj.enabled !== visible) dotObj.enabled = visible;
+        const ringOn = visible && isLocal;
+        if (ringObj && ringObj.enabled !== ringOn) ringObj.enabled = ringOn;
+        if (!visible) return;
+
+        if (memo.__lastText !== text) {
+            row.text = text;
+            memo.__lastText = text;
+        }
+        if (dot && memo.__lastVisualID !== visualID) {
+            const c = this.getPlayerClaimColor(visualID);
+            dot.mainPass.baseColor = new vec4(c.x, c.y, c.z, 1.0); // opaque for legibility
+            memo.__lastVisualID = visualID;
+        }
     }
 
     // seconds = whole seconds remaining; blocked = timer frozen (on territory OR out of bounds);
