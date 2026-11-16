@@ -1,7 +1,6 @@
 //import { GridClaimer } from './GridClaimer';
 import { Networker, RESPAWN_FLOOR_S } from './Networker';
 import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
-import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';
 import { PlayerVisuals } from './PlayerVisuals';
 
 @component
@@ -15,9 +14,6 @@ export class LocationTracker extends BaseScriptComponent {
     
   @input
   Networker: Networker;
-    
-  @input
-  networkedInstantiator: Instantiator;
     
   //player visuals script for minimap and world objects
   @input
@@ -55,14 +51,9 @@ export class LocationTracker extends BaseScriptComponent {
         this.clientID = this.getDeterministicPlayerId(displayName);
         //Networker has to know which player it is attached to
         this.Networker.setPlayerID(this.clientID);
-      });
-        
-      //wait for networked instantiator to be ready for the device tracker to start
-      //sending info because of boundary spawning
-      this.networkedInstantiator.notifyOnReady(() => {
-        // instantiator is ready to instantiate stuff across the network
-        //start sending position to for processing by networker
-        //instantiator and session controller are ready now
+        // Start the position loop now. Cubes are drawn locally from the cell grid, so there
+        // is no networked Instantiator to wait for; the loop's own gridReady guards cover the
+        // time until the grid entity is ready.
         this.getDeviceTrackerPosition();
       });
       
@@ -110,8 +101,9 @@ export class LocationTracker extends BaseScriptComponent {
     
   //return player device tracking position (world origin is 0, 0, 0)
   getDeviceTrackerPosition() {
-    //var position = this.playerTracker.getTransform().getWorldPosition();
-    this.getNewPosition = this.createEvent('DelayedCallbackEvent');
+    if (this.hasStarted) return; // never run two position loops
+    this.hasStarted = true;
+    this.getNewPosition =this.createEvent('DelayedCallbackEvent');
     this.getNewPosition.bind(() => {
         // Session is ready (after singleplayer or multiplayer button click)
         var worldPosition = this.playerTracker.getTransform().getWorldPosition();
@@ -130,19 +122,25 @@ export class LocationTracker extends BaseScriptComponent {
             const miniMapCells = this.Networker.getMiniMapCells(gridPos.x, gridPos.y);
             this.PlayerVisuals.updateMiniMapNetworked(
                 miniMapCells,
-                (id: number) => this.Networker.getPlayerVisualID(id)
+                (id: number) => this.Networker.getDisplayVisualID(id)
             );
         }
 
         // FEAT-2: event-driven leaderboard — redraw only when a score, the present set, or a
         // color slot changed (Networker.leaderboardDirty). Above the clientID/alive gates so it
         // keeps updating while dead; before clientID is known no row is tagged YOU.
-        if (this.Networker.shouldRedrawLeaderboard()) {
-            this.PlayerVisuals.updateLeaderboard(
-                this.Networker.getLeaderboard(),
-                this.clientID,
-                (id: number) => this.Networker.getPlayerVisualID(id)
-            );
+        // Guarded: this is display-only code sitting ahead of the reset() calls that keep this
+        // loop alive — a throw here must never be able to stop the game tick.
+        try {
+            if (this.Networker.shouldRedrawLeaderboard()) {
+                this.PlayerVisuals.updateLeaderboard(
+                    this.Networker.getLeaderboard(),
+                    this.clientID,
+                    (id: number) => this.Networker.getDisplayVisualID(id)
+                );
+            }
+        } catch (e) {
+            print("LocationTracker: leaderboard redraw failed (game loop unaffected): " + e);
         }
 
         // NET-1: clientID is assigned in SessionController.notifyOnReady(), which is independent

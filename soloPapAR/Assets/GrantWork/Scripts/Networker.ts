@@ -51,12 +51,6 @@ export class Networker extends BaseScriptComponent {
     // scheduled by a prior life/batch — even across a respawn, where isAlive flips back to true.
     private conversionEpoch = 0;
 
-    // F1/NET-11: monotonic counter bumped ONLY on local death (next to conversionEpoch++).
-    // In-flight CLAIM-volume spawns capture it and self-destroy in onSuccess if it changed.
-    // Claims need their own epoch: conversionEpoch also bumps at conversion-start, which would
-    // wrongly destroy batch N's still-in-flight claim visuals the moment batch N+1 starts.
-    private deathEpoch = 0;
-
     // F2/NET-12: clientID -> ghost-window deadlines, opened by handlePlayerDeath on every death.
     // serverDeadline is server-time ms (receipt + TTL), matched against a remote write's
     // sentServerTimeMilliseconds — arrival skew, not clock skew, is the hazard: a ghost write
@@ -130,12 +124,33 @@ export class Networker extends BaseScriptComponent {
     // cell store (never stored as a cloud counter — many writers change a player's claim count:
     // enemy captures, death clears, leave sweeps, ghost clears) and kept incrementally:
     // seeded once from a full store scan at grid-ready, then updated only when a cell's claim
-    // owner changes (noteClaimOwner). No polling — leaderboardDirty gates the UI redraw, same
+    // owner changes (noteCell). No polling — leaderboardDirty gates the UI redraw, same
     // pattern as miniMapDirty.
     readonly SCORE_PER_CELL = 10;
     private claimOwnerByKey: Map<string, number> = new Map(); // cell key -> claim owner (nonzero only)
     private claimCounts: Map<number, number> = new Map();     // clientID -> claimed cell count
+    // World cubes are drawn locally from the same per-cell feed (noteCell), so the stake owner
+    // is tracked too. deferredStakeKeys: cells we have staked locally whose cloud write is
+    // still deferred (the 500ms enemy-stake write) — noteCell shows our stake on them meanwhile.
+    private stakeOwnerByKey: Map<string, number> = new Map(); // cell key -> stake owner (nonzero only)
+    private deferredStakeKeys: Set<string> = new Set();
     private leaderboardDirty = false;
+    // Safety net for the event-driven tally: a full recount from the store, run once
+    // LEADERBOARD_RECOUNT_DELAY_S after a claim change (never while the grid is idle). It
+    // corrects anything the event stream got wrong (e.g. two clients writing one cell within a
+    // round trip, where the last event this client saw is not the value the store ended on).
+    private readonly LEADERBOARD_RECOUNT_DELAY_S = 3.0;
+    private leaderboardRecountEvent: DelayedCallbackEvent | null = null;
+    private leaderboardRecountPending = false;
+    private leaderboardRecounting = false;
+    // getLeaderboard retries (one per tick) while a scoring player reads as absent without
+    // having left — their display name can be blank for a moment after we join.
+    private readonly LEADERBOARD_PRESENCE_RETRIES = 30;
+    private leaderboardPresenceRetries = 0;
+    // clientID -> the color index they last held in a color slot (see getDisplayVisualID).
+    private lastVisualIDByClient: Map<number, number> = new Map();
+    // Diagnostic (showLogs only): store updates seen that this client itself sent.
+    private ownStoreEchoCount = 0;
 
     //script to manager the grid claim modification permissions
     onAwake() {
@@ -186,11 +201,20 @@ export class Networker extends BaseScriptComponent {
         // cells this client never subscribed. This is what keeps the leaderboard tally current
         // for far-away territory without adding gridCells subscriptions. Pre-ready events are
         // ignored; seedClaimCounts() picks those values up from the store snapshot at ready.
-        this.gridSyncEntity.storeCallbacks.onStoreUpdated.add((_session, store, key) => {
-            if (!this.gridReady || !key || key.indexOf("cell_") !== 0) return;
+        this.gridSyncEntity.storeCallbacks.onStoreUpdated.add((_session, store, key, updateInfo) => {
+            if (!this.gridReady || !key) return;
             try {
+                if (!this.isTallyCellKey(key)) return;
                 const val = store.getVec2(key);
-                this.noteClaimOwner(key, val ? val.x : 0);
+                // Diagnostic: does the platform echo this client's own store writes back? Snap
+                // does not document it. Logs only; costs nothing with showLogs off.
+                if (this.showLogs && updateInfo && updateInfo.updaterInfo
+                    && updateInfo.updaterInfo.connectionId === SessionController.getInstance().getLocalConnectionId()) {
+                    this.ownStoreEchoCount++;
+                    this.log("NetworkerV2: OWN STORE ECHO #" + this.ownStoreEchoCount + " " + key
+                        + " = (" + (val ? val.x + ", " + val.y : "null") + ")");
+                }
+                this.noteCell(key, val ? val.x : 0, val ? val.y : 0);
             } catch (e) {
                 this.log("NetworkerV2: LEADERBOARD store-update read failed for " + key + ": " + e);
             }
@@ -301,12 +325,17 @@ export class Networker extends BaseScriptComponent {
             const slot = StorageProperty.manualVec2(`playerColorSlot_${i}`, vec2.zero());
             this.playerColorSlots.push(slot);
             this.gridSyncEntity.addStorageProperty(slot);
+            this.adoptDefaultIfAbsent(slot);
+            this.rememberVisualID(slot.currentValue); // seeded values fire no events
             // F2: slot interceptor — a slot claim arriving from a player who has died/left (and
             // is not present) would otherwise leak that color for the whole session (the leaver
             // can't self-clean and everyone's slot-free already ran). Zero it on arrival.
             slot.onAnyChange.add((newVal: vec2, _oldVal: vec2, updateInfo) => {
                 this.leaderboardDirty = true; // FEAT-2: a color-slot change recolors rows
-                this.interceptGhostSlotWrite(slot, newVal, updateInfo);
+                this.miniMapDirty = true;     // ...and any of that player's cells in the window
+                // A ghost's slot claim is rejected, so it must not evict a real player's remembered color.
+                if (!this.interceptGhostSlotWrite(slot, newVal, updateInfo)) this.rememberVisualID(newVal);
+                this.refreshAllCubes();       // ...and their cubes
             });
         }
 
@@ -333,7 +362,8 @@ export class Networker extends BaseScriptComponent {
         
         // Add to sync entity
         this.gridSyncEntity.addStorageProperty(cellProp);
-        
+        this.adoptDefaultIfAbsent(cellProp);
+
         // Store in map
         this.gridCells.set(key, cellProp);
         
@@ -362,6 +392,13 @@ export class Networker extends BaseScriptComponent {
                 this.log("  🧹 LOCAL CACHE CLEARED - Cloud update received (cloud authoritative)");
             }
 
+            // A deferred stake of ours is still pending on this cell: keep showing it locally
+            // (the value that just arrived is usually our own death-clear for the kill).
+            if (this.deferredStakeKeys.has(cellKey)) {
+                this.localCellState.set(cellKey, new vec2(newClaimed, this.clientID));
+                this.localCacheTimestamps.set(cellKey, Date.now());
+            }
+
             // Special logging for stake-to-claim conversions (with null safety)
             if (oldStaked !== 0 && newStaked === 0 && newClaimed !== 0) {
                 this.log("  ✓✓✓ STAKE SUCCESSFULLY CONVERTED TO CLAIM ✓✓✓");
@@ -373,9 +410,9 @@ export class Networker extends BaseScriptComponent {
                 this.miniMapDirty = true;
             }
 
-            // FEAT-2: the confirmed value wins for subscribed cells — corrects the optimistic
-            // tally from updateCellValue if a remote write and our pending write crossed.
-            this.noteClaimOwner(cellKey, newClaimed);
+            // FEAT-2: follow the property's value for subscribed cells — a remote update that
+            // replaced our pending write corrects the optimistic tally from updateCellValue.
+            if (this.isInBounds(x, y)) this.noteCell(cellKey, newClaimed, newStaked);
 
             // F2/NET-12 ghost interceptor: a value naming a recently-dead (sent inside their
             // window) or departed player is a stale remnant of that life — clear it immediately.
@@ -397,6 +434,19 @@ export class Networker extends BaseScriptComponent {
         return cellProp;
     }
     
+    // A StorageProperty created with a default starts with currentValue null, so SyncKit's first
+    // LateUpdate flush sees a "change" and SENDS the default. For a key that is not in the store
+    // yet, that (0,0) can land after another client's first real write still in flight and
+    // erase it (a first claim/stake, or a joiner's color-slot claim). Adopting the default
+    // locally makes current and pending equal, so merely subscribing sends nothing. A later
+    // setPendingValue or remote update behaves exactly as before. No-op when the key existed
+    // (addStorageProperty already seeded currentValue from the store).
+    private adoptDefaultIfAbsent(prop: StorageProperty<vec2>): void {
+        if (prop.currentValue === undefined || prop.currentValue === null) {
+            prop.silentSetCurrentValue(vec2.zero());
+        }
+    }
+
     // Generate unique key for cell coordinates
     private getCellKey(x: number, y: number): string {
         return `cell_${x}_${y}`;
@@ -436,8 +486,9 @@ export class Networker extends BaseScriptComponent {
         }
 
         // FEAT-2: count our own write now — the platform may not echo it back through
-        // onStoreUpdated, and this makes the local score update instantly.
-        this.noteClaimOwner(cellKey, newValue.x);
+        // onStoreUpdated, and this makes the local score update instantly. In-bounds only, the
+        // same rule the seed and the store listener apply (isTallyCellKey).
+        if (this.isInBounds(x, y)) this.noteCell(cellKey, newValue.x, newValue.y);
 
         return true;
     }
@@ -445,50 +496,166 @@ export class Networker extends BaseScriptComponent {
     // FEAT-2: the ONLY place the leaderboard tally changes. Idempotent — it diffs against the
     // last known owner of the cell, so hearing about the same change twice (local write + echo,
     // store event + property event) is harmless.
-    private noteClaimOwner(key: string, newOwner: number): void {
+    // It also drives the world cubes: whenever a cell's claim or stake owner changes, the
+    // cubes at that cell are rebuilt locally to match (PlayerVisuals.setCellCubes).
+    private noteCell(key: string, newOwner: number, newStaker: number): void {
         if (!newOwner || isNaN(newOwner)) newOwner = 0;
+        if (!newStaker || isNaN(newStaker)) newStaker = 0;
+        // Our own stake whose cloud write is still deferred: keep showing it.
+        if (this.deferredStakeKeys.has(key)) newStaker = this.clientID;
         const oldOwner = this.claimOwnerByKey.get(key) || 0;
-        if (oldOwner === newOwner) return;
-        if (oldOwner !== 0) {
-            const remaining = (this.claimCounts.get(oldOwner) || 0) - 1;
-            if (remaining > 0) this.claimCounts.set(oldOwner, remaining);
-            else this.claimCounts.delete(oldOwner);
+        const oldStaker = this.stakeOwnerByKey.get(key) || 0;
+        if (oldOwner === newOwner && oldStaker === newStaker) return;
+        if (oldStaker !== newStaker) {
+            if (newStaker !== 0) this.stakeOwnerByKey.set(key, newStaker);
+            else this.stakeOwnerByKey.delete(key);
         }
-        if (newOwner !== 0) {
-            this.claimCounts.set(newOwner, (this.claimCounts.get(newOwner) || 0) + 1);
-            this.claimOwnerByKey.set(key, newOwner);
-        } else {
-            this.claimOwnerByKey.delete(key);
+        if (oldOwner !== newOwner) {
+            if (oldOwner !== 0) {
+                const remaining = (this.claimCounts.get(oldOwner) || 0) - 1;
+                if (remaining > 0) this.claimCounts.set(oldOwner, remaining);
+                else this.claimCounts.delete(oldOwner);
+            }
+            if (newOwner !== 0) {
+                this.claimCounts.set(newOwner, (this.claimCounts.get(newOwner) || 0) + 1);
+                this.claimOwnerByKey.set(key, newOwner);
+            } else {
+                this.claimOwnerByKey.delete(key);
+            }
+            this.leaderboardDirty = true;
         }
-        this.leaderboardDirty = true;
+        this.scheduleLeaderboardRecount();
+        this.drawCellCubes(key);
     }
 
-    // FEAT-2: one-time full-store scan at grid-ready (local reads only). Same key filtering as
-    // sweepStoreForDepartedClient, without the gridCells skip — this is read-only.
-    private seedClaimCounts(): void {
-        const store = this.gridSyncEntity.currentStore;
+    // Rebuild the cubes at one cell from the tracked owners. Guarded: display code must never
+    // be able to break the tally or a store callback.
+    private drawCellCubes(key: string): void {
+        try {
+            const keyParts = key.split('_');
+            if (keyParts.length !== 3) return;
+            const center = this.gridPosToWorldCoords(parseInt(keyParts[1]), parseInt(keyParts[2]));
+            const owner = this.claimOwnerByKey.get(key) || 0;
+            const staker = this.stakeOwnerByKey.get(key) || 0;
+            this.PlayerVisuals.setCellCubes(
+                key,
+                owner ? this.getDisplayVisualID(owner) : 0,
+                staker ? this.getDisplayVisualID(staker) : 0,
+                center.x, center.y, this.unitsPerCell
+            );
+        } catch (e) {
+            this.log("NetworkerV2: cube draw failed for " + key + ": " + e);
+        }
+    }
+
+    // A color slot changed: a player's color index may be different now. setCellCubes only
+    // rebuilds cells whose color actually changed, so this is cheap.
+    private refreshAllCubes(): void {
+        this.claimOwnerByKey.forEach((_owner, key) => this.drawCellCubes(key));
+        this.stakeOwnerByKey.forEach((_staker, key) => {
+            if (!this.claimOwnerByKey.has(key)) this.drawCellCubes(key);
+        });
+    }
+
+    // Stop showing our deferred stakes (the life or trail that made them has ended) and fall
+    // back to what each cell's property actually holds.
+    private clearDeferredStakes(): void {
+        if (this.deferredStakeKeys.size === 0) return;
+        const keys = Array.from(this.deferredStakeKeys);
+        this.deferredStakeKeys.clear();
+        for (let i = 0; i < keys.length; i++) {
+            const prop = this.gridCells.get(keys[i]);
+            const v = prop ? (prop.pendingValue || prop.currentValue) : null;
+            this.noteCell(keys[i], v ? v.x : 0, v ? v.y : 0);
+        }
+    }
+
+    // FEAT-2: the one rule for which store keys count toward the tally — a well-formed,
+    // in-bounds "cell_x_y". Shared by the seed/recount and the store listener so a client that
+    // was present for a write and one that joined later always count the same keys.
+    private isTallyCellKey(key: string): boolean {
+        if (key.indexOf("cell_") !== 0) return false;
+        const keyParts = key.split('_');
+        if (keyParts.length !== 3) return false;
+        const cellX = parseInt(keyParts[1]);
+        const cellY = parseInt(keyParts[2]);
+        return !isNaN(cellX) && !isNaN(cellY) && this.isInBounds(cellX, cellY);
+    }
+
+    // FEAT-2: full recount from the store replica (local reads only, at most 1600 keys). Every
+    // tally key is re-noted — zeros included — so this is a complete reconcile, not just a seed.
+    private recountClaimsFromStore(): void {
+        const store = this.gridSyncEntity ? this.gridSyncEntity.currentStore : null;
         if (!store) return;
+        const seen: Set<string> = new Set();
         try {
             const allKeys = store.getAllKeys();
             for (const key of allKeys) {
                 try {
-                    if (key.indexOf("cell_") !== 0) continue;
-                    const keyParts = key.split('_');
-                    if (keyParts.length !== 3) continue;
-                    const cellX = parseInt(keyParts[1]);
-                    const cellY = parseInt(keyParts[2]);
-                    if (isNaN(cellX) || isNaN(cellY) || !this.isInBounds(cellX, cellY)) continue;
+                    if (!this.isTallyCellKey(key)) continue;
+                    seen.add(key); // present in the store, even if the read below fails
                     const val = store.getVec2(key);
                     if (!val) continue;
-                    this.noteClaimOwner(key, val.x);
+                    this.noteCell(key, val.x, val.y);
                 } catch (e) {
-                    this.log("NetworkerV2: LEADERBOARD seed read failed for " + key + ": " + e);
+                    this.log("NetworkerV2: LEADERBOARD recount read failed for " + key + ": " + e);
                 }
             }
         } catch (e) {
-            this.log("NetworkerV2: LEADERBOARD seed enumeration failed: " + e);
+            // Enumeration failed: keep the current tally rather than dropping keys we could not see.
+            this.log("NetworkerV2: LEADERBOARD recount enumeration failed: " + e);
+            return;
+        }
+        // A counted key the store no longer holds is not a claim. (A first-ever local write
+        // that has not flushed yet is re-noted by its own onAnyChange at this frame's LateUpdate.)
+        const stale: string[] = [];
+        this.claimOwnerByKey.forEach((_owner, key) => { if (!seen.has(key)) stale.push(key); });
+        this.stakeOwnerByKey.forEach((_staker, key) => {
+            if (!seen.has(key) && !this.claimOwnerByKey.has(key)) stale.push(key);
+        });
+        for (let i = 0; i < stale.length; i++) this.noteCell(stale[i], 0, 0);
+        // Cubes share this safety net: re-assert every tracked cell (free when already in sync),
+        // which also retries any cube whose spawn failed earlier.
+        this.refreshAllCubes();
+    }
+
+    // FEAT-2: one-time seed at grid-ready (seeded store values fire no events).
+    private seedClaimCounts(): void {
+        this.leaderboardRecounting = true; // the seed is itself a full count — don't queue a recount
+        try {
+            this.recountClaimsFromStore();
+        } finally {
+            this.leaderboardRecounting = false;
         }
         this.leaderboardDirty = true;
+    }
+
+    // FEAT-2: queue one recount LEADERBOARD_RECOUNT_DELAY_S from now unless one is already
+    // queued. Called on every tally change, so recounts happen only while claims are changing
+    // (at most one per delay period) and never while the grid is idle.
+    private scheduleLeaderboardRecount(): void {
+        if (!this.gridReady || this.leaderboardRecountPending || this.leaderboardRecounting) return;
+        try {
+            if (!this.leaderboardRecountEvent) {
+                this.leaderboardRecountEvent = this.createEvent("DelayedCallbackEvent");
+                this.leaderboardRecountEvent.bind(() => {
+                    this.leaderboardRecountPending = false;
+                    this.leaderboardRecounting = true;
+                    try {
+                        this.recountClaimsFromStore();
+                    } catch (e) {
+                        this.log("NetworkerV2: LEADERBOARD recount failed: " + e);
+                    } finally {
+                        this.leaderboardRecounting = false;
+                    }
+                });
+            }
+            this.leaderboardRecountPending = true;
+            this.leaderboardRecountEvent.reset(this.LEADERBOARD_RECOUNT_DELAY_S);
+        } catch (e) {
+            this.leaderboardRecountPending = false;
+            this.log("NetworkerV2: LEADERBOARD recount scheduling failed: " + e);
+        }
     }
 
     // FEAT-2: cheap per-tick guard for LocationTracker (mirrors shouldRedrawMiniMap).
@@ -502,11 +669,23 @@ export class Networker extends BaseScriptComponent {
     getLeaderboard(): { clientID: number, score: number }[] {
         this.leaderboardDirty = false;
         const entries: { clientID: number, score: number }[] = [];
+        let unresolved = false; // scoring id that reads absent but never left
         this.claimCounts.forEach((count, id) => {
-            if (count > 0 && this.isClientPresent(id)) {
+            if (count <= 0) return;
+            if (this.isClientPresent(id)) {
                 entries.push({ clientID: id, score: count * this.SCORE_PER_CELL });
+            } else if (!this.departedClients.has(id)) {
+                unresolved = true;
             }
         });
+        // Their display name may just not have resolved yet (seen right after we join): look
+        // again next tick, for a bounded number of ticks, instead of waiting for the next change.
+        if (unresolved && this.leaderboardPresenceRetries < this.LEADERBOARD_PRESENCE_RETRIES) {
+            this.leaderboardPresenceRetries++;
+            this.leaderboardDirty = true;
+        } else if (!unresolved) {
+            this.leaderboardPresenceRetries = 0;
+        }
         entries.sort((a, b) => (b.score - a.score) || (a.clientID - b.clientID));
         return entries;
     }
@@ -563,6 +742,33 @@ export class Networker extends BaseScriptComponent {
             if (val && val.x === clientID) return val.y;
         }
         return (clientID % 5) || 5;
+    }
+
+    // Remembers which color a client holds, from a color-slot value vec2(clientID, visualID).
+    // A slot newly claimed by one client drops any OTHER client's memory of that color, so a
+    // remembered color is never shown for a player whose color has been taken over.
+    private rememberVisualID(slotVal: vec2 | null | undefined): void {
+        if (!slotVal || !slotVal.x || !slotVal.y) return;
+        const stale: number[] = [];
+        this.lastVisualIDByClient.forEach((visualID, id) => {
+            if (visualID === slotVal.y && id !== slotVal.x) stale.push(id);
+        });
+        for (let i = 0; i < stale.length; i++) this.lastVisualIDByClient.delete(stale[i]);
+        this.lastVisualIDByClient.set(slotVal.x, slotVal.y);
+    }
+
+    // Color index for DISPLAY (minimap cells, leaderboard rows, world cubes). Same as getPlayerVisualID
+    // while the player holds a slot. When they hold none — every client frees a victim's slot
+    // the moment they die, before their cells have all cleared — it returns the color they
+    // last held instead of the modulo fallback, so their remaining cells and row don't flash a
+    // different color.
+    getDisplayVisualID(clientID: number): number {
+        if (clientID === this.clientID && this.playerID) return this.playerID;
+        for (let i = 0; i < this.playerColorSlots.length; i++) {
+            const val = this.playerColorSlots[i].currentValue;
+            if (val && val.x === clientID) return val.y;
+        }
+        return this.lastVisualIDByClient.get(clientID) || ((clientID % 5) || 5);
     }
 
     getCellDataReadOnly(x: number, y: number): vec2 {
@@ -712,11 +918,7 @@ export class Networker extends BaseScriptComponent {
             // Use helper method to update both local state and cloud storage
             this.updateCellValue(xpos, zpos, homeClaimVal, "HOME CLAIM");
 
-            //calculate the center of current cell for visuals
-            const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
-            //create visual for claim
-            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell, this.clientID, this.claimSpawnValidity());
-            return;//can return early now that backend and frontend home claim tasks are handled
+            return; // the cube is drawn from the cell value (noteCell) — nothing else to do
         }
 
         //use current data at current index to determine next step
@@ -776,19 +978,16 @@ export class Networker extends BaseScriptComponent {
             // last and wins the race against the dead player's clear.
             else if (stakedBy !== this.clientID) {
                 const newCellValue = new vec2(claimedBy, ID);
-                const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
-
                 this.stakeList.push(new vec2(xpos, zpos));
 
-                // Immediate local cache update — minimap reads this before cloud confirms
+                // Show the stake now — local cache for the minimap, cubes via noteCell — even
+                // though the cloud write is deferred. deferredStakeKeys keeps both showing our
+                // stake while other values for this cell pass through (our own death-clear for
+                // it, run inside sendEvent above, is promoted at this frame's LateUpdate).
                 this.localCellState.set(cellKey, newCellValue);
                 this.localCacheTimestamps.set(cellKey, Date.now());
-
-                // Spawn the world visual right away
-                this.PlayerVisuals.createWorldStakeVolume(
-                    this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell,
-                    this.clientID, this.stakeSpawnValidity()
-                );
+                this.deferredStakeKeys.add(cellKey);
+                this.noteCell(cellKey, this.claimOwnerByKey.get(cellKey) || 0, ID);
 
                 // Delayed cloud write wins the race against the dead player's death-clear writes.
                 // D3: capture the epoch now and only write if it's unchanged when the timer fires.
@@ -798,8 +997,15 @@ export class Networker extends BaseScriptComponent {
                 const writeEpoch = this.conversionEpoch;
                 const delayedWrite = this.createEvent("DelayedCallbackEvent");
                 delayedWrite.bind(() => {
+                    this.deferredStakeKeys.delete(cellKey); // the real write (or its cancellation) takes over
                     if (this.conversionEpoch === writeEpoch) {
-                        this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
+                        // Re-read the claim owner now rather than re-asserting the one read
+                        // 500ms ago: that owner may have died or lost the cell since, and
+                        // writing them back would resurrect a cleared claim. Freshest on-device
+                        // value: pendingValue is set by every path (store seed, remote update,
+                        // local write), so it also sees a clear written earlier this frame.
+                        const live = cellProp.pendingValue || cellProp.currentValue || vec2.zero();
+                        this.updateCellValue(xpos, zpos, new vec2(live.x, ID), "STAKE");
                     } else {
                         this.log("NetworkerV2: dropped stale delayed stake write at (" + xpos + ", " + zpos + ") — epoch changed");
                     }
@@ -822,10 +1028,6 @@ export class Networker extends BaseScriptComponent {
 
             // Use helper method to update both local state and cloud storage
             this.updateCellValue(xpos, zpos, newCellValue, "STAKE");
-
-            //create player visual for newly staked cell at center of cell and at current y
-            const cellCenterCoords = this.gridPosToWorldCoords(xpos, zpos);
-            this.PlayerVisuals.createWorldStakeVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell, this.clientID, this.stakeSpawnValidity());
         }
         
         if (this.showLogs) {
@@ -954,17 +1156,8 @@ export class Networker extends BaseScriptComponent {
             } catch (e) {
                 this.log("NetworkerV2: ERROR in death phase 1 (local teardown): " + e);
             }
-        } else {
-            // Phase 2 — remote-player visual sweep. Deliberately NOT gated on gridReady
-            // (F4/NET-15): the Instantiator can have materialized every volume while the grid
-            // entity is still initializing, and owner-key matching (F3) needs neither the grid
-            // nor the color slots. Pre-SessionController-ready the instance map is empty (no-op).
-            try {
-                this.deathPhaseRemoteVisualSweep(ID, visualIDHint);
-            } catch (e) {
-                this.log("NetworkerV2: ERROR in death phase 2 (remote visual sweep): " + e);
-            }
         }
+        // No visual phase: cubes are local and follow the cell values cleared below.
 
         // Phase 3 — cloud cell sweep (best-effort — only covers cells that have been
         // getCellProperty'd on this device)
@@ -994,20 +1187,12 @@ export class Networker extends BaseScriptComponent {
         // write scheduled by this (now-dead) life, and clear the mutex so it can't linger while
         // dead (respawn() also clears it, but clearing here keeps it consistent on death alone).
         this.conversionEpoch++;
-        // F1/NET-11: invalidate this life's in-flight CLAIM spawns too (stake spawns are covered
-        // by the conversionEpoch bump above) — their onSuccess destroys them at the source.
-        this.deathEpoch++;
         this.isPerformingBulkConversion = false;
         this.localCellState.clear();
         this.localCacheTimestamps.clear();
-        // spawnedClaims/spawnedStakes track only locally-spawned objects, so these are the right teardown paths
-        this.PlayerVisuals.DestroyAllStakes();
-        this.PlayerVisuals.DestroyAllClaims();
-    }
-
-    // Phase 2: destroy a remote player's visual objects on this device via Instantiator lookup
-    private deathPhaseRemoteVisualSweep(ID: number, visualIDHint?: number): void {
-        this.PlayerVisuals.destroyPlayerVisuals(ID, this.getPlayerVisualID.bind(this), visualIDHint);
+        // Cubes need no teardown of their own: the cell sweep (Phase 3) clears our cells and
+        // the cubes follow. Only stakes shown ahead of their deferred write need dropping.
+        this.clearDeferredStakes();
     }
 
     // Phase 3: zero the dead player's own claim/stake components in every subscribed cell.
@@ -1090,11 +1275,6 @@ export class Networker extends BaseScriptComponent {
             }
             this.log("NetworkerV2: replaying queued death cleanup for " + entry.id + (entry.isLeave ? " (leave)" : " (kill)"));
             try {
-                this.deathPhaseRemoteVisualSweep(entry.id, entry.hint);
-            } catch (e) {
-                this.log("NetworkerV2: ERROR in replayed visual sweep for " + entry.id + ": " + e);
-            }
-            try {
                 this.deathPhaseFreeColorSlot(entry.id);
             } catch (e) {
                 this.log("NetworkerV2: ERROR in replayed slot free for " + entry.id + ": " + e);
@@ -1128,16 +1308,11 @@ export class Networker extends BaseScriptComponent {
     // ghost interceptor does for subscribed keys).
     // Leave-only by design: kill victims stay connected and self-clean; a kill re-sweep could
     // destroy the respawned life.
-    private scheduleLeaveResweeps(leftClientID: number, hint: number | undefined): void {
+    private scheduleLeaveResweeps(leftClientID: number, _hint: number | undefined): void {
         for (const delaySeconds of this.LEAVE_RESWEEP_DELAYS_S) {
             const resweep = this.createEvent("DelayedCallbackEvent");
             resweep.bind(() => {
                 if (!this.isClientPresent(leftClientID)) {
-                    try {
-                        this.PlayerVisuals.destroyPlayerVisuals(leftClientID, this.getPlayerVisualID.bind(this), hint, true);
-                    } catch (e) {
-                        this.log("NetworkerV2: ERROR in leave re-sweep for " + leftClientID + ": " + e);
-                    }
                     // NET-5: store re-sweep (guarded internally on gridReady/departed/presence)
                     try {
                         this.sweepStoreForDepartedClient(leftClientID);
@@ -1229,7 +1404,7 @@ export class Networker extends BaseScriptComponent {
                 const clearStake = val.y !== 0 && val.y === leftClientID;
                 if (!clearClaim && !clearStake) continue; // changed since collect (e.g. another client's heal landed)
                 store.putVec2(key, new vec2(clearClaim ? 0 : val.x, clearStake ? 0 : val.y));
-                this.noteClaimOwner(key, clearClaim ? 0 : val.x); // FEAT-2: raw write, no property event
+                this.noteCell(key, clearClaim ? 0 : val.x, clearStake ? 0 : val.y); // raw write, no property event
             } catch (e) {
                 this.log("NetworkerV2: STORE SWEEP heal failed for " + key + ": " + e);
             }
@@ -1334,8 +1509,16 @@ export class Networker extends BaseScriptComponent {
     private interceptGhostCellWrite(x: number, y: number, val: vec2, updateInfo: ConnectedLensModule.RealtimeStoreUpdateInfo | null): void {
         if (!val) return;
         const sentMs = (updateInfo && updateInfo.sentServerTimeMilliseconds) ? updateInfo.sentServerTimeMilliseconds : null;
-        const clearClaim = val.x !== 0 && this.isGhostID(val.x, sentMs);
-        const clearStake = val.y !== 0 && this.isGhostID(val.y, sentMs);
+        // While WE are dead, a value naming us that was sent inside our own ghost window is a
+        // remnant too (e.g. another client's read-modify-write re-asserting our old claim after
+        // our sweep ran). isGhostID never matches the local player (always present), so our
+        // device is the one that must clear it. A dead player writes nothing naming itself.
+        // !isAlive is required, not redundant: a duplicate death event re-opens the window, which
+        // could otherwise still be open when the respawn home claim is written.
+        const selfGhost = (id: number) =>
+            id === this.clientID && !this.isAlive && this.isRecentlyDead(id, sentMs);
+        const clearClaim = val.x !== 0 && (this.isGhostID(val.x, sentMs) || selfGhost(val.x));
+        const clearStake = val.y !== 0 && (this.isGhostID(val.y, sentMs) || selfGhost(val.y));
         if (!clearClaim && !clearStake) return;
         const healed = new vec2(clearClaim ? 0 : val.x, clearStake ? 0 : val.y);
         this.log("NetworkerV2: GHOST CLEAR - cell (" + x + ", " + y + ") named dead/departed player (claimed=" + val.x + ", staked=" + val.y + ")");
@@ -1346,29 +1529,17 @@ export class Networker extends BaseScriptComponent {
     // within RTT" color leak (their claim write outraces everyone's slot-free). isGhostID's
     // presence check (TD-13: shared predicate, no open-coded variant) protects a kill victim's
     // post-respawn re-claim (they're connected, so never zeroed here regardless of timing).
-    private interceptGhostSlotWrite(slot: StorageProperty<vec2>, val: vec2, updateInfo: ConnectedLensModule.RealtimeStoreUpdateInfo | null): void {
-        if (!val || val.x === 0) return;
-        if (this.clientID && val.x === this.clientID) return; // our own slot claim is never a ghost
+    // Returns true when the value was a ghost claim and has been zeroed.
+    private interceptGhostSlotWrite(slot: StorageProperty<vec2>, val: vec2, updateInfo: ConnectedLensModule.RealtimeStoreUpdateInfo | null): boolean {
+        if (!val || val.x === 0) return false;
+        if (this.clientID && val.x === this.clientID) return false; // our own slot claim is never a ghost
         const sentMs = (updateInfo && updateInfo.sentServerTimeMilliseconds) ? updateInfo.sentServerTimeMilliseconds : null;
         if (this.isGhostID(val.x, sentMs)) {
             this.log("NetworkerV2: GHOST SLOT CLEAR - slot claimed by dead/departed player " + val.x);
             slot.setPendingValue(vec2.zero());
+            return true;
         }
-    }
-
-    // F1/NET-11: validity closures captured at spawn-request time and re-checked in the
-    // Instantiator's async onSuccess — if the life/batch that requested the spawn has ended,
-    // the volume is destroyed at the source instead of tracked (the store deletion propagates
-    // to every client). Claims are invalidated only by DEATH (deathEpoch); stakes by death OR
-    // conversion-start (conversionEpoch — its two bump sites correspond 1:1 with the two
-    // DestroyAllStakes sites).
-    private claimSpawnValidity(): () => boolean {
-        const epoch = this.deathEpoch;
-        return () => this.deathEpoch === epoch;
-    }
-    private stakeSpawnValidity(): () => boolean {
-        const epoch = this.conversionEpoch;
-        return () => this.conversionEpoch === epoch;
+        return false;
     }
 
     // Re-enable a dead local player. Called by LocationTracker when the respawn
@@ -1440,8 +1611,9 @@ export class Networker extends BaseScriptComponent {
         const epoch = this.conversionEpoch;
         this.log("NetworkerV2: BULK CONVERSION START - Converting " + numOfStakes + " stakes to claims with proper cloud storage");
 
-        // Destroy stake visuals immediately
-        this.PlayerVisuals.DestroyAllStakes();
+        // Stake cubes disappear cell by cell as each stake converts (they follow the cell
+        // values). Drop any stake still shown ahead of its deferred write — it is in this batch.
+        this.clearDeferredStakes();
 
         // Create copy of stakeList for processing
         const stakesToConvert = [...this.stakeList];
@@ -1506,11 +1678,6 @@ export class Networker extends BaseScriptComponent {
         if (success) {
             this.log("  ✅ CONVERSION SUCCESS: Stake (" + stake.x + ", " + stake.y + ") → Claim");
             this.log("  AFTER: claimed=" + newValue.x + ", staked=" + newValue.y);
-            
-            //Create visual for newly claimed cell (exterior loop cell)
-            const cellCenterCoords = this.gridPosToWorldCoords(stake.x, stake.y);
-            //this.log("test first claim by id: " + this.playerID);
-            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell, this.clientID, this.claimSpawnValidity());
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");
@@ -1694,11 +1861,6 @@ export class Networker extends BaseScriptComponent {
         
         if (success) {
             this.log("  ✅ INTERIOR CELL CLAIMED: (" + cell.x + ", " + cell.y + ") updated");
-            
-            // Create visual for newly claimed cell
-            const cellCenterCoords = this.gridPosToWorldCoords(cell.x, cell.y);
-            //this.log("test first claim by id: " + this.playerID);
-            this.PlayerVisuals.createWorldClaimVolume(this.playerID, cellCenterCoords.x, realWorldCoords.y, cellCenterCoords.y, this.unitsPerCell, this.clientID, this.claimSpawnValidity());
             
             // Add small delay to allow SpectaclesSyncKit to sync to cloud
             const delayedEvent = this.createEvent("DelayedCallbackEvent");

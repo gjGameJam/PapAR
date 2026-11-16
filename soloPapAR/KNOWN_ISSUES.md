@@ -8,7 +8,7 @@
 > detail) and mirror the change into the relevant `CLAUDE.md` section. This file lists only
 > open/documented/missing work — no "resolved" archive, to keep it scannable.
 >
-> **Last updated:** 2026-07-13
+> **Last updated:** 2026-11-15
 > **Line numbers** are approximate and will drift — the file + symbol/function name is the
 > durable anchor.
 
@@ -42,7 +42,6 @@
 | DEAD-4 | Dead helpers `coordsToIndex` / `indexToCoords` / `lastIdx` | 🟡 | ⬜ Open |
 | TD-1 | `getData()` called every tick for nothing (post-LOG) | 🟡 | ⬜ Open |
 | TD-2 | FNV hash + coord conversion + constants duplicated across files | 🟡 | ⬜ Open |
-| TD-3 | `as any` reach into SyncKit `spawnedInstances` — now encapsulated; dependency irreducible | 🟡 | 📝 Documented |
 | TD-4 | `updateHUDText` misleading legacy param names | 🟡 | ⬜ Open |
 | TD-5 | `Array(25).fill(vec2.zero())` shares one instance | 🟡 | ⬜ Open |
 | TD-6 | `getCellDataReadOnly` has no cache TTL (unlike `getData`/`getMiniMapCells`) | 🟡 | ⬜ Open |
@@ -50,8 +49,8 @@
 | TD-8 | Non-strict TS: `map.has()`→`map.get()` deref without narrowing | 🟡 | ⬜ Open |
 | TD-9 | Gated logging still builds the log string on every call (hot-path perf) | 🟡 | ⬜ Open |
 | TD-10 | Unbounded `gridCells` subscription growth (churn fixed; 1600 ceiling remains) | 🟡 | ⬜ Open |
-| TD-12 | Three near-identical epoch-gated `onSuccess` closures in `PlayerVisuals` spawn methods | 🟡 | ⬜ Open |
 | TD-15 | `updateCellValue` write-mode dispatch by description substring (writer set now larger) | 🟡 | ⬜ Open |
+| TD-16 | Local-cubes refactor untested on device; cube height + join-time build untuned | 🟠 | ⬜ Open |
 | FEAT-1 | No kill on entering enemy **claimed** territory | — | ⬛ Missing |
 | FEAT-3 | No kill feed / death announcement | — | ⬛ Missing |
 
@@ -85,7 +84,8 @@
   regions — indistinguishable from their new life's cells (same clientID), so neither the
   ghost predicate nor a full-store sweep can safely clear a present client's values (a late
   sweep would erase the respawned life's claims); they converge only via the victim's own
-  death sweep, which can't reach cells no client re-touches. Also residual (vanishingly
+  death sweep, which can't reach cells no client re-touches. World cubes are drawn from the
+  cell values, so a kill-ghost cell also shows as a stale cube. Also residual (vanishingly
   narrow): every remaining client disconnects before any sweep completes while the session
   store persists for a later joiner.
 - **Fix hint:** The kill residual needs authoritative server-side ownership or a
@@ -125,7 +125,9 @@
   unreachable. `Networker` + `updateMiniMapNetworked` superseded it. If ever re-enabled, `getCellColor`
   returns 0–255 `vec4`s (e.g. `new vec4(255,0,0,0.5)`) where shaders expect 0–1 — it would
   render fully clipped. `SparseGrid` and `CellState` are still legitimately imported/used and
-  should stay.
+  should stay. `PlayerVisuals.createWorldClaimVolume` / `createWorldStakeVolume` /
+  `DestroyAllClaims` / `DestroyAllStakes` are now empty no-op stubs kept only so this file
+  compiles; they go when it does.
 - **Fix hint:** Delete the dead render methods and the `GridClaimer` component's game logic,
   keeping `SparseGrid`/`CellState` if still needed, or drop `GridClaimer` from the scene.
 
@@ -170,29 +172,6 @@
 - **Risk:** Any change must be made in 2–3 places; silent divergence.
 - **Fix hint:** Extract a shared `GridMath`/`PlayerId` util module.
 
-### TD-3 — `as any` reach into SyncKit `spawnedInstances` (encapsulated; dependency irreducible)
-- **Sev:** 🟡 Low · **Status:** 📝 Documented · **Location:** `PlayerVisuals.getSpawnedInstances()`
-  (the single audited `(this.networkedInstantiator as any).spawnedInstances` access),
-  consumed by `forEachSpawnedInstance()` / `deleteSpawnedInstance()` /
-  `destroyPlayerVisuals()` / `pruneOnDestroy()`.
-- **Why it can't be eliminated (research verdict):** the Instantiator exposes no public
-  enumerator, no by-owner/by-id lookup, and fires **no callback for remote spawns**
-  (`onSuccess` is local-only). PapAR's claim/stake objects are spawned **unowned**, so
-  `ownerInfo`/`getOwnerId()` are null — player identity lives in the spawn's own store: the
-  `"_papar_owner"` clientID stamp (primary match), with the `_prefab_name` prefix
-  (`"P{visualID}…"`) as fallback for unstamped objects. `SessionController` exposes the stores
-  but not their `SceneObject`s. So scanning the private `spawnedInstances` map is the only way
-  to reach another player's spawned objects; "track it ourselves" cannot see remote spawns.
-- **What was done (hardening):** the `as any` now lives in exactly one helper
-  (`getSpawnedInstances`) that warns loudly and returns `null` if the map disappears (SDK
-  changed). Iteration/deletion go through `forEachSpawnedInstance`/`deleteSpawnedInstance`,
-  which tolerate **both** the current representation (a `Map` object whose entries are stored
-  as plain-object properties → enumerate with `for..in`) and a hypothetical future real-`Map`
-  (`.forEach()`/`.delete()`). Deliberately not `instanceof Map`-based — the current map *is* a
-  `Map` instance but `.forEach()` visits zero of its property-stored entries.
-- **Residual risk:** still coupled to an SDK private field; a rename/removal disables
-  remote-player visual cleanup (now fails loud, not silent). No further action planned unless
-  the SDK gains a public API.
 
 ### TD-4 — `updateHUDText` misleading legacy param names
 - **Sev:** 🟡 Low · **Location:** `PlayerVisuals.updateHUDText(lat, long, gridx, gridy, …)`
@@ -268,16 +247,6 @@
 - **Fix hint (residual only):** reuse a fixed pool of 25 properties keyed to the visible window,
   or accept the finite 1600 ceiling. Measure on-device (frame time, memory) before investing.
 
-### TD-12 — Three near-identical epoch-gated `onSuccess` closures in `PlayerVisuals`
-- **Sev:** 🟡 Low · **Location:** `PlayerVisuals.createWorldClaimVolume()` (~line 244) and
-  `createWorldStakeVolume()` (~lines 272 and 286 — cube + pillar).
-- **Cost:** The `pruneOnDestroy` → `isStillValid` re-check → `safeDestroy`-or-push sequence
-  is copy-pasted three times, differing only in the target array (`spawnedClaims` vs
-  `spawnedStakes`). A future fix to the gating order (e.g. NET-11-class bugs) must be applied
-  in three places or it silently diverges.
-- **Fix hint:** Extract one
-  `makeGatedOnSuccess(targetArray: SceneObject[], isStillValid?: () => boolean)` helper that
-  returns the closure; each spawn call passes it to `instantiate`.
 
 ### TD-15 — `updateCellValue` write-mode dispatch by description substring
 - **Sev:** 🟡 Low · **Location:** `Networker.updateCellValue()` (~line 318) —
@@ -290,6 +259,23 @@
   label (e.g. `"STAKE→CLAIM CONVERSION"`) would silently change write semantics.
 - **Fix hint:** Add an explicit parameter (`mode: "immediate" | "pending"` or a boolean)
   defaulting to pending; keep `description` for logging only.
+
+### TD-16 — Local-cubes refactor untested on device; cube height + join-time build untuned
+- **Sev:** 🟠 Medium · **Location:** `Networker.noteCell()` / `drawCellCubes()` /
+  `refreshAllCubes()` / `clearDeferredStakes()`; `PlayerVisuals.setCellCubes()` /
+  `spawnLocal()` / `cubeHeight()`.
+- **Detail:** World cubes (claim cube, stake cube, stake pillar) are no longer networked
+  Instantiator spawns; each client draws them locally from the synced cell grid. This
+  replaced the whole networked-visual cleanup machinery, but the new path has **not yet
+  been verified in a multi-device session**.
+  Two behaviours are accepted for now and not yet tuned: **cube height is taken from the
+  local viewer** (each client's own device height, minus `scale/6`, at the moment it draws
+  the cube — not synced, so viewers can disagree), and **a late joiner builds every existing
+  cube at once** (the grid-ready seed instantiates them in one synchronous pass, up to 1600
+  cells).
+- **Fix hint:** Run a two-device session (join, stake, convert, kill, leave, late join) and
+  confirm the cubes match the minimap on both devices; then decide whether height needs a
+  shared reference and whether the join-time build needs batching.
 
 ---
 
@@ -316,7 +302,7 @@
 | Cell format, `sendData` decision tree, death handling, respawn, bounds | "`Networker.ts`" |
 | Stake→claim conversion, interior fill | "Stake → claim conversion pipeline" / "Interior fill algorithm" |
 | `currentValue` vs `currentOrPendingValue` gotcha | "Networking Architecture → Reading lazily-subscribed properties" |
-| Visual spawning, minimap, arrow, HUD, respawn text | "`PlayerVisuals.ts`" |
+| World cubes (local, drawn from the cell grid), minimap, arrow, HUD, respawn text | "`PlayerVisuals.ts`" |
 | Player identity, color cycling | "Player Identity & Color Cycling" |
 | Full open-issue prose | "Known Incomplete Areas" |
 | Submission blockers (IP, safety, metadata) | "Lens Publication — Known Submission Blockers" |

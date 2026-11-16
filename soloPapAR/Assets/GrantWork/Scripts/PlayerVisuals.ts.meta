@@ -30,7 +30,6 @@
     deviceTracker: false
     leaderboardRows: false
     miniMapCells: false
-    networkedInstantiator: false
     p1claimCellObj: false
     p1stakeCellObj: false
     p1stakePillarObj: false
@@ -88,7 +87,6 @@
       p5claimCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p5stakeCellObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       p5stakePillarObj: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
-      networkedInstantiator: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       miniMapCells: !<reference.Image[]>
         []
   ScriptTypes:
@@ -120,5 +118,4 @@
     - // @input Asset.ObjectPrefab p5claimCellObj
     - // @input Asset.ObjectPrefab p5stakeCellObj
     - // @input Asset.ObjectPrefab p5stakePillarObj
-    - // @input AssignableType_1 networkedInstantiator
     - "// @input Component.Image[] miniMapCells"

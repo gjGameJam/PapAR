@@ -3,7 +3,6 @@
   objects:
     - !<own> 00000000-0000-0065-0000-000000000064
     - !<own> 0005641c-028d-459a-0000-000000014b4d
-    - !<own> eab3a1bf-4868-40ad-9cbd-01db91909767
     - !<own> b3b278d3-aa2b-4bb8-87f7-530c4d77bb67
     - !<own> eda8583b-66ae-425c-a85d-80482dc0e091
     - !<own> 6c1c197c-0043-49a5-ad83-2c8338f32e73
@@ -362,8 +361,7 @@
     "":
       playerTracker: !<reference.DeviceTracking> e5553c8a-0b7e-4ef4-92d9-3e1318fb82c1
       Networker: !<MappingBased.AssignableType> 4c5dfdbe-adcb-41f1-859f-12facad6a924
-      networkedInstantiator: !<MappingBased.AssignableType_1> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
-      PlayerVisuals: !<MappingBased.AssignableType_2> 4777e408-6610-41a7-b07c-ac300141d63c
+      PlayerVisuals: !<MappingBased.AssignableType_1> 4777e408-6610-41a7-b07c-ac300141d63c
       showLogs: false
   ScriptTypes:
     "":
@@ -5188,7 +5186,6 @@
       p5claimCellObj: !<reference.ObjectPrefab> 019dd634-4db3-406d-afb2-3b4c6cdb8c15
       p5stakeCellObj: !<reference.ObjectPrefab> 3261f9e5-32bb-426e-b688-7b5d56236970
       p5stakePillarObj: !<reference.ObjectPrefab> ae7a9abf-ce61-400e-839f-d6daa6635b3b
-      networkedInstantiator: !<MappingBased.AssignableType_1> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
       miniMapCells: !<reference.Image[]>
         - !<reference> af5d1441-8220-446f-96eb-88469074afdc
         - !<reference> 9a3bbacc-8a4f-48a8-af8e-f342b8373b9d
@@ -17443,49 +17440,6 @@
     - !<own> fca82e3f-c775-4847-a688-6b37ef06fea1
   Components:
     []
-- !<ScriptComponent/d6452a32-2e9a-44ad-8eab-727a75f7e7d9>
-  PrefabRemaps:
-    []
-  Name: Instantiator
-  Enabled: true
-  ScriptAsset: !<reference> 0f0500cb-c58a-434d-a171-94167130d106
-  ScriptInputsDefault:
-    spawnerOwnsObject: true
-    autoInstantiate: true
-    autoInstantiatePrefabs: true
-    persistenceString: true
-    autoInstantiateOwnershipString: true
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      prefabs: !<reference.ObjectPrefab[]>
-        - !<reference> 99267dff-1b24-4308-a022-dc67892f14e8
-        - !<reference> 2197170f-c771-43f9-8d6c-371cea55b242
-        - !<reference> ae58c9e6-315a-42d4-af48-0b87b7af1688
-        - !<reference> 163d9598-2a82-496a-b481-c554a23c9402
-        - !<reference> 87cb6875-81f9-47ce-9f23-ab91e34d618d
-        - !<reference> ec7cd8ea-919a-471d-a940-e1a8a92ec588
-        - !<reference> db5599e8-7c42-4c7b-a6bd-58d947481dac
-        - !<reference> c847b6b7-f63f-4310-a3f5-ed15527c6b85
-        - !<reference> e060792c-b2db-4b6f-a56c-624b0b791316
-        - !<reference> ec26eb7c-7177-44a1-a4bd-028224600ddb
-        - !<reference> 7b6bf067-d25b-4e07-909b-b5f3867d051e
-        - !<reference> 2fae336c-fc95-40af-b399-5074203de3e8
-        - !<reference> 019dd634-4db3-406d-afb2-3b4c6cdb8c15
-        - !<reference> 3261f9e5-32bb-426e-b688-7b5d56236970
-        - !<reference> ae7a9abf-ce61-400e-839f-d6daa6635b3b
-      spawnerOwnsObject: false
-      spawnAsChildren: true
-      spawnUnderParent: !<reference.SceneObject> ebbb0cbd-5a77-4cf8-a37c-976492f4c098
-      autoInstantiate: false
-      autoInstantiatePrefabs: !<reference.ObjectPrefab[]>
-        []
-      persistenceString: Session
-      autoInstantiateOwnershipString: Unowned
-  ScriptTypes:
-    "":
-      {}
 - !<ScriptComponent/d68da9c9-4e30-44d9-b2ab-8a114683d479>
   PrefabRemaps:
     []
@@ -18815,21 +18769,6 @@
     - !<own> 79c1f55f-e8ff-4a4f-9038-ce2e2411ea36
   Components:
     []
-- !<SceneObject/eab3a1bf-4868-40ad-9cbd-01db91909767>
-  PrefabRemaps:
-    []
-  Name: Instantiator
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> d6452a32-2e9a-44ad-8eab-727a75f7e7d9
 - !<SceneObject/eadec45e-08e9-41a2-9c7d-dcfdfde09be2>
   PrefabRemaps:
     []

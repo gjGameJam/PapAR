@@ -1,12 +1,13 @@
 import { SparseGrid } from './GridClaimer';
 import { CellState } from './GridClaimer';
 import { LocationTracker } from './LocationTracker';
-import {Instantiator} from 'SpectaclesSyncKit.lspkg/Components/Instantiator';
+import { SessionController } from "SpectaclesSyncKit.lspkg/Core/SessionController";
 
-// F3/NET-14: every spawned volume's realtime store is stamped with its owner's clientID under
-// this key, so death sweeps can match objects by owner instead of by the "P{visualID}" prefab
-// prefix (which depends on a color slot every client is simultaneously zeroing during a death).
-const OWNER_KEY = "_papar_owner";
+// The cube objects currently shown at one cell (see setCellCubes).
+type CellCubes = {
+    claimID: number; claim: SceneObject | null;
+    stakeID: number; stake: SceneObject | null; pillar: SceneObject | null;
+};
 
 @component
 export class PlayerVisuals extends BaseScriptComponent {
@@ -100,22 +101,10 @@ export class PlayerVisuals extends BaseScriptComponent {
     
     //end of player object fields
     
-    @input
-    networkedInstantiator: Instantiator;
-    
     //array of cells going one column at a time
     @input
     miniMapCells: Image[]; // array of cells to be colored for minimap
    
-    // Global array to hold all instances of claims spawned by THIS device. Entries may be
-    // destroyed natives (a remote deleteRealtimeStore destroys the object without splicing this
-    // array) — consume them only via safeDestroy (NET-13).
-    spawnedClaims: SceneObject[] = [];
-
-    // Global array to hold all instances of stakes spawned by THIS device. Same destroyed-native
-    // caveat as spawnedClaims — consume only via safeDestroy (NET-13).
-    spawnedStakes: SceneObject[] = [];
-    
     private previousRotation: number = 0;
 
     private previousArrowOffset: vec2 | null = null; // exact-compare memo, like previousRotation
@@ -160,6 +149,8 @@ export class PlayerVisuals extends BaseScriptComponent {
     private readonly leaderboardRingScale = 1.4;   // white outline square relative to the color square
     private readonly leaderboardOwnRowGap = 0.5;   // extra gap above row 3 (own score), in row pitches
     private readonly leaderboardTextWidth = 0.6;   // width of the score text rect
+    private readonly LEADERBOARD_ROW_COUNT = 4;    // top three + the local player's own row
+    private leaderboardXPerY = NaN;                // screen aspect ratio the rows were last positioned with
 
 
     //returns true if new worldPos == previous position
@@ -243,210 +234,110 @@ export class PlayerVisuals extends BaseScriptComponent {
         
     }
     
-    // F3: builds the customDataStore for one instantiate call, stamping the spawn's owner. A
-    // FRESH store per call — the stake cube + pillar are two instantiate calls; sharing one
-    // store would cross-contaminate the SDK's per-object keys (_network_id/_prefab_name/_init_*),
-    // which the Instantiator writes on top of the custom data.
-    private makeOwnerStore(ownerClientID: number): GeneralDataStore {
-        const store = GeneralDataStore.create();
-        store.putInt(OWNER_KEY, ownerClientID);
-        return store;
-    }
+    // ── World cubes: local, drawn from the cell grid ────────────────────────────────────────
+    // Cubes are NOT networked objects. Every client already has the synced cell grid, so each
+    // client builds and destroys its own cubes from the cell values (Networker.noteCell calls
+    // setCellCubes whenever a cell's claim or stake owner changes). A cube therefore can never
+    // disagree with the grid, a death needs no cube cleanup of its own, and spawning or
+    // removing a cube sends nothing over the network.
+    // One record per cell that currently shows something. claimID / stakeID are the color
+    // indices (1-5) the objects were built for; 0 = none.
+    private cellCubes: Map<string, CellCubes> = new Map();
+    private cubeParent: SceneObject | null = null;
+    private warnedCubeSetup = false;
 
-    //creates a cell cube visual for claimed cell via instantiator.instantiate
-    // ownerClientID (F3): stamped into the spawn's realtime store so death sweeps match by owner.
-    // isStillValid (F1/NET-11): instantiate() completes only after a createRealtimeStore network
-    // round-trip, so a spawn requested by a life/batch that has since ended can materialize AFTER
-    // cleanup already ran — orphaning it on every client. onSuccess re-checks the closure and
-    // destroys the object at the source instead of tracking it (the store deletion then
-    // propagates the cleanup to every client).
-    createWorldClaimVolume(ID: number, x: number, y: number, z: number, scale: number, ownerClientID: number = 0, isStillValid?: () => boolean){
-        if (!this.networkedInstantiator.isReady()){
-            this.log('instantiator not ready:(');
-            return;
+    // The shared colocated root (ColocatedWorld) — the same parent the networked cubes used,
+    // so local positions mean the same thing on every device.
+    private getCubeParent(): SceneObject | null {
+        if (this.cubeParent && !isNull(this.cubeParent)) return this.cubeParent;
+        try {
+            const located = SessionController.getInstance().getLocatedAtComponent();
+            this.cubeParent = located ? located.getSceneObject() : null;
+        } catch (e) {
+            this.cubeParent = null;
         }
-        const newPosition = new vec3(x, y - (scale / 6), z);
-        const cellScale = new vec3(scale, scale, scale);
-        this.networkedInstantiator.instantiate(this.getClaimVolumeFromPlayerID(ID), {
-            localPosition: newPosition,
-            localScale: cellScale,
-            customDataStore: this.makeOwnerStore(ownerClientID),
-            onSuccess: (networkRoot) => {
-                // prune FIRST so even a spawn we immediately destroy drops its map entry
-                this.pruneOnDestroy(networkRoot);
-                if (isStillValid && !isStillValid()) {
-                    this.safeDestroy(networkRoot.sceneObject);
-                    return;
-                }
-                this.spawnedClaims.push(networkRoot.sceneObject);
-            },
-            // The SDK failure path calls onError unguarded — always pass one.
-            onError: (message) => this.log("createWorldClaimVolume failed: " + message)
-        });
+        return this.cubeParent;
     }
 
-
-    //creates cube visuals for staked cell via instantiator.instantiate
-    // ownerClientID / isStillValid: see createWorldClaimVolume — same F3 owner stamp (a fresh
-    // store per instantiate call) and same F1 in-flight-spawn gating in each onSuccess.
-    createWorldStakeVolume(ID: number, x: number, y: number, z: number, scale: number, ownerClientID: number = 0, isStillValid?: () => boolean){
-        if (!this.networkedInstantiator.isReady()){
-            this.log('instantiator not ready:(');
-            return;
+    // Cubes sit at the local viewer's body height at the moment they are drawn.
+    private cubeHeight(scale: number): number {
+        let y = 0;
+        try {
+            y = this.deviceTracker.playerTracker.getTransform().getWorldPosition().y;
+        } catch (e) {
+            y = 0;
         }
-        const newPosition = new vec3(x, y - (scale / 6), z);
-        this.networkedInstantiator.instantiate(this.getStakeVolumeFromPlayerID(ID), {
-            localPosition: newPosition,
-            localScale: new vec3(scale, scale, scale),
-            customDataStore: this.makeOwnerStore(ownerClientID),
-            onSuccess: (networkRoot) => {
-                this.pruneOnDestroy(networkRoot);
-                if (isStillValid && !isStillValid()) {
-                    this.safeDestroy(networkRoot.sceneObject);
-                    return;
-                }
-                this.spawnedStakes.push(networkRoot.sceneObject);
-            },
-            onError: (message) => this.log("createWorldStakeVolume (cube) failed: " + message)
-        });
-        this.networkedInstantiator.instantiate(this.getStakePillarFromPlayerID(ID), {
-            localPosition: newPosition,
-            localScale: new vec3(1, scale, 1),
-            customDataStore: this.makeOwnerStore(ownerClientID),
-            onSuccess: (networkRoot) => {
-                this.pruneOnDestroy(networkRoot);
-                if (isStillValid && !isStillValid()) {
-                    this.safeDestroy(networkRoot.sceneObject);
-                    return;
-                }
-                this.spawnedStakes.push(networkRoot.sceneObject);
-            },
-            onError: (message) => this.log("createWorldStakeVolume (pillar) failed: " + message)
-        });
+        return y - (scale / 6);
     }
-    
-    // ── SDK-internals adapter (TD-3) ────────────────────────────────────────────────────────
-    // The Instantiator exposes no public way to enumerate spawned objects and fires no callback
-    // for REMOTE spawns, so destroying another player's visuals requires reaching its private
-    // `spawnedInstances`. These three helpers are the ONLY place that `as any` cast lives, and
-    // they tolerate both representations of the map:
-    //   • current SDK: declared `Map<string, NetworkRootInfo>` but entries are stored as plain
-    //     OBJECT properties (`map[id] = root`), never `.set()`; enumerate with `for..in`.
-    //   • hypothetical future SDK: a real Map used via `.set()/.forEach()/.delete()`.
-    // NOTE: do NOT branch on `instanceof Map` — the current map IS a Map instance yet holds its
-    // entries as own properties, so `.forEach()` would visit zero of them. Hence "for..in first,
-    // fall back to forEach only if for..in found nothing".
 
-    // Single audited access point. Returns null (with a loud log) if the SDK removed/renamed it.
-    private getSpawnedInstances(): any {
-        const inst = (this.networkedInstantiator as any).spawnedInstances;
-        if (!inst) {
-            this.log("PlayerVisuals: WARNING - Instantiator.spawnedInstances is missing (SDK changed?) — remote-player visual cleanup is disabled");
+    // Same construction the SyncKit Instantiator used: a holder under the parent carrying the
+    // position and scale, with the prefab instantiated beneath it.
+    private spawnLocal(prefab: ObjectPrefab, x: number, y: number, z: number, localScale: vec3): SceneObject | null {
+        const parent = this.getCubeParent();
+        if (!prefab || !parent) {
+            // A setup error, not a debug detail: say so once even with showLogs off.
+            if (!this.warnedCubeSetup) {
+                this.warnedCubeSetup = true;
+                print("PlayerVisuals: CONFIG ERROR - cannot draw cubes (" + (prefab ? "colocated parent" : "cube prefab") + " missing)");
+            }
             return null;
         }
-        return inst;
-    }
-
-    // Iterate (networkId, networkRoot) pairs across either representation. Safe to delete the
-    // current key from within `cb` (true for both for..in and Map.forEach).
-    private forEachSpawnedInstance(cb: (networkId: string, networkRoot: any) => void): void {
-        const inst = this.getSpawnedInstances();
-        if (!inst) return;
-        let sawAny = false;
-        for (const networkId in inst) {
-            sawAny = true;
-            cb(networkId, inst[networkId]);
-        }
-        if (!sawAny && typeof inst.forEach === "function") {
-            inst.forEach((networkRoot: any, networkId: string) => cb(networkId, networkRoot));
+        let holder: SceneObject | null = null;
+        try {
+            holder = global.scene.createSceneObject("cellCube");
+            holder.setParent(parent);
+            const t = holder.getTransform();
+            t.setLocalPosition(new vec3(x, y, z));
+            t.setLocalScale(localScale);
+            prefab.instantiate(holder);
+            return holder;
+        } catch (e) {
+            this.log("PlayerVisuals: cube spawn failed: " + e);
+            this.safeDestroy(holder);
+            return null;
         }
     }
 
-    // Delete an entry from either representation.
-    private deleteSpawnedInstance(networkId: string): void {
-        const inst = this.getSpawnedInstances();
-        if (!inst) return;
-        if (Object.prototype.hasOwnProperty.call(inst, networkId)) {
-            delete inst[networkId];
-        } else if (typeof inst.delete === "function") {
-            inst.delete(networkId);
+    // Make the cubes at one cell match its state. claimVisualID / stakeVisualID are color
+    // indices (0 = none). (x, z) is the cell center in the colocated space. Only what changed
+    // is rebuilt, so calling this with unchanged values is free.
+    setCellCubes(key: string, claimVisualID: number, stakeVisualID: number, x: number, z: number, scale: number): void {
+        let rec = this.cellCubes.get(key);
+        if (!rec) {
+            if (!claimVisualID && !stakeVisualID) return;
+            rec = { claimID: 0, claim: null, stakeID: 0, stake: null, pillar: null };
+            this.cellCubes.set(key, rec);
         }
-    }
-    // ────────────────────────────────────────────────────────────────────────────────────────
-
-    // Keep the Instantiator's spawnedInstances map from accumulating destroyed holders:
-    // when this locally-spawned object is destroyed (locally OR remotely), drop its entry.
-    // onDestroyed (NetworkRootInfo) fires for both destruction paths, so this also covers
-    // the self-death path (DestroyAllClaims/Stakes), where spawnedInstances is never pruned.
-    private pruneOnDestroy(networkRoot: any): void {
-        if (!networkRoot || !networkRoot.onDestroyed) return;
-        networkRoot.onDestroyed.add(() => {
-            this.deleteSpawnedInstance(networkRoot.networkId);
-        });
-    }
-
-    // Destroy all visual objects (claims + stakes + pillars) spawned by a specific player.
-    // Works on every device: iterates the Instantiator's internal spawnedInstances map,
-    // which holds all objects created during the session (both local and remote spawns).
-    // Matching is primarily by the "_papar_owner" clientID stamped into each spawn's store
-    // (F3/NET-14) — independent of the color slots, which every client is simultaneously
-    // zeroing during a death. The "P{visualID}" prefab-name prefix is only a FALLBACK for
-    // objects with no owner stamp, resolved from visualIDHint (the victim's color index
-    // carried in the death payload) when valid, else the getPlayerVisualID resolver.
-    // ownerKeyOnly disables the prefix fallback entirely — used by the leave re-sweeps, where
-    // a prefix match could hit a rejoined player's NEW visuals.
-    // The SDK never prunes spawnedInstances, so we prune matched (and stale) entries here to
-    // stop re-scanning destroyed holders and reading from their deleted realtime stores.
-    destroyPlayerVisuals(clientID: number, getPlayerVisualID: (id: number) => number, visualIDHint?: number, ownerKeyOnly: boolean = false): void {
-        const visualID = (Number.isFinite(visualIDHint) && visualIDHint >= 1 && visualIDHint <= 5)
-            ? visualIDHint
-            : getPlayerVisualID(clientID);
-        const prefix = "P" + visualID;
-        const toDestroy: { id: string; obj: SceneObject }[] = [];
-        this.forEachSpawnedInstance((networkId, networkRoot) => {
-            // Drop obviously-stale entries (already-destroyed holder / missing store) as we go.
-            if (!networkRoot || !networkRoot.dataStore || !networkRoot.sceneObject) {
-                this.deleteSpawnedInstance(networkId);
-                return;
+        if (rec.claimID !== claimVisualID) {
+            this.safeDestroy(rec.claim);
+            rec.claim = null;
+            rec.claimID = 0;
+            if (claimVisualID) {
+                rec.claim = this.spawnLocal(this.getClaimVolumeFromPlayerID(claimVisualID),
+                    x, this.cubeHeight(scale), z, new vec3(scale, scale, scale));
+                if (rec.claim) rec.claimID = claimVisualID;
             }
-            // Read owner + prefab name inside ONE try/catch: a throw means the realtime store
-            // was deleted — the entry is stale; prune and skip. Never route a throw to the
-            // prefix fallback (a half-read entry must not be matched by guesswork).
-            let owner = 0;
-            let prefabName = "";
-            try {
-                const store = networkRoot.dataStore;
-                if (store.has(OWNER_KEY)) {
-                    owner = store.getInt(OWNER_KEY);
-                }
-                prefabName = store.getString("_prefab_name");
-            } catch (e) {
-                this.deleteSpawnedInstance(networkId);
-                return;
-            }
-            let matches = false;
-            if (owner !== 0) {
-                matches = owner === clientID; // stamped: the owner key is authoritative
-            } else if (!ownerKeyOnly) {
-                matches = !!prefabName && prefabName.startsWith(prefix);
-            }
-            if (matches) {
-                toDestroy.push({ id: networkId, obj: networkRoot.sceneObject });
-            }
-        });
-        for (const entry of toDestroy) {
-            this.safeDestroy(entry.obj);
-            this.deleteSpawnedInstance(entry.id); // prune so this entry is never re-scanned on a later death
         }
-        this.log("PlayerVisuals: Destroyed " + toDestroy.length + " objects for player " + clientID + " (P" + visualID + (ownerKeyOnly ? ", owner-key only" : "") + ")");
+        if (rec.stakeID !== stakeVisualID) {
+            this.safeDestroy(rec.stake);
+            this.safeDestroy(rec.pillar);
+            rec.stake = null;
+            rec.pillar = null;
+            rec.stakeID = 0;
+            if (stakeVisualID) {
+                const y = this.cubeHeight(scale);
+                rec.stake = this.spawnLocal(this.getStakeVolumeFromPlayerID(stakeVisualID),
+                    x, y, z, new vec3(scale, scale, scale));
+                rec.pillar = this.spawnLocal(this.getStakePillarFromPlayerID(stakeVisualID),
+                    x, y, z, new vec3(1, scale, 1));
+                if (rec.stake || rec.pillar) rec.stakeID = stakeVisualID;
+            }
+        }
+        if (!rec.claimID && !rec.stakeID) this.cellCubes.delete(key);
     }
 
-    // NET-13: destroy that can never throw or abort a teardown loop. A remote deleteRealtimeStore
-    // can destroy the native object under us without splicing our arrays, and calling destroy()
-    // on a destroyed native throws — `obj && obj.destroy` does not detect that (needs isNull).
-    // The catch must never be empty: silent catches would make NET-13-class races undiagnosable
-    // on device.
-    private safeDestroy(obj: SceneObject): void {
+    // Destroy that can never throw: skips null / already-destroyed natives and logs failures.
+    private safeDestroy(obj: SceneObject | null): void {
         if (!obj || isNull(obj)) return;
         try {
             obj.destroy();
@@ -455,58 +346,39 @@ export class PlayerVisuals extends BaseScriptComponent {
         }
     }
 
-    //destroy all visible color volumes representing home claims
-    //entries may be destroyed natives — consume only via safeDestroy; the length reset lives in
-    //a finally so one bad entry can't leave dead refs poisoning every later teardown (NET-13)
-    DestroyAllClaims(){
-        try {
-            for (let obj of this.spawnedClaims) {
-                this.safeDestroy(obj);
-            }
-        } finally {
-            //set length to 0 to be reused
-            this.spawnedClaims.length = 0;
-        }
-        this.log('removed all home claims');
-    }
+    // Legacy no-ops: only the unused single-player GridClaimer still calls these. The live
+    // game draws cubes through setCellCubes.
+    createWorldClaimVolume(_ID: number, _x: number, _y: number, _z: number, _scale: number): void {}
+    createWorldStakeVolume(_ID: number, _x: number, _y: number, _z: number, _scale: number): void {}
+    DestroyAllClaims(): void {}
+    DestroyAllStakes(): void {}
 
-    //destroy all visible color volumes representing staked cells
-    //same safeDestroy + finally hardening as DestroyAllClaims (NET-13)
-    DestroyAllStakes(){
-        try {
-            for (let obj of this.spawnedStakes) {
-                this.safeDestroy(obj);
-            }
-        } finally {
-            //set length to 0 to be reused
-            this.spawnedStakes.length = 0;
-        }
-        this.log('removed all stakes');
-    }
-   
     onAwake(){
         this.createEvent("UpdateEvent").bind(this.onUpdate.bind(this));
         this.alignMiniMapCells();
         this.hideRespawnCountdown();
-        this.layoutLeaderboard();
-        this.updateLeaderboard([], null, () => 0); // start with every row hidden
+        // Guarded: display-only setup must not be able to abort onAwake.
+        try {
+            this.layoutLeaderboard();
+            this.updateLeaderboard([], null, () => 0); // start with every row hidden
+        } catch (e) {
+            print("PlayerVisuals: leaderboard setup failed: " + e);
+        }
     }
 
-    // FEAT-2: lays out the whole leaderboard once. Per row it builds the player-color square and
-    // the larger white "this is you" square behind it (which shows as a white outline), and
-    // re-anchors the row's score Text to sit right of them. Squares on purpose — they echo the
-    // grid cells and reuse the minimap's whiteCell texture, like the stake dots. Squares are
-    // siblings of the row Text (same parent, same render layer). Every position comes from the
-    // leaderboard* constants in the parent's anchor space; the Text rects authored in the
-    // editor are overwritten, so their setup cannot break the layout.
+    // FEAT-2: builds the leaderboard once. Per row it styles the score Text and creates the
+    // player-color square plus the larger white "this is you" square behind it (which shows as
+    // a white outline). Squares on purpose — they echo the grid cells and reuse the minimap's
+    // whiteCell texture, like the stake dots. Squares are siblings of the row Text (same parent,
+    // same render layer). Positions come from positionLeaderboardRows; the Text rects authored
+    // in the editor are overwritten, so their setup cannot break the layout.
     private layoutLeaderboard(): void {
         const rows = this.leaderboardRows;
         if (!rows || rows.length === 0) return;
-        if (!this.cellMaterial || !this.whiteCell) {
+        const canBuildSquares = !!this.cellMaterial && !!this.whiteCell;
+        if (!canBuildSquares) {
             this.log("layoutLeaderboard: cellMaterial/whiteCell unassigned — leaderboard squares skipped");
-            return;
         }
-        const tex = this.whiteCell;
 
         for (let i = 0; i < rows.length; i++) {
             this.leaderboardDots[i] = null;
@@ -514,76 +386,108 @@ export class PlayerVisuals extends BaseScriptComponent {
             const row = rows[i];
             if (!row) continue;
             const rowObj = row.getSceneObject();
-            const st = rowObj.getComponent("Component.ScreenTransform") as ScreenTransform;
-            const parentObj = rowObj.getParent();
-            const parentST = parentObj ? parentObj.getComponent("Component.ScreenTransform") as ScreenTransform : null;
-            if (!st || !parentST) {
-                this.log("layoutLeaderboard: row " + i + " or its parent has no ScreenTransform");
+            if (i >= this.LEADERBOARD_ROW_COUNT) { // only 4 rows are ever driven — hide extras
+                rowObj.enabled = false;
                 continue;
             }
 
-            // Score text is always white; identity is carried by the square.
+            // Text styling never depends on the squares. Score text is always white (identity
+            // is carried by the square) and has no box behind it — a background would block the
+            // 3D visuals (the scene Text objects were authored with Background enabled).
             row.textFill.color = new vec4(1, 1, 1, 1);
-            // No box behind the number — it would block the 3D visuals (the scene Text objects
-            // were authored with Background enabled).
             row.backgroundSettings.enabled = false;
+            row.verticalAlignment = VerticalAlignment.Center;
+            row.horizontalAlignment = HorizontalAlignment.Left;
 
-            // Row band in the parent's anchor space. Row 3 (the local player's own score) sits
-            // an extra half row lower so it reads as separate from the top three.
-            const pitch = this.leaderboardRowPitch;
-            const top = this.leaderboardTop - i * pitch - (i === 3 ? pitch * this.leaderboardOwnRowGap : 0);
-            const cy = top - pitch / 2;
-
-            // Anchor units are not square on screen: convert the square's anchor height to the
-            // anchor width that gives the same on-screen size. A ratio, so it survives a later
-            // rescale of the screen mapping.
-            const w0 = parentST.localPointToWorldPoint(new vec2(0, 0));
-            const w1 = parentST.localPointToWorldPoint(new vec2(1, 1));
-            const perX = Math.abs(w1.x - w0.x);
-            const perY = Math.abs(w1.y - w0.y);
-            const xPerY = (perX > 0 && perY > 0) ? perY / perX : 1;
-
-            const dotHalfH  = pitch * this.leaderboardDotScale / 2;
-            const ringHalfH = dotHalfH * this.leaderboardRingScale;
-            const ringHalfW = ringHalfH * xPerY;
-            const cx = this.leaderboardLeft + ringHalfW;
-
-            const make = (name: string, halfH: number): Image => {
-                const halfW = halfH * xPerY;
+            const parentObj = rowObj.getParent();
+            if (!canBuildSquares || !parentObj) continue;
+            const make = (name: string): Image => {
                 const obj = global.scene.createSceneObject(name + i);
                 obj.setParent(parentObj);
                 obj.layer = rowObj.layer; // draw on the same UI camera as the row text
-                const dst = obj.createComponent("Component.ScreenTransform") as ScreenTransform;
-                dst.anchors.left = cx - halfW; dst.anchors.right = cx + halfW;
-                dst.anchors.top = cy + halfH;  dst.anchors.bottom = cy - halfH;
-                dst.offsets.left = 0; dst.offsets.right = 0; dst.offsets.top = 0; dst.offsets.bottom = 0;
+                obj.createComponent("Component.ScreenTransform");
                 const img = obj.createComponent("Component.Image") as Image;
+                img.stretchMode = StretchMode.Stretch; // fill the rect (the texture is not square)
                 img.mainMaterial = this.cellMaterial.clone();
-                img.mainPass.baseTex = tex;
+                img.mainPass.baseTex = this.whiteCell;
                 obj.enabled = false;
                 return img;
             };
             // Ring first so the dot (created after it) renders on top.
-            const ring = make("LeaderboardRing", ringHalfH);
+            const ring = make("LeaderboardRing");
             ring.mainPass.baseColor = new vec4(1, 1, 1, 1);
             this.leaderboardRings[i] = ring;
-            this.leaderboardDots[i] = make("LeaderboardDot", dotHalfH);
+            this.leaderboardDots[i] = make("LeaderboardDot");
+        }
+        this.positionLeaderboardRows();
+    }
 
-            // The score text's rect is owned by code too: just right of the outline, the same
-            // band as the square, vertically centered — so the authored rect never matters.
-            const textLeft = cx + ringHalfW + ringHalfW * 0.6;
-            st.anchors.left = textLeft; st.anchors.right = textLeft + this.leaderboardTextWidth;
-            st.anchors.top = top;       st.anchors.bottom = top - pitch;
+    // FEAT-2: writes the anchors of every row's squares and score Text from the leaderboard*
+    // constants, in the parent's anchor space. Anchor units are not square on screen, so the
+    // squares' anchor width is derived from their anchor height via the parent's current
+    // world-per-anchor ratio. That ratio can change after onAwake (render target / camera
+    // setup), so updateLeaderboard calls this again on each redraw; it rewrites anchors only
+    // when the ratio actually changed.
+    private positionLeaderboardRows(): void {
+        const rows = this.leaderboardRows;
+        if (!rows || rows.length === 0) return;
+        let parentST: ScreenTransform | null = null;
+        for (let i = 0; i < rows.length && !parentST; i++) {
+            const p = rows[i] ? rows[i].getSceneObject().getParent() : null;
+            parentST = p ? p.getComponent("Component.ScreenTransform") as ScreenTransform : null;
+        }
+        let xPerY = 1;
+        if (parentST) {
+            const w0 = parentST.localPointToWorldPoint(new vec2(0, 0));
+            const w1 = parentST.localPointToWorldPoint(new vec2(1, 1));
+            const perX = Math.abs(w1.x - w0.x);
+            const perY = Math.abs(w1.y - w0.y);
+            if (perX > 0 && perY > 0) xPerY = perY / perX;
+        }
+        if (Math.abs(xPerY - this.leaderboardXPerY) < 0.0001) return; // unchanged since last layout
+        this.leaderboardXPerY = xPerY;
+
+        const pitch = this.leaderboardRowPitch;
+        const dotHalfH  = pitch * this.leaderboardDotScale / 2;
+        const ringHalfH = dotHalfH * this.leaderboardRingScale;
+        const ringHalfW = ringHalfH * xPerY;
+        const cx = this.leaderboardLeft + ringHalfW;
+        const textLeft = cx + ringHalfW + ringHalfW * 0.6;
+
+        const place = (obj: SceneObject, l: number, r: number, t: number, b: number): void => {
+            const st = obj.getComponent("Component.ScreenTransform") as ScreenTransform;
+            if (!st) return;
+            st.anchors.left = l; st.anchors.right = r;
+            st.anchors.top = t;  st.anchors.bottom = b;
             st.offsets.left = 0; st.offsets.right = 0; st.offsets.top = 0; st.offsets.bottom = 0;
-            row.verticalAlignment = VerticalAlignment.Center;
-            row.horizontalAlignment = HorizontalAlignment.Left;
+        };
+
+        const count = Math.min(rows.length, this.LEADERBOARD_ROW_COUNT);
+        for (let i = 0; i < count; i++) {
+            const row = rows[i];
+            if (!row) continue;
+            // Row 3 (the local player's own score) sits an extra half row lower so it reads as
+            // separate from the top three.
+            const top = this.leaderboardTop - i * pitch - (i === 3 ? pitch * this.leaderboardOwnRowGap : 0);
+            const cy = top - pitch / 2;
+            const ring = this.leaderboardRings[i];
+            const dot = this.leaderboardDots[i];
+            if (ring) place(ring.getSceneObject(), cx - ringHalfW, cx + ringHalfW, cy + ringHalfH, cy - ringHalfH);
+            if (dot) {
+                const dotHalfW = dotHalfH * xPerY;
+                place(dot.getSceneObject(), cx - dotHalfW, cx + dotHalfW, cy + dotHalfH, cy - dotHalfH);
+            }
+            // The score text's rect: just right of the outline, the same band as the square.
+            place(row.getSceneObject(), textLeft, textLeft + this.leaderboardTextWidth, top, top - pitch);
         }
     }
 
     // FEAT-2: entries = all scoring players, highest first (Networker.getLeaderboard()).
-    // Rows 0-2 show the top three: a dot in the player's claim color + the score in white.
-    // The local player's row is marked by a white ring around its dot. Row 3 shows the local
-    // player's own score only when they are outside the top three. Called only on a change.
+    // Rows 0-2 show the top three: a square in the player's claim color + the score in white.
+    // The local player's row is marked by a white outline around its square. When the local
+    // player is outside the top three their own score gets a row of its own: the first free
+    // top row if fewer than three players are scoring (they hold no cells), else row 3.
+    // Called only on a change.
     updateLeaderboard(
         entries: { clientID: number, score: number }[],
         localClientID: number | null,
@@ -591,32 +495,37 @@ export class PlayerVisuals extends BaseScriptComponent {
     ): void {
         const rows = this.leaderboardRows;
         if (!rows || rows.length === 0) return;
+        this.positionLeaderboardRows(); // no-op unless the screen aspect changed
 
-        const top = Math.min(3, rows.length);
+        const count = Math.min(rows.length, this.LEADERBOARD_ROW_COUNT);
+        const top = Math.min(3, count);
+        const shown = Math.min(entries.length, top);
         let localInTop = false;
-        for (let i = 0; i < top; i++) {
-            const e = i < entries.length ? entries[i] : null;
-            if (!e) {
-                this.setLeaderboardRow(i, null, 0, false);
-                continue;
-            }
-            const isLocal = localClientID != null && e.clientID === localClientID;
-            if (isLocal) localInTop = true;
-            this.setLeaderboardRow(i, "" + e.score, getPlayerVisualID(e.clientID), isLocal);
+        for (let i = 0; i < shown; i++) {
+            if (localClientID != null && entries[i].clientID === localClientID) localInTop = true;
         }
 
-        if (rows.length > 3) {
-            if (localClientID == null || localInTop) {
-                this.setLeaderboardRow(3, null, 0, false);
+        // Which row (if any) carries the local player's own score.
+        let ownRow = -1;
+        if (localClientID != null && !localInTop) {
+            if (shown < top) ownRow = shown;
+            else if (count > 3) ownRow = 3;
+        }
+        let ownScore = 0; // holding no cells yet
+        if (ownRow >= 0) {
+            for (let i = 0; i < entries.length; i++) {
+                if (entries[i].clientID === localClientID) { ownScore = entries[i].score; break; }
+            }
+        }
+
+        for (let i = 0; i < count; i++) {
+            if (i === ownRow) {
+                this.setLeaderboardRow(i, "" + ownScore, getPlayerVisualID(localClientID as number), true);
+            } else if (i < shown) {
+                const e = entries[i];
+                this.setLeaderboardRow(i, "" + e.score, getPlayerVisualID(e.clientID), e.clientID === localClientID);
             } else {
-                let score = 0; // holding no cells yet
-                for (let i = 0; i < entries.length; i++) {
-                    if (entries[i].clientID === localClientID) {
-                        score = entries[i].score;
-                        break;
-                    }
-                }
-                this.setLeaderboardRow(3, "" + score, getPlayerVisualID(localClientID), true);
+                this.setLeaderboardRow(i, null, 0, false);
             }
         }
     }
@@ -646,6 +555,9 @@ export class PlayerVisuals extends BaseScriptComponent {
         }
         if (dot && memo.__lastVisualID !== visualID) {
             const c = this.getPlayerClaimColor(visualID);
+            // The player's claim color exactly as the minimap uses it (same RGB), so a row
+            // matches that player's territory. Do not brighten it: a brightened P5 brown
+            // reads as orange and no longer matches.
             dot.mainPass.baseColor = new vec4(c.x, c.y, c.z, 1.0); // opaque for legibility
             memo.__lastVisualID = visualID;
         }
