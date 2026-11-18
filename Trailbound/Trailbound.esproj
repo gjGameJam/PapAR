@@ -1,0 +1,54 @@
+studioVersion:
+  major: 5
+  minor: 25
+  patch: 0
+  build: 26111006
+  type: Public
+coreVersion: 387
+clientVersion: 14.31
+updateCheckpoint: 111
+sceneId: 0a1ccb1a-fe88-4fbb-9883-e3af3c75fd99
+metaInfo:
+  hints:
+    []
+  tags:
+    []
+  lensName: Trailbound
+  lensDescriptors:
+    - AI_MUTATED
+  lensApplicableContext:
+    - live_camera
+    - reply_camera
+    - video_chat
+  lensApplicability:
+    - Front
+    - Back
+  lensClientCompatibilities:
+    - Spectacles
+  platformBundlesEnabled: false
+  iconHash: 89a266ab7c87ec4431b35c51803d2342
+  videoPreviewHash: 3a313c34e0dab5d5490eb32609982256
+  localizationsHash: ""
+  fromTemplateName: Default
+  fromTemplateUrl: Lens Studio 5.25.0.26111006
+  activationCamera: Front
+  sourceMapEnabled: false
+  shaderCacheInvalidationEnabled: false
+  usingMinClientVersions: false
+  androidMinClientVersion:
+    major: 0
+    minor: 0
+    patch: 0
+    build: 0
+  iOSMinClientVersion:
+    major: 0
+    minor: 0
+    patch: 0
+    build: 0
+  documentId: b9e16911-8685-4501-a830-0d1dbb64044e
+  originalDocumentId: f3d524c5-ac07-44a7-b03a-e07d591396ec
+  packageId: com.agrancinisc.trailbound
+  packageVersion: 1.0.0
+  spkPrivilegeLevel: Generic
+  gluboEnabled: false
+targetPlatform: Spectacles
