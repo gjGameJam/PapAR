@@ -1,0 +1,61 @@
+# Shipped by Lens Studio
+
+# The lines below are automatically generated and updated by Lens Studio.
+# Please do not modify them manually, as changes will be overwritten each time!
+# If you want to make changes to this file, please put them either above or below this section.
+
+Cache/**
+PluginsUserPreferences/**
+Support/**
+BackUp/**
+Workspaces/**
+.vscode/**
+/jsconfig.json
+/tsconfig.json
+.DS_Store
+/spk_debug_key.pem
+*.lock
+
+# Shipped by Lens Studio
+# Lens Studio generated state
+Cache/
+Support/
+Workspaces/
+PluginsUserPreferences/
+*.lock
+.virtual-scene*.json
+
+# Local agent connection details (per-window tokens and ports)
+.mcp.json
+.cursor/mcp.json
+.vscode/mcp.json
+.codex/config.toml
+.claude/settings.local.json
+ls-live-instance.json
+ls-live-instance.json.tmp
+
+# OS and tools
+.DS_Store
+node_modules/
+npm-debug.log*
+
+# Preview-only inspection helpers and editor plugins (not part of the Lens)
+Plugins/
+Packages/AiPreviewAgentInspect.lspkg
+Packages/AiPreviewAgentInspect.lspkg.meta
+Packages/AiPreviewAgentInteract.lspkg
+Packages/AiPreviewAgentInteract.lspkg.meta
+Packages/Leaf.lspkg
+Packages/Leaf.lspkg.meta
+Packages/Bitmoji 3D.lsc
+Packages/Bitmoji 3D.lsc.meta
+
+# BEGIN Lens Studio managed Agents-Docs block
+.mcp.json
+.cursor/mcp.json
+.vscode/mcp.json
+.codex/config.toml
+.claude/settings.local.json
+ls-live-instance.json
+ls-live-instance.json.tmp
+# END Lens Studio managed Agents-Docs block

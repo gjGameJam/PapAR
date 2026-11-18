@@ -1,0 +1,10 @@
+{
+  "name": "trailbound",
+  "version": "1.0.0",
+  "description": "A solo spatial territory game for Snap Spectacles",
+  "type": "module",
+  "scripts": {
+    "test": "node Assets/Scripts/Tests/GridLogic.test.ts"
+  },
+  "license": "MIT"
+}

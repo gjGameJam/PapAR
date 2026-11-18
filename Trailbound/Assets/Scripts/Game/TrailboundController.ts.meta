@@ -1,0 +1,100 @@
+- !<AssetImportMetadata/e68128b7-ee02-4117-b768-79dfdb8a7801>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 2cf3a9b2-af84-49a3-99b4-dcd372bc2f8f
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 2cf3a9b2-af84-49a3-99b4-dcd372bc2f8f
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> ca86cedd-cc38-4fff-858b-38a205af259c
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/ca86cedd-cc38-4fff-858b-38a205af259c>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  RunInEditor: false
+  ComponentUid: 0f846871-0309-44b1-b6c0-d48bf2f0226c
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    arenaRoot: false
+    autoStartInEditor: false
+    boundaryMaterial: false
+    boxMesh: false
+    captureTrack: false
+    claimMaterials: false
+    connectedSync: false
+    cutTrack: false
+    cylinderMesh: false
+    deathTrack: false
+    gridMaterial: false
+    playerTracker: false
+    sphereMesh: false
+    torusMesh: false
+    trailMaterials: false
+    visualsRoot: false
+    whiteMaterial: false
+    worldPanel: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - playerTracker: !<reference.DeviceTracking> 00000000-0000-0000-0000-000000000000
+      arenaRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      visualsRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      worldPanel: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      connectedSync: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      boxMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      sphereMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      cylinderMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      torusMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      gridMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      boundaryMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      claimMaterials: !<reference.Material[]>
+        []
+      trailMaterials: !<reference.Material[]>
+        []
+      whiteMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      captureTrack: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      deathTrack: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      cutTrack: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      autoStartInEditor: true
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Component.DeviceTracking playerTracker
+    - // @input SceneObject arenaRoot
+    - // @input SceneObject visualsRoot
+    - // @input AssignableType_1 worldPanel
+    - // @input AssignableType_2 connectedSync
+    - // @input Asset.RenderMesh boxMesh
+    - // @input Asset.RenderMesh sphereMesh
+    - // @input Asset.RenderMesh cylinderMesh
+    - // @input Asset.RenderMesh torusMesh
+    - // @input Asset.Material gridMaterial
+    - // @input Asset.Material boundaryMaterial
+    - "// @input Asset.Material[] claimMaterials"
+    - "// @input Asset.Material[] trailMaterials"
+    - // @input Asset.Material whiteMaterial
+    - // @input Asset.AudioTrackAsset captureTrack
+    - // @input Asset.AudioTrackAsset deathTrack
+    - // @input Asset.AudioTrackAsset cutTrack
+    - // @input bool autoStartInEditor = true
